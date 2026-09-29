@@ -1,0 +1,135 @@
+@let s = state();
+
+<div class="warnings" data-testid="warnings-tab">
+  <p class="explanation" data-testid="warnings-explanation">
+    Son avisos, no Bloqueos: nada se detiene. Salen de lo que devuelven las herramientas que leen contenido externo (web, ficheros, servidores MCP,
+    <span class="mono">curl</span>) y son heurísticas, así que pueden ser falsos positivos: descártalos y dejarán de contar.
+  </p>
+
+  <div class="filters" role="group" aria-label="Filtros de Avisos de inyección">
+    <app-select-filter
+      data-testid="severity-filter"
+      label="Severidad"
+      [allLabel]="allSeverities"
+      [options]="severityOptions"
+      [value]="severityLabel()"
+      (changed)="selectSeverity($event)"
+    />
+    <app-select-filter
+      data-testid="pattern-filter"
+      label="Patrón"
+      [allLabel]="allPatterns"
+      [options]="s.patterns"
+      [value]="pattern()"
+      (changed)="selectPattern($event)"
+    />
+    <app-select-filter
+      data-testid="project-filter"
+      label="Proyecto"
+      [allLabel]="allProjects"
+      [options]="s.projects"
+      [value]="project()"
+      (changed)="selectProject($event)"
+    />
+    <app-select-filter
+      data-testid="dismissed-filter"
+      label="Ver descartados"
+      [allLabel]="currentLabel"
+      [options]="dismissedLabels"
+      [value]="dismissedOption()?.label ?? null"
+      (changed)="selectDismissed($event)"
+    />
+  </div>
+
+  @if (sessionId(); as session) {
+    <p class="session-filter" data-testid="session-filter">
+      Solo la Sesión <a class="mono" [routerLink]="['/sesiones', session]">{{ shortId(session) }}</a> ·
+      <a [routerLink]="[]" [queryParams]="{ sesion: null }" queryParamsHandling="merge">Quitar el filtro</a>
+    </p>
+  }
+
+  @if (s.failed) {
+    <p class="notice notice--warn" role="alert" data-testid="warnings-error">
+      No se pudieron cargar los avisos. Se reintentará en unos segundos.
+    </p>
+  }
+  @if (dismissError(); as error) {
+    <p class="notice notice--warn" role="alert" data-testid="dismiss-error">{{ error }}</p>
+  }
+
+  @if (!s.loaded) {
+    <div class="card skeleton" aria-busy="true">
+      <p class="visually-hidden">Cargando los avisos…</p>
+      <div class="skeleton__row" aria-hidden="true"></div>
+      <div class="skeleton__row" aria-hidden="true"></div>
+    </div>
+  } @else if (rows().length === 0) {
+    <div class="card empty" data-testid="warnings-empty">
+      <p class="empty__title">Ningún aviso de inyección en este periodo</p>
+      <p>
+        Se vigilan las respuestas de <span class="mono">WebFetch</span>, <span class="mono">WebSearch</span>, <span class="mono">Read</span>, las
+        Herramientas MCP y los <span class="mono">Bash</span> con <span class="mono">curl</span> o <span class="mono">wget</span>, en busca de
+        órdenes dirigidas al agente, texto oculto o peticiones de enviar datos fuera.
+      </p>
+    </div>
+  } @else {
+    <div class="card table-wrap">
+      <table class="table" data-testid="warnings-table">
+        <thead>
+          <tr>
+            <th scope="col">Hora</th>
+            <th scope="col">Severidad</th>
+            <th scope="col">Patrón</th>
+            <th scope="col">Fuente</th>
+            <th scope="col">Proyecto</th>
+            <th scope="col">Fragmento</th>
+            <th scope="col">Después</th>
+            <th scope="col"><span class="visually-hidden">Acciones</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (warning of rows(); track warning.id) {
+            @let target = sessionLink(warning);
+            <tr data-testid="warning-row" [attr.data-severity]="warning.severity" [attr.data-dismissed]="warning.dismissed">
+              <td class="mono">{{ warning.occurredAt | date: 'd MMM HH:mm:ss' }}</td>
+              <td>
+                <span class="severity" [attr.data-severity]="warning.severity">{{ severityLabels[warning.severity] }}</span>
+              </td>
+              <td>
+                <span class="pattern mono">{{ warning.pattern }}</span>
+                <span class="muted">{{ categoryLabels[warning.category] }}</span>
+              </td>
+              <td class="source">
+                <span class="mono">{{ toolLabel(warning.toolName) }}</span>
+                @if (warning.source) {
+                  <span class="muted" [title]="warning.source">{{ warning.source }}</span>
+                }
+              </td>
+              <td>{{ warning.project }}</td>
+              <td class="snippet mono" [title]="warning.snippet">{{ warning.snippet }}</td>
+              <td>
+                @if (warning.followedBy.length === 0) {
+                  <span class="muted">—</span>
+                } @else {
+                  <ul class="following" data-testid="warning-following">
+                    @for (tool of warning.followedBy; track tool.eventId) {
+                      <li>Después: <span class="mono">{{ toolLabel(tool.toolName) }}@if (tool.summary) {
+                        · {{ tool.summary }}
+                      }</span></li>
+                    }
+                  </ul>
+                }
+              </td>
+              <td class="actions">
+                <a [routerLink]="target.link" [queryParams]="target.queryParams">Ver Sesión<span class="visually-hidden"> del aviso {{ warning.pattern }}</span></a>
+                <button type="button" class="dismiss" data-testid="warning-toggle" (click)="toggleDismissal(warning)">
+                  {{ warning.dismissed ? 'Restaurar' : 'Descartar' }}<span class="visually-hidden"> el aviso {{ warning.pattern }}</span>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

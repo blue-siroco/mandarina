@@ -1,0 +1,110 @@
+@let s = session();
+
+<article class="card-session" data-testid="session-card" [attr.data-session]="s.sessionId">
+  <header class="card-session__top">
+    <app-state-dot [state]="s.state" [reason]="reason()" />
+    <span class="card-session__seen num">{{ lastSeen() }}</span>
+  </header>
+
+  <h4 class="card-session__title">
+    <!-- El enlace cubre toda la tarjeta (::after) sin anidar el botón del Directorio dentro. -->
+    <a class="card-session__link" [routerLink]="['/sesiones', s.sessionId]" [title]="s.sessionId">
+      <code>{{ shortId() }}</code>
+    </a>
+    @if (s.model) {
+      <app-model-badge [model]="s.model" />
+    }
+    @if (s.evaluationScore !== null) {
+      <!-- El texto accesible va oculto a la vista: el icono solo no dice "bien" o "mal" (AC-59). -->
+      <span
+        class="card-session__score"
+        data-testid="session-score"
+        [attr.data-score]="s.evaluationScore === 1 ? 'up' : 'down'"
+        [title]="scoreLabel()"
+      >
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+          @if (s.evaluationScore === 1) {
+            <path d="M7 11v9H4v-9zM7 11l4-8a2 2 0 0 1 2 2v4h6a2 2 0 0 1 2 2.3l-1.4 7A2 2 0 0 1 17.6 20H7" />
+          } @else {
+            <path d="M7 13V4H4v9zM7 13l4 8a2 2 0 0 0 2-2v-4h6a2 2 0 0 0 2-2.3l-1.4-7A2 2 0 0 0 17.6 4H7" />
+          }
+        </svg>
+        <span class="visually-hidden">{{ scoreLabel() }}</span>
+      </span>
+    }
+  </h4>
+
+  <button
+    type="button"
+    class="card-session__directory mono"
+    [title]="'Filtrar por ' + s.directory"
+    (click)="directorySelected.emit(s.directory)"
+  >
+    {{ directoryLabel() }}
+  </button>
+
+  @if (s.budgetStopped) {
+    <!-- El agente se paró por un Presupuesto superado (AC-84); reutiliza el estilo del badge de avisos y el texto lo dice, no solo el color. -->
+    <a class="card-session__alerts" data-testid="session-budget-stopped" routerLink="/presupuestos">
+      <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+        <rect x="6" y="6" width="12" height="12" rx="1" />
+      </svg>
+      Detenida por presupuesto
+    </a>
+  }
+
+  @if (s.injectionAlerts > 0) {
+    <!-- Por encima del enlace de la tarjeta (z-index) para poder pulsarlo aparte (AC-68). -->
+    <a
+      class="card-session__alerts"
+      data-testid="session-alerts"
+      [routerLink]="['/seguridad']"
+      [queryParams]="{ pestana: 'avisos', severidad: 'alta', sesion: s.sessionId }"
+    >
+      <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+        <path d="M12 3 2 20h20L12 3z" />
+        <path d="M12 10v4M12 17h.01" />
+      </svg>
+      {{ alertsLabel() }}
+    </a>
+  }
+
+  @if (working()) {
+    <p class="card-session__working" data-testid="working">
+      Trabajando…
+      @if (s.currentTool) {
+        <span class="mono">{{ toolLabel(s.currentTool.name) }}{{ s.currentTool.summary ? ' · ' + s.currentTool.summary : '' }}</span>
+      }
+    </p>
+  } @else if (s.activity === 'paused') {
+    <p class="card-session__paused">En pausa</p>
+  }
+
+  <app-sparkline [values]="s.sparkline" />
+
+  <p class="card-session__durations num">
+    <span><strong>{{ durations().active }}</strong> Duración activa</span>
+    <span><strong>{{ durations().clock }}</strong> Duración de reloj</span>
+  </p>
+
+  <p class="card-session__counters">
+    <span class="counter counter--subagent">{{ subagents() }}</span>
+    <span class="counter" [class.counter--block]="s.blockCount > 0">{{ blocks() }}</span>
+  </p>
+
+  @if (s.liveSubagents.length > 0) {
+    <ul class="card-session__subagents" aria-label="Subagentes en marcha">
+      @for (sub of s.liveSubagents; track sub.subagentId ?? $index) {
+        <li class="live-subagent" data-testid="live-subagent" [title]="sub.subagentId ?? 'Lanzado, aún sin enlazar'">
+          <span class="live-subagent__type">└ {{ sub.agentType ?? 'Subagente' }}</span>
+          @if (sub.description) {
+            <span class="live-subagent__task">{{ sub.description }}</span>
+          }
+          @if (sub.currentTool) {
+            <span class="live-subagent__tool mono">{{ toolLabel(sub.currentTool.name) }}{{ sub.currentTool.summary ? ' ' + sub.currentTool.summary : '' }}</span>
+          }
+        </li>
+      }
+    </ul>
+  }
+</article>

@@ -1,0 +1,86 @@
+<table class="events" [class.events--compact]="compact()">
+  <thead>
+    <tr>
+      <th scope="col" class="col-time">Hora</th>
+      <th scope="col" class="col-type">Tipo</th>
+      <th scope="col" class="col-summary">Resumen</th>
+      @if (!compact()) {
+        <th scope="col" class="col-project">Proyecto</th>
+        <th scope="col" class="col-session">Sesión</th>
+        <th scope="col" class="col-directory">Directorio</th>
+      }
+      <th scope="col" class="col-toggle"><span class="visually-hidden">Detalle</span></th>
+    </tr>
+  </thead>
+  <tbody>
+    @for (event of events(); track event.id) {
+      @let open = isExpanded(event.id);
+      <tr data-testid="event-row" [attr.data-type]="event.eventType" [class.row--open]="open">
+        <td data-label="Hora" class="time">
+          <time [attr.datetime]="event.occurredAt.toISOString()">{{ event.occurredAt | date: 'HH:mm:ss' }}</time>
+        </td>
+        <td data-label="Tipo">
+          <span class="type"><span class="type__dot" aria-hidden="true"></span>{{ eventTypeLabels[event.eventType] }}</span>
+          @if (event.subagentId) {
+            <span class="subagent" [title]="event.subagentId">subagente</span>
+          }
+        </td>
+        <td data-label="Resumen" class="summary">
+          <span class="mono">{{ summary(event) ?? event.toolName ?? '—' }}</span>
+          @if (hasWarnings(event)) {
+            <app-event-warning-badge [warnings]="event.warnings" />
+          }
+          @if (event.block) {
+            <span class="block-reason">
+              <span class="badge badge--block">{{ event.block.rule }}</span>
+              {{ event.block.reason }}
+            </span>
+          }
+        </td>
+        @if (!compact()) {
+          <td data-label="Proyecto">{{ event.project }}</td>
+          <td data-label="Sesión">
+            <a class="session" [routerLink]="['/sesiones', event.sessionId]" [title]="event.sessionId">
+              <code>{{ shortId(event.sessionId) }}</code>
+            </a>
+          </td>
+          <td data-label="Directorio" class="directory mono" [title]="event.directory">{{ event.directory }}</td>
+        }
+        <td class="toggle">
+          <button
+            type="button"
+            class="toggle__button"
+            data-testid="event-toggle"
+            [attr.aria-expanded]="open"
+            [attr.aria-controls]="'event-detail-' + event.id"
+            (click)="toggle(event.id)"
+          >
+            <span class="visually-hidden">{{ open ? 'Ocultar detalle' : 'Ver detalle' }}</span>
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+          </button>
+        </td>
+      </tr>
+      @if (open) {
+        <tr class="detail" [id]="'event-detail-' + event.id" data-testid="event-detail" [attr.data-type]="event.eventType">
+          <td [attr.colspan]="compact() ? 4 : 7">
+            <dl class="detail__grid">
+              <dt>Tipo nativo</dt>
+              <dd class="mono">{{ event.nativeEventType }}</dd>
+              <dt>Directorio</dt>
+              <dd class="mono">{{ event.directory }}</dd>
+              <dt>Herramienta</dt>
+              <dd class="mono">{{ event.toolName ?? '—' }}</dd>
+              <dt>Transcript</dt>
+              <dd class="mono">{{ event.transcriptPath ?? '—' }}</dd>
+            </dl>
+            @if (event.warnings.length > 0) {
+              <app-event-warning-list [warnings]="event.warnings" [sessionId]="event.sessionId" />
+            }
+            <p class="overline">Payload</p>
+            <pre class="detail__payload"><code>@for (part of payloadSegments(event); track $index) {@if (part.secret) {<span class="secret" title="Valor enmascarado por Mandarina">{{ part.text }}</span>} @else {<span>{{ part.text }}</span>}}</code></pre>
+          </td>
+        </tr>
+      }
+    }
+  </tbody>
+</table>

@@ -1,0 +1,68 @@
+# IA
+
+.agents
+.codebase-memory
+.playwright-mcp
+.claude
+.vscode
+CLAUDE.md
+
+# Frontend
+
+frontend/node_modules
+frontend/dist
+frontend/.angular
+frontend/coverage
+frontend/reports
+frontend/test-results
+frontend/playwright-report
+frontend/.stryker-tmp
+customWebComponent/*
+!customWebComponent/lucia-button-0.3.1.tgz
+!customWebComponent/lucia-core-d3element-0.2.0.tgz
+!customWebComponent/lucia-core-d3style-0.2.0.tgz
+!customWebComponent/lucia-core-pallete-0.1.0.tgz
+!customWebComponent/lucia-core-scales-0.2.1.tgz
+!customWebComponent/lucia-element-bars-0.2.2.tgz
+!customWebComponent/lucia-filterchip-0.1.1.tgz
+!customWebComponent/lucia-info-0.2.0.tgz
+!customWebComponent/lucia-smallchip-0.1.2.tgz
+!customWebComponent/lucia-togglebuttons-0.2.0.tgz
+!customWebComponent/lucia-utils-1.0.0.tgz
+
+# Backend
+backend-api/.import_linter_cache
+backend-api/.venv
+backend-api/.mutmut-cache
+backend-api/mutants
+
+*.pem
+*.key
+.env
+.aws/
+__pycache__/
+*.pyc
+.DS_Store
+backend-api/.coverage
+backend-api/reports
+backend-api/.mutmut-cache
+backend-api/mutants
+backend-api/.pytest_cache
+# Secretos locales (contiene API keys)
+.mcp.json
+
+# Backend (Node)
+backend/node_modules
+backend/dist
+backend/coverage
+backend/reports
+backend/.stryker-tmp
+
+# Datos locales
+data/
+*.sqlite
+*.sqlite-*
+*.db
+
+# Mock de Eventos
+mock-server/node_modules

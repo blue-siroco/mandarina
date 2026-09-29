@@ -1,0 +1,630 @@
+// Tokens de diseño: `spec/design.md` (Mandarina Telemetry). Los componentes no usan valores literales.
+// Claro por defecto; el oscuro se activa con `data-theme='dark'` o, sin tema explícito, con
+// `prefers-color-scheme: dark`. Los nombres semánticos del sistema (`bg-panel`, `text-muted`,
+// `primary`, los seis carriles…) son la fuente de verdad; los nombres anteriores (`--surface-1`,
+// `--brand`, `--ok`…) son alias que los mapean para no reescribir cada componente.
+
+@mixin light-tokens {
+  color-scheme: light;
+
+  --bg-canvas: #ffffff;
+  --bg-panel: #f8f9fa;
+  --bg-raised: #ffffff;
+  --bg-muted: #f1f3f5;
+  --bg-overlay: #ffffff;
+  --border-default: #e5e7eb;
+  --border-subtle: #f3f4f6;
+  --border-strong: #d1d5db;
+  --text-primary: #111827;
+  --text-secondary: #1f2937;
+  --text-muted: #4b5563;
+  --text-disabled: #9ca3af;
+  // Texto secundario que sí debe leerse (etiquetas, detalles): 4,5:1 sobre `bg-canvas` y `bg-panel`.
+  // `text-disabled` queda para lo deshabilitado, los vacíos y los números de línea.
+  --text-subtle: #6b7280;
+
+  --primary: #ea580c;
+  --primary-hover: #c2410c;
+  --primary-active: #9a3412;
+  --primary-glow: #f97316;
+  --on-primary: #ffffff;
+  --primary-tint: #fff7ed;
+  --primary-tint-border: #ffedd5;
+  --primary-text: #9a3412;
+  --focus-ring: rgb(234 88 12 / 0.12);
+  --selection: #ffedd5;
+
+  --success: #10b981;
+  --success-bg: #ecfdf5;
+  --success-text: #065f46;
+  --success-border: #a7f3d0;
+  --prompt: #3b82f6;
+  --prompt-bg: #eff6ff;
+  --prompt-text: #1e40af;
+  --prompt-border: #bfdbfe;
+  --reasoning: #8b5cf6;
+  --reasoning-bg: #f5f3ff;
+  --reasoning-text: #5b21b6;
+  --reasoning-border: #ddd6fe;
+  --tool: #06b6d4;
+  --tool-bg: #ecfeff;
+  --tool-text: #155e75;
+  --tool-border: #a5f3fc;
+  --warning: #eab308;
+  --warning-bg: #fefce8;
+  --warning-text: #854d0e;
+  --warning-border: #fef08a;
+  --error: #f43f5e;
+  --error-bg: #fff1f2;
+  --error-text: #9f1239;
+  --error-border: #fecdd3;
+
+  --shadow-1: 0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 3px 0 rgb(0 0 0 / 0.02);
+  --shadow-2: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-3: 0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.04);
+  --glow-active: 0 0 0 1px #ea580c, 0 0 0 3px rgb(234 88 12 / 0.12);
+  --scrim: rgb(17 24 39 / 0.4);
+
+  // Paleta categórica de modelos: Opus → 1, Sonnet → 2, Haiku → 3, Fable → 4.
+  --series-1: #c2570c;
+  --series-2: #6d28d9;
+  --series-3: #047857;
+  --series-4: #1d4ed8;
+  --series-5: #be185d;
+  --series-6: #a16207;
+  --series-other: #5b5b66;
+}
+
+@mixin dark-tokens {
+  color-scheme: dark;
+
+  --bg-canvas: #0f0f11;
+  --bg-panel: #17171a;
+  --bg-raised: #1f1f23;
+  --bg-muted: #2a2a2f;
+  --bg-overlay: #2a2a2f;
+  --border-default: #27272a;
+  --border-subtle: #1e1e24;
+  --border-strong: #3f3f46;
+  --text-primary: #ececf1;
+  --text-secondary: #d4d4d8;
+  --text-muted: #a1a1aa;
+  --text-disabled: #71717a;
+  --text-subtle: #8b8b95;
+
+  --primary: #ff8a2a;
+  --primary-hover: #ffa14e;
+  --primary-active: #e8761a;
+  --primary-glow: #ff8a2a;
+  --on-primary: #0f0f11;
+  --primary-tint: rgb(255 138 42 / 0.14);
+  --primary-tint-border: rgb(255 138 42 / 0.45);
+  --primary-text: #ff8a2a;
+  --focus-ring: rgb(255 138 42 / 0.2);
+  --selection: rgb(255 138 42 / 0.14);
+
+  --success: #22c55e;
+  --success-bg: rgb(34 197 94 / 0.12);
+  --success-text: #22c55e;
+  --success-border: rgb(34 197 94 / 0.25);
+  --prompt: #60a5fa;
+  --prompt-bg: rgb(96 165 250 / 0.12);
+  --prompt-text: #60a5fa;
+  --prompt-border: rgb(96 165 250 / 0.25);
+  --reasoning: #a78bfa;
+  --reasoning-bg: rgb(167 139 250 / 0.12);
+  --reasoning-text: #a78bfa;
+  --reasoning-border: rgb(167 139 250 / 0.25);
+  --tool: #22d3ee;
+  --tool-bg: rgb(34 211 238 / 0.12);
+  --tool-text: #22d3ee;
+  --tool-border: rgb(34 211 238 / 0.25);
+  --warning: #eab308;
+  --warning-bg: rgb(234 179 8 / 0.12);
+  --warning-text: #eab308;
+  --warning-border: rgb(234 179 8 / 0.25);
+  --error: #f43f5e;
+  --error-bg: rgb(244 63 94 / 0.1);
+  --error-text: #f43f5e;
+  --error-border: rgb(244 63 94 / 0.3);
+
+  --shadow-1: none;
+  --shadow-2: 0 4px 12px -2px rgb(0 0 0 / 0.45);
+  --shadow-3: 0 12px 32px -4px rgb(0 0 0 / 0.65), 0 4px 12px -2px rgb(0 0 0 / 0.45);
+  --glow-active: 0 0 0 1px #ff8a2a, 0 0 16px -2px rgb(255 138 42 / 0.35);
+  --scrim: rgb(0 0 0 / 0.6);
+
+  --series-1: #ff8a2a;
+  --series-2: #8b5cf6;
+  --series-3: #10b981;
+  --series-4: #3b82f6;
+  --series-5: #ec4899;
+  --series-6: #eab308;
+  --series-other: #71717a;
+}
+
+:root {
+  @include light-tokens;
+
+  // Alias de los nombres anteriores. Superficies: la página es el lienzo, las tarjetas y paneles
+  // son `bg-panel` y lo hundido (cabeceras de tabla, campos) es `bg-muted`.
+  --bg: var(--bg-canvas);
+  --surface-1: var(--bg-panel);
+  --surface-2: var(--bg-muted);
+  --surface-3: color-mix(in srgb, var(--bg-muted) 84%, var(--text-primary));
+  --border: var(--border-default);
+  --text: var(--text-primary);
+
+  --brand: var(--primary);
+  --brand-soft: var(--primary-tint);
+  --brand-contrast: var(--on-primary);
+
+  // Tipos de Evento: cada uno usa el carril que le corresponde.
+  --evt-session: var(--text-muted);
+  --evt-prompt: var(--prompt);
+  --evt-tool: var(--tool);
+  --evt-subagent: var(--reasoning);
+  --evt-turn: var(--success);
+  --evt-block: var(--error);
+
+  // Estados como texto o borde usan la variante legible de cada carril; los puntos, el color base.
+  --ok: var(--success-text);
+  --warn: var(--warning-text);
+  --danger: var(--error-text);
+  --info: var(--prompt-text);
+  --ok-soft: var(--success-bg);
+  --warn-soft: var(--warning-bg);
+  --danger-soft: var(--error-bg);
+  --info-soft: var(--prompt-bg);
+
+  --state-active: var(--success);
+  --state-idle: var(--warning);
+  --state-orphan: var(--error);
+  --state-closed: var(--text-disabled);
+
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
+
+  --space-2xs: 0.125rem;
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 0.75rem;
+  --space-lg: 1rem;
+  --space-xl: 1.5rem;
+  --space-2xl: 2rem;
+  --space-3xl: 3rem;
+  // Escala numérica de los componentes existentes.
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  // Solo los puntos de estado son totalmente redondos (`full`).
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  --shadow-pop: var(--shadow-3);
+
+  --rail-left: 240px;
+  --row-compact: 32px;
+  --row-expandable: 44px;
+  --control-compact: 32px;
+  --control-regular: 38px;
+
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+// Sin tema explícito, el oscuro sigue al sistema.
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    @include dark-tokens;
+  }
+}
+
+:root[data-theme='dark'] {
+  @include dark-tokens;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.375rem;
+  color: var(--text-primary);
+  background: var(--bg-canvas);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--selection);
+}
+
+code,
+pre {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.375rem;
+}
+
+// Foco visible en todo lo interactivo.
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+// Los campos usan el anillo del sistema: borde `primary` y halo suave.
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+// Etiqueta de sección y de ficha: `label-xs`, mono en mayúsculas pequeñas.
+.overline {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  line-height: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+
+  h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    line-height: 2rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+}
+
+.page-header__subtitle {
+  margin: var(--space-1) 0 0;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+// Una región separada por borde, sin sombra: la profundidad sale de la capa tonal.
+.card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.notice {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+}
+
+.notice--warn {
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  color: var(--text-primary);
+}
+
+.notice--danger {
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
+  color: var(--text-primary);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skeleton {
+  padding: var(--space-2) var(--space-4);
+}
+
+.skeleton__row {
+  height: 20px;
+  margin: var(--space-2) 0;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--bg-muted) 25%, var(--surface-3) 50%, var(--bg-muted) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+// Datos de máquina (horas, duraciones, tokens, rutas, herramientas) en mono y con cifras tabulares.
+.mono {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+// Color de cada Tipo de evento. Lo usan filas, carriles y leyendas; el texto de la etiqueta
+// evita depender solo del color.
+[data-type] {
+  --type-color: var(--evt-session);
+}
+
+[data-type='prompt.submitted'] {
+  --type-color: var(--evt-prompt);
+}
+
+[data-type='tool.pre'],
+[data-type='tool.post'] {
+  --type-color: var(--evt-tool);
+}
+
+[data-type='subagent.started'],
+[data-type='subagent.stopped'] {
+  --type-color: var(--evt-subagent);
+}
+
+[data-type='turn.ended'] {
+  --type-color: var(--evt-turn);
+}
+
+[data-type='tool.blocked'] {
+  --type-color: var(--evt-block);
+}
+
+// Tarjeta de métrica y su rejilla.
+.kpi-grid {
+  display: grid;
+  // Mínimo menor que los 180 px del diseño para que quepan dos por fila en móvil.
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-3);
+}
+
+.kpi {
+  min-width: 0;
+  padding: var(--space-md);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--dur-fast) var(--ease);
+
+  &:hover {
+    border-color: var(--border-strong);
+  }
+
+  h3 {
+    color: var(--text-muted);
+  }
+}
+
+// `metric`: mono, cifras tabulares para que el número no salte al actualizarse.
+.kpi__value {
+  margin: var(--space-2) 0 var(--space-1);
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--text-primary);
+
+  [data-accent='brand'] & {
+    color: var(--primary-text);
+  }
+
+  [data-accent='ok'] & {
+    color: var(--success-text);
+  }
+
+  [data-accent='danger'] & {
+    color: var(--error-text);
+  }
+}
+
+.kpi__detail {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: var(--text-subtle);
+  overflow-wrap: anywhere;
+
+  // Un detalle malo (p. ej. un sobrecoste de caché) también se dice con texto (AC-74).
+  &[data-tone='danger'] {
+    color: var(--error-text);
+  }
+}
+
+// Etiqueta de telemetría: `label-sm` en mono y mayúsculas, con los colores de su carril.
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 20px;
+  padding: 0 6px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--bg-muted);
+  color: var(--text-muted);
+}
+
+.badge--success {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success-text);
+}
+
+.badge--prompt {
+  background: var(--prompt-bg);
+  border-color: var(--prompt-border);
+  color: var(--prompt-text);
+}
+
+.badge--reasoning,
+.badge--subagent {
+  background: var(--reasoning-bg);
+  border-color: var(--reasoning-border);
+  color: var(--reasoning-text);
+}
+
+.badge--tool {
+  background: var(--tool-bg);
+  border-color: var(--tool-border);
+  color: var(--tool-text);
+}
+
+.badge--warning {
+  background: var(--warning-bg);
+  border-color: var(--warning-border);
+  color: var(--warning-text);
+}
+
+.badge--error,
+.badge--block {
+  background: var(--error-bg);
+  border-color: var(--error-border);
+  color: var(--error-text);
+}
+
+// Pendiente o en curso: el tinte primario, nunca un carril.
+.badge--pending {
+  background: var(--primary-tint);
+  border-color: var(--primary-tint-border);
+  color: var(--primary-text);
+}
+
+.badge--count {
+  background: transparent;
+  font-variant-numeric: tabular-nums;
+}
+
+// Valor enmascarado por el servidor: nunca se puede revelar.
+.secret {
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--warning-bg);
+  color: var(--warning-text);
+  font-family: var(--font-mono);
+}
+
+// Estado vacío.
+.empty {
+  padding: var(--space-8) var(--space-6);
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.empty__title {
+  margin: var(--space-3) 0 var(--space-1);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.section-title {
+  margin: 0 0 var(--space-3);
+  font-size: 1.125rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+a {
+  color: var(--primary-text);
+}
+
+// Chip de filtro de selección múltiple.
+.chip {
+  height: var(--control-compact);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--bg-canvas);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
+
+  &:hover {
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+  }
+
+  &[aria-pressed='true'] {
+    border-color: var(--primary-tint-border);
+    background: var(--primary-tint);
+    color: var(--primary-text);
+  }
+}
+
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--primary-text);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+// Los web components de Lucia heredan la paleta por sus variables `--neutral*`:
+// `--neutral4` es el texto de las opciones no elegidas y debe cumplir AA. La opción elegida se
+// pinta con fondo blanco fijo dentro del componente, así que su texto (`--neutral8`) tiene que
+// ser oscuro también en el tema oscuro.
+lucia--togglebuttons {
+  --neutral1: var(--bg-canvas);
+  --neutral4: var(--text-muted);
+  --neutral8: #111827;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,86 @@
+@let s = state();
+
+<section class="usage" aria-labelledby="usage-title">
+  <header class="usage__header">
+    <h2 id="usage-title" class="overline">{{ title() }}</h2>
+    @if (s.metrics) {
+      <p class="usage__updated">
+        Actualizado a las
+        <time [attr.datetime]="s.metrics.generatedAt.toISOString()">{{ s.metrics.generatedAt | date: 'HH:mm:ss' }}</time>
+      </p>
+    }
+  </header>
+
+  @if (s.failed) {
+    <p class="notice notice--warn" role="alert" data-testid="usage-error">
+      @if (s.metrics) {
+        No se pudieron actualizar las métricas; se muestran las últimas conocidas.
+      } @else {
+        No se pudieron cargar las métricas de uso. Se reintentará en unos segundos.
+      }
+    </p>
+  }
+
+  @if (!s.loaded) {
+    <div class="kpi-grid" aria-busy="true">
+      <p class="visually-hidden">Cargando métricas…</p>
+      @for (card of skeletonCards; track card) {
+        <div class="kpi kpi--skeleton" aria-hidden="true"><div class="skeleton__row"></div><div class="skeleton__row"></div></div>
+      }
+    </div>
+  } @else if (cards().length > 0) {
+    <div class="kpi-grid">
+      @for (card of cards(); track card.key) {
+        <article
+          class="kpi kpi--button"
+          data-testid="usage-card"
+          role="button"
+          tabindex="0"
+          aria-haspopup="dialog"
+          [attr.aria-label]="card.label + ': ' + card.value + '. Ver el desglose'"
+          [attr.data-kpi]="card.key"
+          [attr.data-accent]="card.accent"
+          (click)="open(card)"
+          (keydown.enter)="open(card, $event)"
+          (keydown.space)="open(card, $event)"
+        >
+          <h3 class="overline">{{ card.label }}</h3>
+          <p class="kpi__value">{{ card.value }}</p>
+          <p class="kpi__detail" [attr.data-tone]="card.tone">{{ card.detail }}</p>
+          @if (card.key === 'cost' && dayBudget(); as day) {
+            <div class="day-budget" data-testid="day-budget" [attr.data-state]="day.state">
+              <p class="day-budget__label">
+                <span data-testid="day-budget-label">{{ day.label }}</span>
+                · <span data-testid="day-budget-percent">{{ day.ratio | percent: '1.0-0' }}</span>
+                · <strong data-testid="day-budget-state">{{ stateLabels[day.state] }}</strong>
+              </p>
+              <div
+                class="day-budget__bar"
+                role="progressbar"
+                aria-label="Gastado hoy frente al Presupuesto global del día"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                [attr.aria-valuenow]="day.percent"
+              >
+                <span class="day-budget__fill" [style.width.%]="day.percent"></span>
+              </div>
+            </div>
+          }
+        </article>
+      }
+    </div>
+  }
+</section>
+
+@if (openCard(); as card) {
+  <app-breakdown-modal
+    [isOpen]="true"
+    [kpi]="card.key"
+    [label]="card.label"
+    [periodTitle]="title()"
+    [windowMs]="windowMs()"
+    [directory]="directory()"
+    (closed)="onClosed()"
+    (directorySelected)="directorySelected.emit($event)"
+  />
+}

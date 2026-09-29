@@ -1,0 +1,58 @@
+@let s = state();
+
+@if (s.failed) {
+  <p class="notice notice--warn" role="alert" data-testid="session-skills-error">
+    No se pudieron cargar las Invocaciones de skill. Se reintentará con el siguiente Evento de la Sesión.
+  </p>
+}
+
+@if (!s.loaded) {
+  <p class="muted" aria-busy="true">Cargando Invocaciones de skill…</p>
+} @else if (s.invocations.length === 0) {
+  <div class="card empty" data-testid="session-skills-empty">
+    <p class="empty__title">Esta Sesión no ha cargado ninguna skill</p>
+    <p>Aparecen aquí las que carga el agente con la herramienta <code>Skill</code> y las que pides con <code>/nombre</code> al principio del prompt.</p>
+  </div>
+} @else {
+  <div class="card table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Hora</th>
+          <th scope="col">Skill</th>
+          <th scope="col">Argumentos</th>
+          <th scope="col">Quién</th>
+          <th scope="col">Estado</th>
+          <th scope="col" class="num-col">Duración</th>
+          <th scope="col">Turno</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (invocation of s.invocations; track invocation.id) {
+          <tr data-testid="skill-invocation" [attr.data-status]="invocation.status">
+            <td class="mono num">{{ invocation.startedAt | date: 'HH:mm:ss' }}</td>
+            <td class="mono">{{ invocation.skill }}</td>
+            <td class="args" [title]="invocation.args ?? ''">{{ invocation.args ?? '—' }}</td>
+            <td><span class="badge" [attr.data-invoker]="invocation.invoker">{{ invokerLabel(invocation) }}</span></td>
+            <td>
+              <span class="status" [attr.data-status]="invocation.status">{{ statusLabels[invocation.status] }}</span>
+              @if (invocation.error) {
+                <span class="error">{{ invocation.error }}</span>
+              }
+            </td>
+            <td class="mono num num-col">{{ invocation.durationMs === null ? '—' : formatDuration(invocation.durationMs) }}</td>
+            <td>
+              @if (invocation.turn !== null) {
+                <a [routerLink]="[]" [queryParams]="{ pestana: 'linea', turno: invocation.turn }" queryParamsHandling="merge">
+                  Turno {{ invocation.turn }}
+                </a>
+              } @else {
+                —
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

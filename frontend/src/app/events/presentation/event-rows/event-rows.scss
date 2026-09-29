@@ -1,0 +1,286 @@
+// Filas de Evento (spec/design.md §5.7, §5.8). Colores por Tipo en `styles.scss`.
+:host {
+  display: block;
+}
+
+.events {
+  width: 100%;
+  // Con anchos fijos por columna el recorte con elipsis funciona y la tabla
+  // nunca es más ancha que su tarjeta.
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 13px;
+  line-height: 18px;
+
+  th,
+  td {
+    height: 36px;
+    padding: var(--space-2) var(--space-3);
+    text-align: left;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border);
+  }
+
+  th {
+    height: 32px;
+    background: var(--surface-2);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  tbody tr {
+    transition: background var(--dur-fast) var(--ease);
+
+    &:last-child td {
+      border-bottom: 0;
+    }
+
+    &:hover {
+      background: var(--surface-2);
+    }
+  }
+
+  // Un Bloqueo se ve sin expandir (§5.8).
+  tbody tr[data-type='tool.blocked'] {
+    background: var(--danger-soft);
+  }
+
+  // Barra izquierda con el color del Tipo de evento.
+  tbody tr[data-testid='event-row'] td:first-child {
+    background: linear-gradient(to right, var(--type-color) 3px, transparent 3px);
+  }
+
+  th:first-child,
+  td:first-child {
+    padding-left: var(--space-4);
+  }
+}
+
+.col-time {
+  width: 96px;
+}
+
+.col-type {
+  width: 210px;
+}
+
+.col-project {
+  width: 120px;
+}
+
+.col-session {
+  width: 104px;
+}
+
+.col-directory {
+  width: 22%;
+}
+
+.col-toggle {
+  width: 56px;
+}
+
+.events td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.time {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.type {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+.type__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--type-color);
+}
+
+.summary {
+  .mono {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.block-reason {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.session {
+  text-decoration: none;
+
+  code {
+    padding: 1px var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    color: var(--text);
+  }
+
+  &:hover code {
+    border-color: var(--brand);
+  }
+}
+
+.subagent {
+  margin-left: var(--space-2);
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--evt-subagent) 16%, transparent);
+  color: var(--evt-subagent);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.directory {
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+
+.toggle {
+  text-align: right;
+
+  .events & {
+    text-overflow: clip;
+  }
+}
+
+.toggle__button {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+
+  svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    transition: transform var(--dur-fast) var(--ease);
+  }
+
+  &[aria-expanded='true'] svg {
+    transform: rotate(90deg);
+  }
+
+  &:hover {
+    background: var(--surface-3);
+    color: var(--text);
+  }
+}
+
+.detail td {
+  overflow: visible;
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  background: var(--surface-2);
+  box-shadow: inset 3px 0 0 var(--type-color);
+}
+
+.detail__grid {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-1) var(--space-4);
+  margin: 0 0 var(--space-3);
+
+  dt {
+    color: var(--text-subtle);
+  }
+
+  dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+.detail__payload {
+  max-height: 320px;
+  margin: var(--space-2) 0 0;
+  padding: var(--space-3);
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+// Desktop-first: en pantallas estrechas cada fila pasa a ser una tarjeta.
+@media (max-width: 768px) {
+  .events {
+    thead {
+      display: none;
+    }
+
+    tbody tr {
+      display: block;
+      position: relative;
+      padding: var(--space-2) var(--space-4);
+      border-bottom: 1px solid var(--border);
+      box-shadow: inset 3px 0 0 var(--type-color);
+    }
+
+    tbody td,
+    tbody tr[data-testid='event-row'] td:first-child {
+      display: flex;
+      gap: var(--space-3);
+      height: auto;
+      padding: var(--space-1) 0;
+      border: 0;
+      background: none;
+
+      &[data-label]::before {
+        content: attr(data-label);
+        flex: 0 0 6.5rem;
+        color: var(--text-subtle);
+        font-family: var(--font-sans);
+      }
+    }
+
+    .toggle {
+      position: absolute;
+      top: var(--space-2);
+      right: var(--space-2);
+      width: auto;
+    }
+
+    .summary {
+      max-width: none;
+      min-width: 0;
+      flex-wrap: wrap;
+    }
+  }
+
+  .directory {
+    max-width: none;
+    white-space: normal;
+    word-break: break-all;
+  }
+}

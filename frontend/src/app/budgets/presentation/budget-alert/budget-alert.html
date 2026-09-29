@@ -1,0 +1,17 @@
+<!-- La región viva existe siempre: si no, el lector de pantalla no anunciaría el aviso al aparecer. -->
+<div class="alert-region" aria-live="polite">
+  @if (worst(); as w) {
+    <div class="budget-alert" data-testid="budget-alert" [attr.data-state]="w.subject.state">
+      <span class="budget-alert__state" data-testid="budget-alert-state">{{ stateLabel() }}</span>
+      <span class="budget-alert__message" data-testid="budget-alert-message">{{ message() }}</span>
+      @if (w.more > 0) {
+        <span class="budget-alert__more" data-testid="budget-alert-more">y {{ w.more }} más</span>
+      }
+      <a class="budget-alert__link" routerLink="/presupuestos">Ver Presupuestos</a>
+      <label class="budget-alert__mute">
+        <input type="checkbox" role="switch" data-testid="budget-alert-mute" [checked]="muted()" (change)="onMute($event)" />
+        Silenciar avisos
+      </label>
+    </div>
+  }
+</div>

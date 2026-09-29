@@ -1,0 +1,37 @@
+@let v = view();
+
+<div class="lanes" [class.lanes--tall]="tall()" role="img" [attr.aria-label]="label()" data-testid="activity-lanes">
+  @for (lane of v.lanes; track lane.key) {
+    <div class="lane" data-testid="lane" [attr.data-kind]="lane.kind">
+      <span class="lane__label" [title]="lane.label">{{ lane.label }}</span>
+      <div class="lane__track">
+        @if (lane.kind === 'main') {
+          @for (turn of v.turns; track $index) {
+            <span class="turn" [style.left.%]="turn.from" [style.width.%]="turn.to - turn.from" [title]="turn.title"></span>
+          }
+        }
+        @for (bar of lane.bars; track $index) {
+          <span class="bar" data-type="tool.pre" [style.left.%]="bar.from" [style.width.%]="bar.to - bar.from" [title]="bar.title"></span>
+        }
+        @for (mark of lane.marks; track mark.id) {
+          <span
+            class="mark"
+            data-testid="lane-mark"
+            [attr.data-type]="mark.type"
+            [attr.data-shape]="mark.shape"
+            [style.left.%]="mark.at"
+            [title]="mark.title"
+          ></span>
+        }
+      </div>
+    </div>
+  }
+  <div class="axis" aria-hidden="true">
+    <span class="lane__label"></span>
+    <div class="axis__track">
+      @for (tick of v.ticks; track $index) {
+        <span class="tick num" [style.left.%]="tick.at">{{ tick.label }}</span>
+      }
+    </div>
+  </div>
+</div>

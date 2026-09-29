@@ -1,0 +1,71 @@
+@let r = run();
+
+<header class="suite__header">
+  <h4 class="overline">{{ title() }}</h4>
+  <span class="status" [attr.data-status]="status()">
+    @switch (status()) {
+      @case ('passed') {
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+      }
+      @case ('failed') {
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+      }
+      @default {
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12h14" /></svg>
+      }
+    }
+    {{ statusLabel() }}
+  </span>
+</header>
+
+@if (r) {
+  <p class="suite__value num">
+    {{ r.counts.passed }} / {{ r.counts.total }} <span class="suite__unit">pasados</span>
+  </p>
+  <p class="suite__detail num">
+    {{ plural(r.counts.failed, 'fallido', 'fallidos') }} · {{ plural(r.counts.skipped, 'omitido', 'omitidos') }}
+    @if (r.durationMs !== null) {
+      · {{ formatTestDuration(r.durationMs) }}
+    }
+    · <time [attr.datetime]="r.finishedAt.toISOString()" [title]="r.finishedAt.toLocaleString('es-ES')">{{ relativeTime(r.finishedAt, now()) }}</time>
+  </p>
+  <p class="suite__command mono" [title]="r.command ?? ''">
+    <span class="suite__runner">{{ runnerLabel(r.runner) }}</span> {{ r.command ?? '—' }}
+  </p>
+  <p class="suite__links">
+    <a class="mono" [routerLink]="['/sesiones', r.sessionId]" [title]="'Sesión ' + r.sessionId">Sesión {{ shortId(r.sessionId) }}</a>
+    @if (r.subagentId; as subagent) {
+      <a class="badge badge--subagent" [routerLink]="['/sesiones', r.sessionId]" [queryParams]="{ pestana: 'subagentes' }">
+        Subagente {{ subagent }}
+      </a>
+    }
+  </p>
+
+  @if (r.status === 'failed') {
+    <ul class="failures" aria-label="Tests fallidos">
+      @for (failure of r.failures; track $index) {
+        <li class="failure" data-testid="test-failure">
+          <div class="failure__title">
+            <span class="failure__name">{{ failure.name }}</span>
+            @if (failure.ac) {
+              <span class="badge badge--block">{{ failure.ac }}</span>
+            }
+          </div>
+          @if (failure.file) {
+            <span class="failure__file mono">{{ failure.file }}</span>
+          }
+          @if (failure.message) {
+            <span class="failure__message mono">{{ failure.message }}</span>
+          }
+        </li>
+      }
+    </ul>
+    @if (hiddenFailures() > 0) {
+      <p class="suite__more">
+        {{ r.failures.length > 0 ? 'Y ' + plural(hiddenFailures(), 'fallido más', 'fallidos más') : plural(hiddenFailures(), 'fallido', 'fallidos') + ' sin detalle en la salida' }}
+      </p>
+    }
+  }
+} @else {
+  <p class="suite__empty">Ningún agente ha lanzado tests {{ kind() === 'unit' ? 'unitarios' : 'E2E' }} en 7 días.</p>
+}

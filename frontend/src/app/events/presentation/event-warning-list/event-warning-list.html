@@ -1,0 +1,13 @@
+<p class="overline">Avisos de inyección</p>
+<ul class="warnings" data-testid="event-warning-list">
+  @for (warning of warnings(); track warning.id) {
+    <li class="warnings__item" data-testid="event-warning-item" [attr.data-severity]="warning.severity">
+      <code>{{ warning.pattern }}</code>
+      <span>Severidad {{ labels[warning.severity] }}</span>
+      @if (warning.dismissed) {
+        <span class="warnings__dismissed">Descartado</span>
+      }
+    </li>
+  }
+</ul>
+<a class="warnings__link" [routerLink]="['/seguridad']" [queryParams]="{ pestana: 'avisos', sesion: sessionId() }">Ver en Seguridad</a>

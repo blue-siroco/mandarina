@@ -1,0 +1,48 @@
+:host {
+  display: block;
+}
+
+.tools {
+  height: 100%;
+}
+
+.tools__list {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tools__row {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr) 3rem;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 12.5px;
+}
+
+.tools__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tools__track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.tools__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--evt-tool);
+}
+
+.tools__count {
+  color: var(--text-muted);
+  text-align: right;
+}

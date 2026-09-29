@@ -1,0 +1,185 @@
+// Subagentes de una Sesión (spec/design.md §6.3).
+:host {
+  display: block;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th,
+  td {
+    height: 36px;
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+
+  th {
+    background: var(--surface-2);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .right {
+    text-align: right;
+  }
+}
+
+.task-cell {
+  max-width: 22rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toggle {
+  width: 48px;
+  text-align: right;
+}
+
+.toggle__button {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+
+  svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    transition: transform var(--dur-fast) var(--ease);
+  }
+
+  &[aria-expanded='true'] svg {
+    transform: rotate(90deg);
+  }
+
+  &:hover {
+    background: var(--surface-3);
+    color: var(--text);
+  }
+}
+
+.detail td {
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  background: var(--surface-2);
+  box-shadow: inset 3px 0 0 var(--evt-subagent);
+}
+
+.block + .block {
+  margin-top: var(--space-4);
+}
+
+.task__description {
+  margin: var(--space-1) 0 var(--space-2);
+  font-weight: 600;
+}
+
+.text {
+  max-height: 280px;
+  margin: var(--space-2) 0 0;
+  padding: var(--space-3);
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.muted {
+  margin: var(--space-1) 0 0;
+  color: var(--text-muted);
+}
+
+.calls {
+  display: grid;
+  gap: 2px;
+  max-height: 320px;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+// Resultado con texto y color (§2.5): bien, error, bloqueada, en curso.
+.call {
+  display: grid;
+  grid-template-columns: 5.5rem 7rem minmax(0, 1fr) 6rem;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  font-size: 12.5px;
+
+  --status: var(--ok);
+
+  &[data-status='error'] {
+    --status: var(--danger);
+  }
+
+  &[data-status='blocked'] {
+    --status: var(--danger);
+    background: var(--danger-soft);
+  }
+
+  &[data-status='running'] {
+    --status: var(--warn);
+  }
+}
+
+.call__name {
+  color: var(--evt-tool);
+}
+
+.call__summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.call__status {
+  color: var(--status);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: right;
+}
+
+@media (max-width: 768px) {
+  .call {
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+
+    .call__summary {
+      grid-column: 1 / -1;
+    }
+
+    .call__status {
+      text-align: left;
+    }
+  }
+}
+
+.internal-filter {
+  margin-bottom: var(--space-2);
+}

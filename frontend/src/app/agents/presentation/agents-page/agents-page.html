@@ -1,0 +1,84 @@
+@let s = state();
+
+<section class="agents" aria-labelledby="agents-title">
+  <header class="page-header">
+    <div>
+      <h2 id="agents-title">Agentes</h2>
+      <p class="page-header__subtitle">Cómo trabaja cada Tipo de Subagente y cuánto cuesta frente a los demás · {{ range().title }}</p>
+    </div>
+  </header>
+
+  <div class="filters" role="group" aria-label="Filtros de agentes">
+    <app-toggle-group
+      data-testid="range-filter"
+      label="Periodo"
+      [labels]="rangeLabels"
+      [selectedIndex]="rangeIndex()"
+      [optionWidth]="64"
+      (selected)="onRangeChange($event)"
+    />
+    <app-select-filter
+      data-testid="project-filter"
+      label="Proyecto"
+      [allLabel]="allProjects"
+      [options]="s.projects"
+      [value]="project()"
+      (changed)="selectProject($event)"
+    />
+  </div>
+
+  @if (s.failed) {
+    <p class="notice notice--warn" role="alert" data-testid="agents-error">
+      No se pudieron cargar los agentes. Se reintentará con el siguiente Evento de Subagente.
+    </p>
+  }
+
+  @if (!s.loaded) {
+    <div class="card skeleton" aria-busy="true">
+      <p class="visually-hidden">Cargando agentes…</p>
+      <div class="skeleton__row" aria-hidden="true"></div>
+      <div class="skeleton__row" aria-hidden="true"></div>
+    </div>
+  } @else if (s.types.length === 0) {
+    <div class="card empty" data-testid="agents-empty">
+      <p class="empty__title">Ningún Lanzamiento en este periodo</p>
+      <p>Aparecen aquí los Tipos de Subagente en que delega el agente con la herramienta <code>Agent</code>.</p>
+    </div>
+  } @else {
+    <div class="card table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            @for (column of columns; track column.key) {
+              <th scope="col" [class.num-col]="!$first" [attr.aria-sort]="ariaSort(column)">
+                <button type="button" class="sort" [attr.data-column]="column.key" (click)="sortBy(column)">
+                  {{ column.label }}
+                  <span class="sort__arrow" aria-hidden="true">
+                    {{ ariaSort(column) === 'ascending' ? '▲' : ariaSort(column) === 'descending' ? '▼' : '' }}
+                  </span>
+                </button>
+              </th>
+            }
+            <th scope="col">Última vez</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (type of rows(); track type.type) {
+            <tr data-testid="agent-type">
+              @for (column of columns; track column.key) {
+                @if ($first) {
+                  <td>
+                    <a class="mono" [routerLink]="['/agentes', type.type ?? noType]" queryParamsHandling="preserve">{{ column.format(type) }}</a>
+                  </td>
+                } @else {
+                  <td class="mono num num-col" [attr.data-column-cell]="column.key">{{ column.format(type) }}</td>
+                }
+              }
+              <td>{{ type.lastAt ? relativeTime(type.lastAt, now()) : '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

@@ -1,0 +1,120 @@
+name: mandarina-development
+
+# Entorno de desarrollo completo (roadmap §0.7): `docker compose up`.
+# Los puertos se publican solo en 127.0.0.1: Mandarina es monousuario y local.
+
+services:
+  # --- Backend (Node.js: ingesta HTTP + WebSocket + SQLite) -----------------
+  backend:
+    build:
+      context: .
+      dockerfile: docker-configs/backend.Dockerfile
+      target: development
+    container_name: mandarina-backend
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-4000}:4000"
+    volumes:
+      - ./backend:/app
+      - backend-node-modules:/app/node_modules
+      - mandarina-data:/data
+      # ADR-0003: Transcripts leídos bajo demanda, solo lectura.
+      - ${CLAUDE_HOME:-~/.claude}:/claude-home:ro
+    environment:
+      CLAUDE_HOME_MOUNT: /claude-home
+      CHOKIDAR_USEPOLLING: "true"
+      # Exportación OTLP (roadmap §1.11, ADR-0008): apagada mientras no haya endpoint.
+      # Se define en el `.env` o en el entorno; el contenido de los prompts va aparte.
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+      MANDARINA_OTLP_INCLUDE_CONTENT: ${MANDARINA_OTLP_INCLUDE_CONTENT:-false}
+      # Enmascarado de datos personales (ADR-0009): lista de categorías, `all` o `none`.
+      MANDARINA_MASK_PII: ${MANDARINA_MASK_PII:-all}
+      # Los Presupuestos del día (roadmap §1.15) usan el día natural de esta zona horaria.
+      TZ: ${TZ:-Europe/Madrid}
+    networks:
+      - mandarina-net
+    restart: unless-stopped
+
+  # --- Frontend (Angular con hot-reload) -------------------------------------
+  frontend:
+    build:
+      context: .
+      dockerfile: docker-configs/frontend.Dockerfile
+      target: development
+    container_name: mandarina-frontend
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-4200}:4200"
+    volumes:
+      - ./frontend:/app
+      - ./customWebComponent:/customWebComponent:ro
+      - frontend-node-modules:/app/node_modules
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+      # `API_TARGET=http://mock-api:4000` para trabajar contra el mock.
+      API_TARGET: ${API_TARGET:-http://backend:4000}
+    command: sh -c "npm install && npm start -- --host 0.0.0.0 --poll 1000"
+    networks:
+      - mandarina-net
+    restart: unless-stopped
+
+  # --- Mock de la API + WebSocket con Sesiones simuladas (sin backend) ------
+  mock-api:
+    profiles: ["mock"]
+    image: node:24-bookworm-slim
+    container_name: mandarina-mock-api
+    working_dir: /app
+    ports:
+      - "127.0.0.1:${MOCK_PORT:-4001}:4000"
+    volumes:
+      - ./mock-server:/app
+      - ./adapters:/adapters:ro
+      - mock-node-modules:/app/node_modules
+    environment:
+      MOCK_INTERVAL_MS: ${MOCK_INTERVAL_MS:-1500}
+    command: sh -c "npm install --no-audit --no-fund && node cli.mjs serve"
+    networks:
+      - mandarina-net
+    restart: unless-stopped
+
+  # --- Simulador: envía Sesiones simuladas al backend real ------------------
+  event-simulator:
+    profiles: ["simulate"]
+    image: node:24-bookworm-slim
+    container_name: mandarina-event-simulator
+    working_dir: /app
+    volumes:
+      - ./mock-server:/app
+      - ./adapters:/adapters:ro
+      - mock-node-modules:/app/node_modules
+    environment:
+      MOCK_TARGET: http://backend:4000
+      MOCK_INTERVAL_MS: ${MOCK_INTERVAL_MS:-1000}
+    command: sh -c "npm install --no-audit --no-fund && node cli.mjs send"
+    depends_on:
+      - backend
+    networks:
+      - mandarina-net
+
+  # --- Mock estático del contrato (Prism), opcional --------------------------
+  prism:
+    profiles: ["prism"]
+    image: stoplight/prism:4
+    container_name: mandarina-prism
+    ports:
+      - "127.0.0.1:4010:4010"
+    volumes:
+      - ./spec/api-spec.yaml:/tmp/api-spec.yaml:ro
+    command: ["mock", "-h", "0.0.0.0", "-d", "/tmp/api-spec.yaml"]
+    networks:
+      - mandarina-net
+
+networks:
+  mandarina-net:
+    driver: bridge
+
+volumes:
+  mandarina-data:
+  backend-node-modules:
+  frontend-node-modules:
+  mock-node-modules:

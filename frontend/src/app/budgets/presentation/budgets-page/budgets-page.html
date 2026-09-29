@@ -1,0 +1,350 @@
+@let s = state();
+
+<section class="budgets" aria-labelledby="budgets-title">
+  <header class="page-header">
+    <div>
+      <h2 id="budgets-title">Presupuestos</h2>
+      <p class="page-header__subtitle">Límites de Coste estimado que avisan o detienen al agente</p>
+    </div>
+    <div class="page-header__actions">
+      <label class="mute">
+        <input type="checkbox" role="switch" data-testid="mute-switch" [checked]="muted()" (change)="onMute($event)" />
+        Silenciar avisos
+      </label>
+      <button type="button" class="btn btn--primary" data-testid="budget-new" (click)="openCreate()">Nuevo Presupuesto</button>
+    </div>
+  </header>
+
+  <p class="explanation" data-testid="budgets-explanation">
+    El coste es una estimación con las Tarifas públicas, no la factura. El hook comprueba el Presupuesto antes de cada herramienta y de cada prompt,
+    así que una Sesión puede pasarse del límite en lo que cueste la respuesta en curso. Con Mandarina apagado los Presupuestos no protegen: el
+    hook falla abierto para no dejar a Claude Code sin herramientas (ADR-0010).
+  </p>
+
+  @if (formOpen()) {
+    <form class="card form" data-testid="budget-form" novalidate (submit)="$event.preventDefault(); save()">
+      <h3 class="form__title">{{ editingId() === null ? 'Nuevo Presupuesto' : 'Editar Presupuesto' }}</h3>
+
+      <label class="field">
+        <span class="field__label">Ámbito</span>
+        <select class="field__control" data-testid="field-scope" [value]="draft().scope" (change)="setScope($any($event.target).value)">
+          @for (scope of scopes; track scope) {
+            <option [value]="scope" [selected]="scope === draft().scope">{{ scopeLabels[scope] }}</option>
+          }
+        </select>
+        <span class="field__hint">
+          @switch (draft().scope) {
+            @case ('session') {
+              Cada Sesión por separado, de todos los Proyectos o de uno.
+            }
+            @case ('project_day') {
+              Un Proyecto en el día natural.
+            }
+            @default {
+              Todos los Proyectos en el día natural.
+            }
+          }
+        </span>
+      </label>
+
+      @if (draft().scope !== 'global_day') {
+        <label class="field">
+          <span class="field__label">Proyecto{{ draft().scope === 'session' ? ' (opcional)' : '' }}</span>
+          <select
+            class="field__control"
+            data-testid="field-project"
+            [value]="draft().project"
+            [attr.aria-invalid]="showErrors() && errors().project ? 'true' : null"
+            (change)="setField('project', $any($event.target).value); touched.set(true)"
+          >
+            <option value="" [selected]="draft().project === ''">{{ draft().scope === 'session' ? 'Todos los Proyectos' : 'Elige un Proyecto' }}</option>
+            @for (project of projectOptions(); track project) {
+              <option [value]="project" [selected]="project === draft().project">{{ project }}</option>
+            }
+          </select>
+          @if (showErrors() && errors().project; as error) {
+            <span class="field__error" role="alert" data-testid="error-project">{{ error }}</span>
+          }
+        </label>
+      }
+
+      <label class="field">
+        <span class="field__label">Límite (USD)</span>
+        <input
+          class="field__control"
+          type="text"
+          inputmode="decimal"
+          data-testid="field-limit"
+          [value]="draft().limit"
+          [attr.aria-invalid]="showErrors() && errors().limit ? 'true' : null"
+          (input)="setField('limit', $any($event.target).value); touched.set(true)"
+        />
+        @if (showErrors() && errors().limit; as error) {
+          <span class="field__error" role="alert" data-testid="error-limit">{{ error }}</span>
+        }
+      </label>
+
+      <label class="field">
+        <span class="field__label">Avisar al llegar al (%)</span>
+        <input
+          class="field__control"
+          type="text"
+          inputmode="decimal"
+          data-testid="field-threshold"
+          [value]="draft().threshold"
+          [attr.aria-invalid]="showErrors() && errors().threshold ? 'true' : null"
+          (input)="setField('threshold', $any($event.target).value); touched.set(true)"
+        />
+        @if (showErrors() && errors().threshold; as error) {
+          <span class="field__error" role="alert" data-testid="error-threshold">{{ error }}</span>
+        }
+      </label>
+
+      <label class="field">
+        <span class="field__label">Al superarlo</span>
+        <select class="field__control" data-testid="field-action" [value]="draft().action" (change)="setField('action', $any($event.target).value)">
+          @for (action of actions; track action) {
+            <option [value]="action" [selected]="action === draft().action">{{ action === 'stop' ? 'Detener al agente' : 'Solo avisar' }}</option>
+          }
+        </select>
+      </label>
+
+      @if (serverError(); as error) {
+        <p class="notice notice--warn form__error" role="alert" data-testid="budget-form-error">{{ error }}</p>
+      }
+
+      <div class="form__actions">
+        <button type="submit" class="btn btn--primary" data-testid="budget-save" [disabled]="saving()">
+          {{ saving() ? 'Guardando…' : 'Guardar' }}
+        </button>
+        <button type="button" class="btn" data-testid="budget-cancel" (click)="closeForm()">Cancelar</button>
+      </div>
+    </form>
+  }
+
+  @if (actionError(); as error) {
+    <p class="notice notice--warn" role="alert" data-testid="budgets-action-error">{{ error }}</p>
+  }
+  @if (s.failed) {
+    <p class="notice notice--warn" role="alert" data-testid="budgets-error">
+      @if (s.items.length > 0) {
+        No se pudieron actualizar los Presupuestos; se muestran los últimos conocidos.
+      } @else {
+        No se pudieron cargar los Presupuestos. Se reintentará en unos segundos.
+      }
+    </p>
+  }
+
+  @if (!s.loaded) {
+    <div class="card skeleton" aria-busy="true">
+      <p class="visually-hidden">Cargando los Presupuestos…</p>
+      <div class="skeleton__row" aria-hidden="true"></div>
+      <div class="skeleton__row" aria-hidden="true"></div>
+    </div>
+  } @else if (s.items.length === 0 && !s.failed) {
+    <div class="card empty" data-testid="budgets-empty">
+      <p class="empty__title">Todavía no hay Presupuestos</p>
+      <p>
+        Un Presupuesto vigila el Coste estimado de cada Sesión, de un Proyecto en el día o de todo en el día, y avisa o detiene al agente al
+        superarlo.
+      </p>
+      <button type="button" class="btn btn--primary" (click)="openCreate()">Crear el primero</button>
+    </div>
+  } @else if (s.items.length > 0) {
+    <div class="card table-wrap">
+      <table class="table" data-testid="budgets-table">
+        <thead>
+          <tr>
+            <th scope="col">Ámbito</th>
+            <th scope="col" class="num-col">Límite</th>
+            <th scope="col">Gastado</th>
+            <th scope="col">Estado</th>
+            <th scope="col">Acción</th>
+            <th scope="col">Activo</th>
+            <th scope="col"><span class="visually-hidden">Acciones</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (budget of s.items; track budget.id) {
+            @let ratio = ratioOf(budget.spentUsd, budget.limitUsd);
+            <tr data-testid="budget-row" [attr.data-budget]="budget.id" [class.row--off]="!budget.enabled">
+              <th scope="row">
+                {{ budgetName(budget) }}
+                @if (budget.allowances.length > 0) {
+                  <span class="badge" data-testid="budget-allowances-count">{{ plural(budget.allowances.length, 'excepción', 'excepciones') }}</span>
+                }
+              </th>
+              <td class="mono num num-col" data-testid="budget-limit">{{ formatCost(budget.limitUsd) }}</td>
+              <td class="spent">
+                <span class="mono num" data-testid="budget-spent">{{ formatCost(budget.spentUsd) }} · {{ formatPercent(ratio) }}</span>
+                <div
+                  class="bar"
+                  role="progressbar"
+                  aria-label="Gastado frente al límite"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  [attr.aria-valuenow]="barWidth(ratio)"
+                  [attr.data-state]="budget.state"
+                >
+                  <span class="bar__fill" [style.width.%]="barWidth(ratio)"></span>
+                </div>
+              </td>
+              <td>
+                <span class="state" data-testid="budget-state" [attr.data-state]="budget.state">{{ stateLabels[budget.state] }}</span>
+              </td>
+              <td data-testid="budget-action">{{ actionLabels[budget.action] }}</td>
+              <td>
+                <label class="switch">
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    data-testid="budget-toggle"
+                    [checked]="budget.enabled"
+                    [attr.aria-label]="(budget.enabled ? 'Desactivar ' : 'Activar ') + budgetName(budget)"
+                    (change)="setEnabled(budget, $any($event.target).checked)"
+                  />
+                  <span>{{ budget.enabled ? 'Activo' : 'Desactivado' }}</span>
+                </label>
+              </td>
+              <td class="row-actions">
+                @if (canExpand(budget)) {
+                  <button
+                    type="button"
+                    class="btn btn--small"
+                    data-testid="budget-expand"
+                    [attr.aria-expanded]="isExpanded(budget.id)"
+                    (click)="toggle(budget.id)"
+                  >
+                    {{ isExpanded(budget.id) ? 'Ocultar ámbitos' : 'Ver ámbitos' }}
+                  </button>
+                }
+                <button type="button" class="btn btn--small" data-testid="budget-edit" (click)="openEdit(budget)">Editar</button>
+                @if (confirmingDelete() === budget.id) {
+                  <span class="confirm" role="group" aria-label="Confirmar el borrado">
+                    ¿Borrar?
+                    <button type="button" class="btn btn--small btn--danger" data-testid="budget-delete-confirm" (click)="confirmDelete(budget)">Sí, borrar</button>
+                    <button type="button" class="btn btn--small" (click)="cancelDelete()">Cancelar</button>
+                  </span>
+                } @else {
+                  <button type="button" class="btn btn--small" data-testid="budget-delete" (click)="askDelete(budget)">Borrar</button>
+                }
+              </td>
+            </tr>
+            @if (isExpanded(budget.id)) {
+              <tr class="detail" data-testid="budget-detail">
+                <td colspan="7">
+                  @if (budget.scope === 'session') {
+                    <p class="muted">
+                      {{ plural(budget.sessionsTracked, 'Sesión de hoy vigilada', 'Sesiones de hoy vigiladas') }}; aquí las que están Cerca o Superadas.
+                    </p>
+                  }
+                  @if (budget.subjects.length === 0) {
+                    <p class="muted">Ninguna Sesión Cerca ni Superada.</p>
+                  } @else {
+                    <ul class="subjects">
+                      @for (subject of budget.subjects; track $index) {
+                        <li class="subject" data-testid="budget-subject" [attr.data-state]="subject.state">
+                          <div class="subject__head">
+                            @if (subject.sessionId; as session) {
+                              <a class="mono" [routerLink]="['/sesiones', session]">{{ subjectName(budget, subject) }}</a>
+                            } @else {
+                              <span>{{ subjectName(budget, subject) }}</span>
+                            }
+                            <span class="mono num">{{ formatCost(subject.spentUsd) }} · {{ formatPercent(subject.ratio) }}</span>
+                            <span class="state" [attr.data-state]="subject.state">{{ stateLabels[subject.state] }}</span>
+                            @if (subject.allowed) {
+                              <span class="badge">Con excepción</span>
+                            }
+                          </div>
+
+                          @if (subject.state !== 'within') {
+                            <div class="subject__actions">
+                              @if (canAllowSession(budget, subject)) {
+                                <button type="button" class="btn btn--small" data-testid="allow-session" (click)="allow(budget, { sessionId: subject.sessionId! })">
+                                  Permitir esta Sesión
+                                </button>
+                              }
+                              @if (canAllowProject(budget, subject)) {
+                                <button
+                                  type="button"
+                                  class="btn btn--small"
+                                  data-testid="allow-project"
+                                  (click)="allow(budget, { project: projectOfAllowance(budget, subject) })"
+                                >
+                                  Permitir este Proyecto hoy
+                                </button>
+                              }
+                              @if (canAllowChosenProject(budget, subject)) {
+                                <label class="inline-field">
+                                  <span class="visually-hidden">Proyecto al que permitir seguir</span>
+                                  <select class="field__control field__control--small" data-testid="allow-project-select" (change)="allowProject.set($any($event.target).value)">
+                                    <option value="">Elige un Proyecto</option>
+                                    @for (project of knownProjects(); track project) {
+                                      <option [value]="project">{{ project }}</option>
+                                    }
+                                  </select>
+                                </label>
+                                <button
+                                  type="button"
+                                  class="btn btn--small"
+                                  data-testid="allow-project"
+                                  [disabled]="allowProject() === ''"
+                                  (click)="allow(budget, { project: allowProject() })"
+                                >
+                                  Permitir este Proyecto hoy
+                                </button>
+                              }
+                              @if (raising()?.key === subjectKey(budget, subject)) {
+                                <label class="inline-field">
+                                  <span class="visually-hidden">Nuevo límite (USD)</span>
+                                  <input
+                                    class="field__control field__control--small"
+                                    type="text"
+                                    inputmode="decimal"
+                                    data-testid="raise-input"
+                                    [value]="raising()!.value"
+                                    (input)="setRaiseValue($any($event.target).value)"
+                                  />
+                                </label>
+                                <button type="button" class="btn btn--small btn--primary" data-testid="raise-apply" [disabled]="raiseError() !== null" (click)="applyRaise(budget)">
+                                  Aplicar
+                                </button>
+                                <button type="button" class="btn btn--small" (click)="cancelRaise()">Cancelar</button>
+                                @if (raiseError(); as error) {
+                                  <span class="field__error" role="alert">{{ error }}</span>
+                                }
+                              } @else {
+                                <button type="button" class="btn btn--small" data-testid="raise-limit" (click)="startRaise(budget, subject)">
+                                  Ampliar el límite
+                                </button>
+                              }
+                            </div>
+                          }
+                        </li>
+                      }
+                    </ul>
+                  }
+
+                  @if (budget.allowances.length > 0) {
+                    <h4 class="overline">Excepciones vigentes</h4>
+                    <ul class="allowances">
+                      @for (allowance of budget.allowances; track allowance.id) {
+                        <li class="allowance" data-testid="budget-allowance">
+                          <span>{{ allowanceName(allowance) }}</span>
+                          @if (allowance.until; as until) {
+                            <span class="muted">hasta {{ until | date: 'd MMM HH:mm' }}</span>
+                          }
+                          <button type="button" class="btn btn--small" data-testid="allowance-remove" (click)="removeAllowance(budget, allowance)">Quitar</button>
+                        </li>
+                      }
+                    </ul>
+                  }
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

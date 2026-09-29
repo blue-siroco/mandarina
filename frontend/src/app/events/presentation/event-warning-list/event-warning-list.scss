@@ -1,0 +1,31 @@
+:host {
+  display: block;
+  margin-bottom: var(--space-3);
+}
+
+.warnings {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-1) 0 var(--space-2);
+  padding: 0;
+  list-style: none;
+}
+
+.warnings__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+
+  &[data-severity='high'] code {
+    color: var(--danger);
+  }
+}
+
+.warnings__dismissed {
+  color: var(--text-subtle);
+}
+
+.warnings__link {
+  font-size: 12px;
+}

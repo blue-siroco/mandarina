@@ -1,0 +1,134 @@
+@let s = state();
+@let st = stats();
+
+<section class="blocks" aria-labelledby="blocks-title">
+  <header class="page-header">
+    <div>
+      <h2 id="blocks-title">Bloqueos</h2>
+      <p class="page-header__subtitle">Invocaciones que las Reglas de bloqueo impidieron en los últimos 7 días</p>
+    </div>
+  </header>
+
+  @if (s.failed) {
+    <p class="notice notice--warn" role="alert" data-testid="blocks-error">
+      No se pudieron cargar los Bloqueos. Se muestran solo los que lleguen en vivo.
+    </p>
+  }
+
+  <div class="kpi-grid" data-testid="block-kpis">
+    <article class="kpi" data-kpi="today" data-accent="danger">
+      <h3 class="overline">Bloqueos hoy</h3>
+      <p class="kpi__value">{{ formatInteger(st.today) }}</p>
+      <p class="kpi__detail">Desde las 00:00</p>
+    </article>
+    <article class="kpi" data-kpi="week">
+      <h3 class="overline">Bloqueos en 7 días</h3>
+      <p class="kpi__value">{{ formatInteger(st.week) }}</p>
+      <p class="kpi__detail">{{ plural(st.rules.length, 'Regla distinta', 'Reglas distintas') }}</p>
+    </article>
+    <article class="kpi" data-kpi="top-rule">
+      <h3 class="overline">Regla más disparada</h3>
+      <p class="kpi__value kpi__value--text mono">{{ st.topRule?.rule ?? '—' }}</p>
+      <p class="kpi__detail">{{ st.topRule ? plural(st.topRule.count, 'Bloqueo', 'Bloqueos') : 'Sin Bloqueos' }}</p>
+    </article>
+    <article class="kpi" data-kpi="sessions">
+      <h3 class="overline">Sesiones afectadas</h3>
+      <p class="kpi__value">{{ formatInteger(st.sessions) }}</p>
+      <p class="kpi__detail">En 7 días</p>
+    </article>
+  </div>
+
+  <article class="card chart" data-testid="block-chart">
+    <h3 class="section-title">Bloqueos por día y Regla</h3>
+    <div class="chart__bars" role="img" [attr.aria-label]="'Bloqueos por día: ' + st.week + ' en total'">
+      @for (day of st.days; track day.day.getTime()) {
+        <div class="chart__day" data-testid="block-day" [attr.data-total]="day.total">
+          <div class="chart__stack">
+            @for (count of day.counts; track $index; let i = $index) {
+              @if (count > 0) {
+                <span
+                  class="chart__segment"
+                  [style.height.%]="(count / maxDay()) * 100"
+                  [style.background]="ruleColor(i)"
+                  [title]="st.rules[i] + ': ' + count"
+                ></span>
+              }
+            }
+          </div>
+          <span class="chart__total num">{{ day.total }}</span>
+          <span class="chart__label">{{ day.day | date: 'EEE d' }}</span>
+        </div>
+      }
+    </div>
+    @if (st.rules.length > 0) {
+      <ul class="legend">
+        @for (rule of st.rules; track rule; let i = $index) {
+          <li><span class="legend__swatch" [style.background]="ruleColor(i)"></span><span class="mono">{{ rule }}</span></li>
+        }
+      </ul>
+    }
+  </article>
+
+  <div class="table-header">
+    <h3 class="section-title">Registro</h3>
+    <app-select-filter
+      data-testid="rule-filter"
+      label="Regla"
+      [allLabel]="allRules"
+      [options]="st.rules"
+      [value]="rule()"
+      (changed)="selectRule($event)"
+    />
+    @if (rule(); as r) {
+      <button type="button" class="link-button" (click)="selectRule(null)">Quitar filtro {{ r }}</button>
+    }
+  </div>
+
+  @if (!s.loaded) {
+    <div class="card skeleton" aria-busy="true">
+      <p class="visually-hidden">Cargando Bloqueos…</p>
+      <div class="skeleton__row" aria-hidden="true"></div>
+      <div class="skeleton__row" aria-hidden="true"></div>
+    </div>
+  } @else if (rows().length === 0) {
+    <div class="card empty" data-testid="blocks-empty">
+      <p class="empty__title">{{ rule() ? 'Ninguna invocación bloqueada por esta Regla' : 'Ningún Bloqueo en 7 días' }}</p>
+      <p>Las Reglas de bloqueo se configuran en <code>adapters/claude-code/rules.json</code>.</p>
+    </div>
+  } @else {
+    <div class="card table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Hora</th>
+            <th scope="col">Proyecto</th>
+            <th scope="col">Sesión</th>
+            <th scope="col">Herramienta</th>
+            <th scope="col">Entrada</th>
+            <th scope="col">Regla</th>
+            <th scope="col">Motivo</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.id) {
+            <tr data-testid="block-row">
+              <td class="mono num">{{ row.occurredAt | date: 'd MMM HH:mm:ss' }}</td>
+              <td>{{ row.project }}</td>
+              <td>
+                <a class="mono" [routerLink]="['/sesiones', row.sessionId]" [queryParams]="{ pestana: 'bloqueos' }">{{ shortId(row.sessionId) }}</a>
+              </td>
+              <td class="mono">{{ row.toolName ?? '—' }}</td>
+              <td class="mono entry" [title]="row.summary ?? ''">{{ row.summary ?? '—' }}</td>
+              <td>
+                <button type="button" class="badge badge--block rule-button" [title]="'Filtrar por ' + row.rule" (click)="selectRule(row.rule)">
+                  {{ row.rule }}
+                </button>
+              </td>
+              <td>{{ row.reason }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

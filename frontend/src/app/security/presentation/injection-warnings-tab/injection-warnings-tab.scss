@@ -1,0 +1,131 @@
+:host {
+  display: block;
+}
+
+.warnings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.explanation,
+.session-filter {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: flex-end;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th,
+  td {
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  thead th {
+    background: var(--surface-2);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  // Un aviso descartado sigue en la lista, pero apagado.
+  tr[data-dismissed='true'] td {
+    opacity: 0.6;
+  }
+}
+
+// La severidad se dice con texto además de con color.
+.severity {
+  font-weight: 700;
+
+  &[data-severity='high'] {
+    color: var(--danger);
+  }
+
+  &[data-severity='medium'] {
+    color: var(--warn);
+  }
+
+  &[data-severity='low'] {
+    color: var(--text-muted);
+  }
+}
+
+.pattern,
+.source > span,
+td > .muted {
+  display: block;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.source,
+.snippet {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.snippet {
+  white-space: normal;
+  word-break: break-word;
+}
+
+.following {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  white-space: nowrap;
+}
+
+.dismiss {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--brand);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+}

@@ -1,0 +1,227 @@
+// Shell de la aplicación (spec/design.md §4).
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--surface-1);
+  border-right: 1px solid var(--border);
+}
+
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 52px;
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--border);
+
+  h1 {
+    margin: 0;
+    font-size: 15px;
+    line-height: 22px;
+    font-weight: 600;
+  }
+}
+
+.logo {
+  display: block;
+  flex: none;
+  width: 24px;
+  height: 24px;
+}
+
+.sidebar__nav {
+  flex: 1;
+  padding: var(--space-4) var(--space-2);
+}
+
+.sidebar__group {
+  padding: 0 var(--space-2) var(--space-2);
+}
+
+// Un grupo nuevo se separa del anterior (Observar → Configurar).
+.sidebar__group--next {
+  margin-top: var(--space-4);
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: 36px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+
+  svg {
+    flex: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  &:hover {
+    background: var(--surface-2);
+    color: var(--text);
+  }
+
+  &[aria-current='page'] {
+    background: var(--primary-tint);
+    color: var(--primary-text);
+    font-weight: 500;
+
+    svg {
+      color: var(--primary);
+    }
+  }
+}
+
+.sidebar__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.workspace {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  height: 52px;
+  padding: 0 var(--space-6);
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+
+.content {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: var(--space-6);
+}
+
+// < 1024 px: barra lateral solo con iconos (§4.3).
+@media (max-width: 1024px) {
+  .shell {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .sidebar__brand {
+    justify-content: center;
+    padding: 0;
+
+    h1 {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+  }
+
+  .sidebar__group,
+  .nav-item__label {
+    display: none;
+  }
+
+  .nav-item {
+    justify-content: center;
+  }
+
+  .sidebar__footer {
+    flex-direction: column;
+    justify-content: center;
+  }
+}
+
+// < 768 px: la barra lateral pasa a franja superior, sin cajón.
+@media (max-width: 768px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar {
+    position: static;
+    flex-direction: row;
+    align-items: center;
+    height: 52px;
+    padding: 0 var(--space-4);
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar__brand {
+    height: auto;
+    padding: 0;
+    border: 0;
+
+    h1 {
+      position: static;
+      width: auto;
+      height: auto;
+      clip-path: none;
+    }
+  }
+
+  // Con cada sección nueva la franja crece: la navegación encoge y hace scroll
+  // propio antes que desbordar la página.
+  .sidebar__nav {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    padding: 0 var(--space-2);
+  }
+
+  .nav-item {
+    flex: none;
+    justify-content: flex-start;
+    padding: 0 var(--space-2);
+  }
+
+  // Las secciones + marca + pie no caben con texto en 390 px: solo iconos, con su `title`.
+  .nav-item__label {
+    display: none;
+  }
+
+  .sidebar__footer {
+    flex-direction: row;
+    padding: 0;
+    border: 0;
+  }
+
+  .topbar {
+    display: none;
+  }
+
+  .content {
+    padding: var(--space-4);
+  }
+}

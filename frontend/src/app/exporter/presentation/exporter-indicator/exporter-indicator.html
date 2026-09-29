@@ -1,0 +1,29 @@
+@if (state().status; as s) {
+  @if (s.enabled) {
+    <button
+      #trigger
+      type="button"
+      class="exporter"
+      data-testid="exporter-indicator"
+      [attr.data-failed]="s.counts.failed > 0"
+      aria-haspopup="dialog"
+      [attr.title]="'Exportación OTLP a ' + s.endpointHost"
+      (click)="open()"
+    >
+      <span class="exporter__dot" aria-hidden="true"></span>
+      <span class="exporter__text">
+        <span class="exporter__label" data-testid="exporter-label">
+          Exportando a {{ s.endpointHost }}@if (s.includeContent) {
+            · incluye contenido
+          }
+        </span>
+        @if (s.counts.failed > 0) {
+          <span class="exporter__failed" data-testid="exporter-failed">
+            {{ plural(s.counts.failed, 'Turno fallido', 'Turnos fallidos') }}
+          </span>
+        }
+      </span>
+    </button>
+    <app-exporter-modal [isOpen]="isOpen()" [status]="s" (closed)="close()" />
+  }
+}

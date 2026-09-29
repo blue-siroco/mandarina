@@ -1,0 +1,106 @@
+@if (isOpen()) {
+  @let s = state();
+  <div
+    class="modal-overlay"
+    data-testid="breakdown-overlay"
+    tabindex="-1"
+    (click)="onOverlayClick($event)"
+    (keydown.escape)="close()"
+  >
+    <div
+      #window
+      class="modal-window"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="breakdown-title"
+      tabindex="-1"
+      data-testid="breakdown-modal"
+    >
+      <div class="modal-close" data-testid="breakdown-close">
+        <lucia--button [button]="closeButton" aria-label="Cerrar" (callback)="onCloseButtonClick()"></lucia--button>
+      </div>
+
+      <div class="modal-content">
+        <header class="breakdown__header">
+          <h2 id="breakdown-title" class="breakdown__title">{{ label() }} · {{ periodTitle() }}</h2>
+          @if (directory(); as dir) {
+            <p class="breakdown__filter" data-testid="breakdown-filter" [title]="dir">Solo {{ tailPath(dir) }}</p>
+          }
+        </header>
+
+        <app-toggle-group
+          data-testid="breakdown-views"
+          label="Vista del desglose"
+          [labels]="viewLabels"
+          [selectedIndex]="viewIndex()"
+          [optionWidth]="136"
+          (selected)="onViewChange($event)"
+        />
+
+        @for (warning of costWarnings(); track warning) {
+          <p class="notice notice--warn" data-testid="breakdown-warning">{{ warning }}</p>
+        }
+        @if (s.failed) {
+          <p class="notice notice--warn" role="alert" data-testid="breakdown-error">
+            No se pudo actualizar el desglose; se muestran las últimas cifras conocidas.
+          </p>
+        }
+
+        @if (!s.loaded) {
+          <p class="muted" aria-busy="true">Cargando el desglose…</p>
+        } @else if (total(); as t) {
+          <div class="table-wrap">
+            <table class="table" data-testid="breakdown-table" [attr.data-view]="view()">
+              <thead>
+                <tr>
+                  <th scope="col">{{ view() === 'directory' ? 'Directorio' : 'Modelo' }}</th>
+                  @for (column of columns(); track column.key) {
+                    <th scope="col" [class.num-col]="column.numeric" [attr.aria-sort]="ariaSort(column)">
+                      <button type="button" class="sort" [attr.data-column]="column.key" (click)="sortBy(column)">
+                        {{ column.label }}
+                        <span class="sort__arrow" aria-hidden="true">
+                          {{ ariaSort(column) === 'ascending' ? '▲' : ariaSort(column) === 'descending' ? '▼' : '' }}
+                        </span>
+                      </button>
+                    </th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="total" data-testid="breakdown-total">
+                  <th scope="row">Total</th>
+                  @for (column of columns(); track column.key) {
+                    <td class="mono num" [class.num-col]="column.numeric">{{ cell(column, t) }}</td>
+                  }
+                </tr>
+                @for (row of rows(); track row.directory ?? row.model ?? 'desconocido') {
+                  <tr data-testid="breakdown-row">
+                    <th scope="row">
+                      @if (view() === 'directory') {
+                        <button type="button" class="link-button mono" [title]="row.directory" (click)="selectDirectory(row.directory!)">
+                          {{ tailPath(row.directory!) }}
+                        </button>
+                        <span class="project">{{ row.project }}</span>
+                      } @else if (row.model) {
+                        <app-model-badge [model]="row.model" />
+                      } @else {
+                        <span class="muted">Modelo desconocido</span>
+                      }
+                    </th>
+                    @for (column of columns(); track column.key) {
+                      <td class="mono num" [class.num-col]="column.numeric">{{ cell(column, row) }}</td>
+                    }
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td class="muted" [attr.colspan]="columns().length + 1">Sin actividad en este periodo.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}

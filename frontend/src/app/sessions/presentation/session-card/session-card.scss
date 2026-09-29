@@ -1,0 +1,270 @@
+// Tarjeta de Sesión (spec/design.md §6.1): borde izquierdo con el color del Estado.
+:host {
+  display: block;
+  min-width: 0;
+
+  --state-color: var(--state-closed);
+}
+
+:host([data-state='active']) {
+  --state-color: var(--state-active);
+}
+
+:host([data-state='idle']) {
+  --state-color: var(--state-idle);
+}
+
+:host([data-state='orphaned']) {
+  --state-color: var(--state-orphan);
+}
+
+.card-session {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  height: 100%;
+  padding: var(--space-4);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: inset 3px 0 0 var(--state-color);
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-base) var(--ease);
+
+  &:hover,
+  &:focus-within {
+    border-color: var(--border-strong);
+  }
+}
+
+.card-session__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.card-session__seen {
+  color: var(--text-subtle);
+  font-size: 12px;
+}
+
+.card-session__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: 14px;
+}
+
+// Pulgar de la Evaluación de la Sesión; el color acompaña al texto accesible, no lo sustituye.
+.card-session__score {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  color: var(--text-muted);
+
+  svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  &[data-score='up'] {
+    color: var(--ok);
+  }
+
+  &[data-score='down'] {
+    color: var(--danger);
+  }
+}
+
+.card-session__link {
+  color: var(--text);
+  text-decoration: none;
+
+  code {
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+
+  &:focus-visible {
+    outline: none;
+
+    &::after {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+    }
+  }
+}
+
+// Por encima del enlace estirado para poder pulsarlo por separado.
+.card-session__directory {
+  position: relative;
+  z-index: 1;
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--brand);
+    text-decoration: underline;
+  }
+}
+
+.card-session__working,
+.card-session__paused {
+  margin: 0;
+  font-size: 12px;
+}
+
+.card-session__working {
+  display: flex;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--success-text);
+  font-weight: 500;
+
+  .mono {
+    overflow: hidden;
+    color: var(--text-muted);
+    font-weight: 400;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.card-session__paused {
+  color: var(--text-subtle);
+}
+
+.card-session__durations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+  color: var(--text-subtle);
+  font-size: 12px;
+
+  strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+}
+
+.card-session__counters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.card-session__subagents {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-2) 0 0;
+  border-top: 1px dashed var(--border);
+  list-style: none;
+  font-size: 12px;
+}
+
+// Una línea por Subagente: tipo · Tarea · herramienta, recortando la Tarea si no cabe.
+.live-subagent {
+  display: flex;
+  gap: var(--space-2);
+  min-width: 0;
+  white-space: nowrap;
+
+  span + span::before {
+    content: '·';
+    margin-right: var(--space-2);
+    color: var(--text-subtle);
+  }
+}
+
+.live-subagent__type {
+  flex: none;
+  color: var(--evt-subagent);
+  font-weight: 500;
+}
+
+.live-subagent__task {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+}
+
+.live-subagent__tool {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+}
+
+.counter {
+  padding: 1px var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.counter--subagent {
+  color: var(--evt-subagent);
+}
+
+.counter--block {
+  border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+// Avisos de inyección de severidad alta (AC-68): con texto y por encima del enlace de la tarjeta.
+.card-session__alerts {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  align-self: flex-start;
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+
+  svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+  }
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+  }
+}

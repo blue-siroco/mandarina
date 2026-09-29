@@ -1,0 +1,292 @@
+// Pantalla Presupuestos (mismo patrón que las demás pantallas).
+:host {
+  display: block;
+}
+
+.budgets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.page-header {
+  flex-wrap: wrap;
+  margin-bottom: 0;
+}
+
+.page-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.mute,
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.explanation,
+.muted {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+// Botones nativos: los de Lucia no traen su fuente de iconos (spec/design.md §9).
+.btn {
+  height: 36px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--surface-2);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.btn--primary {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--brand-contrast);
+
+  &:hover:not(:disabled) {
+    background: var(--brand);
+    filter: brightness(1.08);
+  }
+}
+
+.btn--small {
+  height: 28px;
+  padding: 0 var(--space-2);
+  font-size: 12px;
+}
+
+.btn--danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+
+.form__title {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 16px;
+}
+
+.form__error {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.form__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: var(--space-2);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.field__label {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.field__hint {
+  color: var(--text-subtle);
+  font-size: 12px;
+}
+
+.field__control {
+  height: 40px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  color: var(--text);
+  font: inherit;
+
+  &[aria-invalid='true'] {
+    border-color: var(--danger);
+  }
+}
+
+.field__control--small {
+  height: 28px;
+  padding: 0 var(--space-2);
+  font-size: 12px;
+}
+
+.field__error {
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th,
+  td {
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  thead th {
+    background: var(--surface-2);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  tbody th {
+    font-weight: 500;
+  }
+
+  .num-col {
+    text-align: right;
+  }
+
+  .row--off td,
+  .row--off th {
+    opacity: 0.6;
+  }
+
+  tbody tr:last-child td,
+  tbody tr:last-child th {
+    border-bottom: 0;
+  }
+}
+
+.spent {
+  min-width: 170px;
+}
+
+.bar {
+  height: 6px;
+  margin-top: var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+  overflow: hidden;
+
+  --fill: var(--ok);
+
+  &[data-state='near'] {
+    --fill: var(--warn);
+  }
+
+  &[data-state='exceeded'] {
+    --fill: var(--danger);
+  }
+}
+
+.bar__fill {
+  display: block;
+  height: 100%;
+  background: var(--fill);
+}
+
+// El estado se dice con texto además del color.
+.state {
+  font-weight: 700;
+
+  &[data-state='within'] {
+    color: var(--ok);
+  }
+
+  &[data-state='near'] {
+    color: var(--warn);
+  }
+
+  &[data-state='exceeded'] {
+    color: var(--danger);
+  }
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+}
+
+.detail > td {
+  background: var(--surface-2);
+}
+
+.subjects,
+.allowances {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-2) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.subject__head,
+.subject__actions,
+.allowance {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.subject__actions {
+  margin-top: var(--space-2);
+}
+
+.inline-field {
+  display: inline-flex;
+}
+
+.empty {
+  padding: var(--space-6);
+  text-align: center;
+}

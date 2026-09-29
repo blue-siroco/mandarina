@@ -1,0 +1,123 @@
+// Marcas con el color del Tipo de evento (§3.3, `[data-type]` en styles.scss).
+:host {
+  display: block;
+  // Scroll horizontal propio en pantallas estrechas, nunca de la página (§4.3).
+  overflow-x: auto;
+}
+
+.lanes {
+  min-width: 560px;
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+
+  --lane-height: 28px;
+}
+
+.lanes--tall {
+  --lane-height: 40px;
+}
+
+.lane,
+.axis {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.lane {
+  height: var(--lane-height);
+  border-bottom: 1px dashed var(--border);
+}
+
+.lane__label {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  [data-kind='subagent'] & {
+    color: var(--evt-subagent);
+  }
+
+  [data-kind='blocks'] & {
+    color: var(--danger);
+  }
+}
+
+.lane__track,
+.axis__track {
+  position: relative;
+  height: 100%;
+  margin: 0 6px;
+}
+
+.turn {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  min-width: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.bar {
+  position: absolute;
+  top: 50%;
+  height: 4px;
+  min-width: 4px;
+  margin-top: -2px;
+  border-radius: 2px;
+  background: var(--type-color);
+  opacity: 0.85;
+}
+
+.mark {
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: var(--radius-full);
+  background: var(--type-color);
+
+  &[data-shape='diamond'] {
+    border-radius: 1px;
+    transform: rotate(45deg);
+  }
+
+  // ✕ del Bloqueo (§5.9), dibujado con dos barras.
+  &[data-shape='cross'] {
+    width: 12px;
+    height: 12px;
+    margin: -6px 0 0 -6px;
+    border-radius: 0;
+    background:
+      linear-gradient(45deg, transparent 42%, var(--danger) 42% 58%, transparent 58%),
+      linear-gradient(-45deg, transparent 42%, var(--danger) 42% 58%, transparent 58%);
+  }
+}
+
+.axis {
+  height: 20px;
+}
+
+.tick {
+  position: absolute;
+  top: 4px;
+  color: var(--text-subtle);
+  font-size: 11px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+
+  &:first-child {
+    transform: none;
+  }
+
+  &:last-child {
+    transform: translateX(-100%);
+  }
+}

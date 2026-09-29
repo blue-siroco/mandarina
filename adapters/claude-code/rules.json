@@ -1,0 +1,9 @@
+{
+  "rules": {
+    "dangerous-rm": { "enabled": true },
+    "force-push-main": { "enabled": true },
+    "sensitive-file": { "enabled": true },
+    "secret-in-command": { "enabled": true }
+  },
+  "projects": {}
+}

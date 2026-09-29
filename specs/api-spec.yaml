@@ -1,0 +1,2059 @@
+openapi: 3.1.0
+info:
+  title: Mandarina API
+  version: 0.1.0
+  description: |
+    Ingesta y consulta de Eventos normalizados (ver `CONTEXT.md` y `spec/mvp-fase1.md`).
+
+    **Tiempo real:** el backend expone un WebSocket en `/ws`. Por cada Evento
+    aceptado envía a todos los clientes un mensaje `LiveMessage`.
+servers:
+  - url: http://127.0.0.1:4000
+tags:
+  - name: health
+  - name: events
+  - name: metrics
+  - name: sessions
+  - name: tests
+  - name: skills
+  - name: subagents
+  - name: mcp
+  - name: agents
+  - name: exporter
+  - name: evaluations
+  - name: security
+  - name: budgets
+paths:
+  /api/v1/health:
+    get:
+      tags: [health]
+      operationId: getHealth
+      responses:
+        '200':
+          description: El servicio está vivo.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, const: ok }
+  /api/v1/events:
+    post:
+      tags: [events]
+      operationId: ingestEvent
+      summary: Ingiere un Evento enviado por un Adaptador.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EventInput' }
+      responses:
+        '202':
+          description: Evento aceptado, persistido y difundido.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id: { type: string }
+        '400':
+          description: El Evento no cumple el esquema.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    get:
+      tags: [events]
+      operationId: listEvents
+      summary: Eventos más recientes primero.
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 500, default: 100 }
+        - name: before
+          in: query
+          description: Devuelve solo Eventos anteriores al Evento con este id.
+          schema: { type: string }
+        - name: session_id
+          in: query
+          description: Solo Eventos de esta Sesión (AC-17).
+          schema: { type: string, minLength: 1 }
+        - name: event_type
+          in: query
+          description: Solo Eventos de estos Tipos; se repite para varios (AC-17, AC-21).
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/EventType' }
+        - name: since
+          in: query
+          description: Solo Eventos recibidos desde esta fecha.
+          schema: { type: string, format: date-time }
+      responses:
+        '200':
+          description: Página de Eventos.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Event' }
+        '400':
+          description: Parámetros inválidos.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/metrics:
+    get:
+      tags: [metrics]
+      operationId: getUsageMetrics
+      summary: Resumen de actividad, Uso de tokens y Coste estimado desde una fecha.
+      description: |
+        Considera las Sesiones con algún Evento recibido desde `since` (AC-11).
+        Los tokens se leen de sus Transcripts y de los de sus Subagentes
+        (AC-12, ADR-0003); el coste aplica la tabla de Tarifas (ADR-0005).
+      parameters:
+        - name: since
+          in: query
+          required: true
+          description: Inicio de la ventana; la UI envía el inicio del periodo seleccionado en el board (ahora − 1 h / 24 h / 7 d, o la época Unix para "Todo").
+          schema: { type: string, format: date-time }
+        - name: directory
+          in: query
+          description: Solo las Sesiones de este Directorio, como el filtro del board (AC-38).
+          schema: { type: string, minLength: 1 }
+        - name: breakdown
+          in: query
+          description: Añade el desglose por Directorio y por modelo (AC-38); la UI lo pide solo con el modal abierto.
+          schema: { type: boolean, default: false }
+      responses:
+        '200':
+          description: Métricas de la ventana.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UsageMetrics' }
+        '400':
+          description: Falta `since` o no es una fecha.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/sessions:
+    get:
+      tags: [sessions]
+      operationId: listSessions
+      summary: Sesiones del board con su Estado y resumen (AC-15).
+      description: Ordenadas por inicio, la más nueva primero; el orden no cambia con la actividad (AC-15).
+      parameters:
+        - name: since
+          in: query
+          description: Solo Sesiones con algún Evento recibido desde esta fecha.
+          schema: { type: string, format: date-time }
+        - name: state
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/SessionState' }
+        - name: directory
+          in: query
+          schema: { type: string, minLength: 1 }
+        - name: project
+          in: query
+          schema: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: Sesiones y valores disponibles para los filtros.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, facets]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/SessionSummary' }
+                  facets:
+                    description: Proyectos y Directorios de las Sesiones de `since`, antes de filtrar por Estado, Directorio o Proyecto.
+                    type: object
+                    required: [projects, directories]
+                    properties:
+                      projects: { type: array, items: { type: string } }
+                      directories: { type: array, items: { type: string } }
+        '400':
+          description: Parámetros inválidos.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/sessions/{id}:
+    get:
+      tags: [sessions]
+      operationId: getSessionDetail
+      summary: Detalle de una Sesión (AC-18).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Detalle de la Sesión.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionDetail' }
+        '404':
+          description: La Sesión no existe.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/test-runs:
+    get:
+      tags: [tests]
+      operationId: listTestRuns
+      summary: Ejecuciones de tests leídas de los Eventos `Bash` (AC-27).
+      description: |
+        Se derivan al consultar de los `tool.post` de `Bash` cuya salida trae el
+        resumen de un runner reconocido (AC-26, ADR-0007). La más reciente
+        primero; como máximo 500.
+      parameters:
+        - name: since
+          in: query
+          required: true
+          description: Solo Ejecuciones recibidas desde esta fecha; la UI envía las 00:00 locales de hace 6 días.
+          schema: { type: string, format: date-time }
+        - name: project
+          in: query
+          schema: { type: string, minLength: 1 }
+        - name: kind
+          in: query
+          schema: { $ref: '#/components/schemas/TestKind' }
+      responses:
+        '200':
+          description: Ejecuciones de tests y Proyectos disponibles para el filtro.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, facets]
+                properties:
+                  items:
+                    type: array
+                    maxItems: 500
+                    items: { $ref: '#/components/schemas/TestRun' }
+                  facets:
+                    description: Proyectos con alguna Ejecución desde `since`, antes de filtrar por Proyecto o Tipo de tests.
+                    type: object
+                    required: [projects]
+                    properties:
+                      projects: { type: array, items: { type: string } }
+        '400':
+          description: Falta `since` o algún parámetro es inválido.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/skill-invocations:
+    get:
+      tags: [skills]
+      operationId: listSkillInvocations
+      summary: Invocaciones de skill leídas de los Eventos y de los Transcripts (AC-30).
+      description: |
+        Se derivan al consultar de los Eventos de la herramienta `Skill`, de los
+        `prompt.submitted` que empiezan por `/nombre` y de las herramientas `Skill`
+        de los Transcripts del agente principal y de sus Subagentes (AC-29). La más reciente
+        primero; `items` trae como máximo 500, pero `stats` cuenta todas.
+      parameters:
+        - name: since
+          in: query
+          required: true
+          description: Inicio de la ventana; la UI envía el inicio del periodo seleccionado (ahora − 1 h / 24 h / 7 d, o la época Unix para 'Todo').
+          schema: { type: string, format: date-time }
+        - name: project
+          in: query
+          schema: { type: string, minLength: 1 }
+        - name: session_id
+          in: query
+          description: Solo las invocaciones de esta Sesión (pestaña *Skills* del detalle).
+          schema: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: Invocaciones de skill, su agregado por Proyecto y skill, y Proyectos disponibles para el filtro.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, stats, facets]
+                properties:
+                  items:
+                    type: array
+                    maxItems: 500
+                    items: { $ref: '#/components/schemas/SkillInvocation' }
+                  stats:
+                    description: Una fila por Proyecto y skill con todas las invocaciones filtradas, ordenadas por total descendente.
+                    type: array
+                    items: { $ref: '#/components/schemas/SkillUsage' }
+                  facets:
+                    description: Proyectos con alguna invocación desde `since`, antes de filtrar por Proyecto o Sesión.
+                    type: object
+                    required: [projects]
+                    properties:
+                      projects: { type: array, items: { type: string } }
+        '400':
+          description: Falta `since` o algún parámetro es inválido.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/subagents:
+    get:
+      tags: [subagents]
+      operationId: listSubagents
+      summary: Subagentes de todas las Sesiones (AC-35).
+      description: |
+        Se derivan al consultar de los Eventos y los Transcripts de las Sesiones
+        con actividad desde `since` (AC-33). El más reciente primero; como
+        máximo 500. La vista por Tipo de Subagente está en `/api/v1/agents` (AC-46).
+      parameters:
+        - name: since
+          in: query
+          required: true
+          description: Inicio del periodo; cuenta un Subagente que empezó desde entonces o sigue en marcha. La UI envía el inicio del periodo seleccionado (época Unix para "Todo").
+          schema: { type: string, format: date-time }
+        - name: project
+          in: query
+          schema: { type: string, minLength: 1 }
+        - name: type
+          in: query
+          description: Tipo de Subagente.
+          schema: { type: string, minLength: 1 }
+        - name: include_internal
+          in: query
+          description: Incluir los Subagentes internos; por defecto se omiten.
+          schema: { type: boolean, default: false }
+      responses:
+        '200':
+          description: Subagentes y los valores disponibles para los filtros.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, facets]
+                properties:
+                  items:
+                    type: array
+                    maxItems: 500
+                    items: { $ref: '#/components/schemas/SubagentListItem' }
+                  facets:
+                    description: Proyectos y Tipos de Subagente del periodo, antes de filtrar por Proyecto o Tipo.
+                    type: object
+                    required: [projects, types]
+                    properties:
+                      projects: { type: array, items: { type: string } }
+                      types: { type: array, items: { type: string } }
+        '400':
+          description: Falta `since` o algún parámetro es inválido.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/mcp-invocations:
+    get:
+      tags: [mcp]
+      operationId: listMcpInvocations
+      summary: Invocaciones de Herramientas MCP y su uso por Servidor MCP (AC-42).
+      description: |
+        Se derivan al consultar de los Eventos de herramientas `mcp__…` y de las
+        herramientas de recursos MCP (AC-41). La más reciente primero; `items`
+        trae como máximo 500, pero `servers` cuenta todas.
+      parameters:
+        - name: since
+          in: query
+          required: true
+          description: Inicio del periodo; la UI envía el inicio del periodo seleccionado (época Unix para "Todo").
+          schema: { type: string, format: date-time }
+        - name: project
+          in: query
+          schema: { type: string, minLength: 1 }
+        - name: server
+          in: query
+          description: Nombre del Servidor MCP.
+          schema: { type: string, minLength: 1 }
+        - name: session_id
+          in: query
+          description: Solo las de esta Sesión (pestaña *MCP* del detalle).
+          schema: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: Invocaciones, su uso por servidor y herramienta, las herramientas diferidas sin usar y los valores de los filtros.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, servers, unused_deferred, facets]
+                properties:
+                  items:
+                    type: array
+                    maxItems: 500
+                    items: { $ref: '#/components/schemas/McpInvocation' }
+                  servers:
+                    description: Una fila por Servidor MCP con todas las invocaciones filtradas, ordenadas por llamadas.
+                    type: array
+                    items: { $ref: '#/components/schemas/McpServerUsage' }
+                  unused_deferred:
+                    description: Herramientas MCP cargadas con `ToolSearch` y nunca invocadas en su Sesión.
+                    type: array
+                    items:
+                      type: object
+                      required: [session_id, tool_name, server, tool, loaded_at]
+                      properties:
+                        session_id: { type: string }
+                        tool_name: { type: string }
+                        server: { type: string }
+                        tool: { type: string }
+                        loaded_at: { type: string, format: date-time }
+                  facets:
+                    description: Proyectos y servidores del periodo, antes de filtrar.
+                    type: object
+                    required: [projects, servers]
+                    properties:
+                      projects: { type: array, items: { type: string } }
+                      servers: { type: array, items: { type: string } }
+        '400':
+          description: Falta `since` o algún parámetro es inválido.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/agents:
+    get:
+      tags: [agents]
+      operationId: listAgentTypes
+      summary: Comparativa de los Tipos de Subagente del periodo (AC-46).
+      description: |
+        Se deriva al consultar del ciclo de vida de los Subagentes (AC-33) de las
+        Sesiones con actividad desde `since`; sin los internos. Ordenados por Lanzamientos.
+      parameters:
+        - name: since
+          in: query
+          required: true
+          description: Inicio del periodo; cuenta un Lanzamiento empezado desde entonces o que sigue en marcha.
+          schema: { type: string, format: date-time }
+        - name: project
+          in: query
+          schema: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: Una fila por Tipo de Subagente y los Proyectos disponibles para el filtro.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, facets]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/AgentTypeSummary' }
+                  facets:
+                    type: object
+                    required: [projects]
+                    properties:
+                      projects: { type: array, items: { type: string } }
+        '400':
+          description: Falta `since` o algún parámetro es inválido.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/agents/{type}:
+    get:
+      tags: [agents]
+      operationId: getAgentProfile
+      summary: Perfil de un Tipo de Subagente en el periodo (AC-46).
+      parameters:
+        - name: type
+          in: path
+          required: true
+          description: Tipo de Subagente; `sin-tipo` agrupa los Lanzamientos sin Tipo conocido.
+          schema: { type: string, minLength: 1 }
+        - name: since
+          in: query
+          required: true
+          schema: { type: string, format: date-time }
+        - name: project
+          in: query
+          schema: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: Perfil del Tipo; sin Lanzamientos en el periodo, con cifras a cero.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentProfile' }
+        '400':
+          description: Falta `since` o algún parámetro es inválido.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/budgets:
+    get:
+      tags: [budgets]
+      operationId: listBudgets
+      summary: Presupuestos con su estado y lo gastado (AC-76, AC-77).
+      responses:
+        '200':
+          description: Todos los Presupuestos, activos o no, en el orden en que se crearon.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, generated_at]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Budget' }
+                  generated_at: { type: string, format: date-time }
+    post:
+      tags: [budgets]
+      operationId: createBudget
+      summary: Crea un Presupuesto (AC-76).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BudgetInput' }
+      responses:
+        '201':
+          description: El Presupuesto creado.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Budget' }
+        '400':
+          description: Ámbito, Proyecto, límite, umbral o acción inválidos.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/budgets/status:
+    get:
+      tags: [budgets]
+      operationId: getBudgetStatus
+      summary: Si hay que parar al agente de una Sesión (AC-79).
+      description: |
+        Lo consulta el hook antes de cada herramienta y de cada prompt (ADR-0010). Solo
+        cuenta los Presupuestos activos con acción `stop` que están Superados para esa Sesión y
+        ese Proyecto y sin excepción vigente. Responde deprisa: el hook espera 500 ms.
+      parameters:
+        - name: session_id
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: project
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: "`stop` es `null` si el agente puede seguir."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BudgetStatus' }
+        '400':
+          description: Falta `session_id` o `project`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/budgets/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string, minLength: 1 }
+    put:
+      tags: [budgets]
+      operationId: updateBudget
+      summary: Sustituye un Presupuesto (AC-76).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BudgetInput' }
+      responses:
+        '200':
+          description: El Presupuesto actualizado.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Budget' }
+        '400':
+          description: Valores inválidos.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: No existe.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    delete:
+      tags: [budgets]
+      operationId: deleteBudget
+      summary: Borra un Presupuesto y sus excepciones (AC-76).
+      responses:
+        '204': { description: Borrado. }
+        '404':
+          description: No existe.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/budgets/{id}/allowances:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string, minLength: 1 }
+    post:
+      tags: [budgets]
+      operationId: createBudgetAllowance
+      summary: Deja seguir a un ámbito superado sin cambiar el Presupuesto (AC-78).
+      description: |
+        Con `session_id`, esa Sesión hasta que termine. Con `project`, ese Proyecto hasta el
+        fin del día natural. Uno de los dos, no ambos.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                session_id: { type: string, minLength: 1 }
+                project: { type: string, minLength: 1 }
+      responses:
+        '201':
+          description: La excepción creada.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BudgetAllowance' }
+        '400':
+          description: Falta uno de los dos, vienen los dos o no encaja con el ámbito del Presupuesto.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: No existe el Presupuesto.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/budgets/{id}/allowances/{allowance_id}:
+    delete:
+      tags: [budgets]
+      operationId: deleteBudgetAllowance
+      summary: Quita una excepción (AC-78).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: allowance_id
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        '204': { description: Quitada. }
+        '404':
+          description: No existe el Presupuesto o la excepción.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/injection-warnings:
+    get:
+      tags: [security]
+      operationId: listInjectionWarnings
+      summary: Avisos de inyección del periodo, el más reciente primero (AC-64).
+      description: |
+        Se derivan al consultar de las respuestas de las herramientas que leen contenido
+        externo (AC-63). Avisan, nunca bloquean. Como máximo 500.
+      parameters:
+        - name: since
+          in: query
+          required: true
+          schema: { type: string, format: date-time }
+        - name: project
+          in: query
+          schema: { type: string, minLength: 1 }
+        - name: session_id
+          in: query
+          schema: { type: string, minLength: 1 }
+        - name: severity
+          in: query
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/InjectionSeverity' }
+        - name: pattern
+          in: query
+          schema: { type: string, minLength: 1 }
+        - name: dismissed
+          in: query
+          description: '`false` (por defecto) solo los vigentes, `true` solo los descartados y `all` todos.'
+          schema: { type: string, enum: ['true', 'false', all] }
+      responses:
+        '200':
+          description: Los avisos y los valores disponibles para los filtros, antes de filtrar.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, facets]
+                properties:
+                  items:
+                    type: array
+                    maxItems: 500
+                    items: { $ref: '#/components/schemas/InjectionWarning' }
+                  facets:
+                    type: object
+                    required: [projects, patterns]
+                    properties:
+                      projects: { type: array, items: { type: string } }
+                      patterns: { type: array, items: { type: string } }
+        '400':
+          description: Falta `since` o algún parámetro es inválido.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/injection-warnings/{id}/dismissal:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string, minLength: 1 }
+    put:
+      tags: [security]
+      operationId: dismissInjectionWarning
+      summary: Descarta un aviso como falso positivo (AC-64).
+      responses:
+        '204': { description: Descartado; si ya lo estaba, no cambia nada. }
+        '404':
+          description: No existe ese aviso.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    delete:
+      tags: [security]
+      operationId: restoreInjectionWarning
+      summary: Vuelve a contar un aviso descartado (AC-64).
+      responses:
+        '204': { description: Restaurado; si no estaba descartado, no cambia nada. }
+        '404':
+          description: No existe ese aviso.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/masking-stats:
+    get:
+      tags: [security]
+      operationId: getMaskingStats
+      summary: Cuántos marcadores de Enmascarado hay guardados por Proyecto y tipo (AC-65).
+      parameters:
+        - name: since
+          in: query
+          required: true
+          description: Solo Eventos recibidos desde entonces.
+          schema: { type: string, format: date-time }
+      responses:
+        '200':
+          description: Recuento de marcadores en los payloads guardados; lo enmascarado con `***` antes de ADR-0009 no cuenta.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MaskingStats' }
+        '400':
+          description: Falta `since` o es inválido.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/evaluations:
+    get:
+      tags: [evaluations]
+      operationId: listEvaluations
+      summary: Evaluaciones de la persona usuaria, la más reciente primero (AC-55).
+      parameters:
+        - $ref: '#/components/parameters/EvaluationObjectType'
+        - $ref: '#/components/parameters/EvaluationScore'
+        - $ref: '#/components/parameters/EvaluationTag'
+        - $ref: '#/components/parameters/EvaluationProject'
+        - $ref: '#/components/parameters/EvaluationSince'
+        - $ref: '#/components/parameters/EvaluationSessionId'
+      responses:
+        '200':
+          description: Como máximo 500 Evaluaciones, con el recuento de sus Etiquetas y los Proyectos disponibles.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, tags, facets]
+                properties:
+                  items:
+                    type: array
+                    maxItems: 500
+                    items: { $ref: '#/components/schemas/Evaluation' }
+                  tags:
+                    description: Etiquetas de las Evaluaciones devueltas, con su recuento, ordenadas por uso.
+                    type: array
+                    items: { $ref: '#/components/schemas/EvaluationTagCount' }
+                  facets:
+                    type: object
+                    required: [projects]
+                    properties:
+                      projects: { type: array, items: { type: string } }
+        '400':
+          description: Algún parámetro es inválido.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/evaluations/tags:
+    get:
+      tags: [evaluations]
+      operationId: listEvaluationTags
+      summary: Etiquetas usadas en todas las Evaluaciones, para el autocompletado (AC-55).
+      responses:
+        '200':
+          description: Ordenadas por uso y, a igual uso, alfabéticamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/EvaluationTagCount' }
+  /api/v1/evaluations/export:
+    get:
+      tags: [evaluations]
+      operationId: exportEvaluations
+      summary: Dataset de evaluación en JSONL (AC-56).
+      description: |
+        Una línea por Evaluación que pasa el filtro, la más reciente primero. Con los
+        mismos filtros que `GET /api/v1/evaluations`, sin el límite de 500. El
+        contenido sale enmascarado como en la ingesta.
+      parameters:
+        - $ref: '#/components/parameters/EvaluationObjectType'
+        - $ref: '#/components/parameters/EvaluationScore'
+        - $ref: '#/components/parameters/EvaluationTag'
+        - $ref: '#/components/parameters/EvaluationProject'
+        - $ref: '#/components/parameters/EvaluationSince'
+        - $ref: '#/components/parameters/EvaluationSessionId'
+      responses:
+        '200':
+          description: JSON Lines, un `EvaluationExportLine` por línea.
+          content:
+            application/x-ndjson:
+              schema: { $ref: '#/components/schemas/EvaluationExportLine' }
+        '400':
+          description: Algún parámetro es inválido.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/evaluations/{object_type}/{object_id}:
+    parameters:
+      - name: object_type
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/EvaluationObjectType' }
+      - name: object_id
+        in: path
+        required: true
+        description: '`session_id` de la Sesión, id del `prompt.submitted` que abre el Turno o `subagent_id` del Subagente.'
+        schema: { type: string, minLength: 1 }
+    put:
+      tags: [evaluations]
+      operationId: putEvaluation
+      summary: Crea o sustituye la Evaluación de un objeto (AC-55).
+      description: |
+        Las Etiquetas se normalizan (minúsculas, guiones, sin repetidas). Una
+        Evaluación sin Puntuación, Etiquetas ni Nota se borra con `DELETE`, no se guarda.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EvaluationInput' }
+      responses:
+        '200':
+          description: La Evaluación guardada.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Evaluation' }
+        '400':
+          description: Puntuación, Etiquetas o Nota inválidas, o Evaluación vacía.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: No existe el objeto que se quiere evaluar.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    delete:
+      tags: [evaluations]
+      operationId: deleteEvaluation
+      summary: Borra la Evaluación de un objeto (AC-55).
+      responses:
+        '204': { description: Borrada. }
+        '404':
+          description: El objeto no tiene Evaluación.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/exporter:
+    get:
+      tags: [exporter]
+      operationId: getExporterStatus
+      summary: Estado de la Exportación OTLP (AC-52).
+      description: |
+        La Exportación OTLP es opt-in (ADR-0008): sin `OTEL_EXPORTER_OTLP_ENDPOINT`
+        ni `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` responde `enabled: false` con las
+        cifras a cero. Nunca devuelve las cabeceras ni la ruta del colector.
+      responses:
+        '200':
+          description: Estado del exportador y de los últimos Turnos exportados.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExporterStatus' }
+components:
+  parameters:
+    EvaluationObjectType:
+      name: object_type
+      in: query
+      description: Solo estos tipos de objeto.
+      schema:
+        type: array
+        items: { $ref: '#/components/schemas/EvaluationObjectType' }
+    EvaluationScore:
+      name: score
+      in: query
+      description: '`up` (+1), `down` (−1) o `none` (sin Puntuación).'
+      schema: { type: string, enum: [up, down, none] }
+    EvaluationTag:
+      name: tag
+      in: query
+      schema: { type: string, minLength: 1 }
+    EvaluationProject:
+      name: project
+      in: query
+      schema: { type: string, minLength: 1 }
+    EvaluationSince:
+      name: since
+      in: query
+      description: Solo Evaluaciones actualizadas desde entonces.
+      schema: { type: string, format: date-time }
+    EvaluationSessionId:
+      name: session_id
+      in: query
+      description: Las de la Sesión y las de sus Turnos y Subagentes.
+      schema: { type: string, minLength: 1 }
+  schemas:
+    EvaluationObjectType:
+      description: Qué se evalúa (AC-54).
+      type: string
+      enum: [session, turn, subagent]
+    EvaluationInput:
+      type: object
+      additionalProperties: false
+      required: [score, tags, note]
+      properties:
+        score: { type: [integer, 'null'], enum: [1, -1, null], description: '+1 (bien), −1 (mal) o sin puntuar.' }
+        tags:
+          description: Como máximo 10 Etiquetas de hasta 40 caracteres.
+          type: array
+          maxItems: 10
+          items: { type: string, minLength: 1, maxLength: 60 }
+        note: { type: [string, 'null'], maxLength: 2000 }
+    EvaluationTagCount:
+      type: object
+      required: [tag, count]
+      properties:
+        tag: { type: string }
+        count: { type: integer, minimum: 1 }
+    Evaluation:
+      description: Evaluación de un objeto (AC-54, AC-55).
+      type: object
+      required: [object_type, object_id, session_id, project, score, tags, note, summary, agent_type, created_at, updated_at]
+      properties:
+        object_type: { $ref: '#/components/schemas/EvaluationObjectType' }
+        object_id: { type: string }
+        session_id: { type: string }
+        project: { type: string }
+        score: { type: [integer, 'null'], enum: [1, -1, null] }
+        tags: { type: array, items: { type: string } }
+        note: { type: [string, 'null'] }
+        summary:
+          type: [string, 'null']
+          description: El prompt del Turno o la Tarea del Subagente, en una línea; `null` en una Sesión.
+        agent_type: { type: [string, 'null'], description: Tipo de Subagente; solo en un Subagente. }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    EvaluationExportLine:
+      description: Una línea del Dataset de evaluación (AC-56).
+      type: object
+      required: [object_type, object_id, project, session_id, model, prompt, response, tools, score, tags, note, evaluated_at]
+      properties:
+        object_type: { $ref: '#/components/schemas/EvaluationObjectType' }
+        object_id: { type: string }
+        project: { type: string }
+        session_id: { type: string }
+        model: { type: [string, 'null'], description: Modelo de la última respuesta del objeto en el Transcript; `null` sin Transcript. }
+        prompt:
+          type: [string, 'null']
+          description: El del Turno, la Tarea del Subagente o los de la Sesión separados por una línea en blanco.
+        response:
+          type: [string, 'null']
+          description: Respuesta final del agente, la que trae el hook `Stop` o `SubagentStop`; `null` si el objeto no ha terminado.
+        tools: { type: array, items: { type: string }, description: Herramientas invocadas, sin repetir. }
+        score: { type: [integer, 'null'], enum: [1, -1, null] }
+        tags: { type: array, items: { type: string } }
+        note: { type: [string, 'null'] }
+        evaluated_at: { type: string, format: date-time }
+    SessionState:
+      description: Estado de la Sesión (AC-14).
+      type: string
+      enum: [active, idle, orphaned, closed]
+    SessionSummary:
+      type: object
+      required:
+        - session_id
+        - project
+        - directory
+        - harness
+        - state
+        - activity
+        - current_tool
+        - model
+        - started_at
+        - last_event_at
+        - last_activity_at
+        - event_count
+        - tool_count
+        - prompt_count
+        - turn_count
+        - subagent_count
+        - running_subagents
+        - live_subagents
+        - block_count
+        - active_duration_ms
+        - clock_duration_ms
+        - sparkline
+        - evaluation_score
+        - injection_alerts
+        - budget_stopped
+      properties:
+        session_id: { type: string }
+        project: { type: string }
+        directory: { type: string }
+        harness: { type: string }
+        state: { $ref: '#/components/schemas/SessionState' }
+        activity:
+          description: Trabajando / En pausa; `null` en Sesiones Cerradas o Huérfanas.
+          type: [string, 'null']
+          enum: [working, paused, null]
+        current_tool:
+          description: Herramienta en curso de una Sesión Trabajando.
+          oneOf:
+            - type: object
+              required: [name, summary]
+              properties:
+                name: { type: string }
+                summary: { type: [string, 'null'], description: Entrada resumida en una línea. }
+            - { type: 'null' }
+        model: { type: [string, 'null'], description: Modelo más reciente del Transcript. }
+        started_at: { type: string, format: date-time }
+        last_event_at: { type: string, format: date-time }
+        last_activity_at:
+          type: string
+          format: date-time
+          description: Último Evento recibido o última escritura del Transcript, lo más reciente.
+        event_count: { type: integer, minimum: 0 }
+        tool_count: { type: integer, minimum: 0 }
+        prompt_count: { type: integer, minimum: 0 }
+        turn_count: { type: integer, minimum: 0 }
+        subagent_count: { type: integer, minimum: 0, description: Sin los Subagentes internos (AC-34). }
+        running_subagents: { type: integer, minimum: 0, description: Incluye los lanzamientos pendientes de enlazar (AC-33). }
+        live_subagents:
+          description: Subagentes en marcha con su Tarea y su herramienta en curso (AC-15).
+          type: array
+          items:
+            type: object
+            required: [subagent_id, agent_type, description, current_tool]
+            properties:
+              subagent_id: { type: [string, 'null'], description: '`null` en un lanzamiento pendiente de enlazar (AC-33).' }
+              agent_type: { type: [string, 'null'] }
+              description: { type: [string, 'null'], description: Descripción de la Tarea del Subagente. }
+              current_tool:
+                oneOf:
+                  - type: object
+                    required: [name, summary]
+                    properties:
+                      name: { type: string }
+                      summary: { type: [string, 'null'] }
+                  - { type: 'null' }
+        block_count: { type: integer, minimum: 0 }
+        budget_stopped:
+          description: El último Bloqueo de la Sesión lo produjo la regla `budget` (AC-84).
+          type: boolean
+        injection_alerts:
+          description: Avisos de inyección de severidad alta sin descartar en la Sesión (AC-68).
+          type: integer
+          minimum: 0
+        evaluation_score:
+          description: Puntuación de la Evaluación de la Sesión (AC-59); `null` sin Evaluación o sin puntuar.
+          type: [integer, 'null']
+          enum: [1, -1, null]
+        active_duration_ms: { type: integer, minimum: 0 }
+        clock_duration_ms: { type: integer, minimum: 0 }
+        sparkline:
+          description: Eventos por intervalo de 5 min en la última hora; el último es el más reciente.
+          type: array
+          minItems: 12
+          maxItems: 12
+          items: { type: integer, minimum: 0 }
+    SubagentTask:
+      description: Tarea del Subagente (ver `CONTEXT.md`).
+      type: object
+      required: [description, prompt]
+      properties:
+        description: { type: [string, 'null'] }
+        prompt: { type: [string, 'null'] }
+    SubagentToolCall:
+      type: object
+      required: [name, summary, started_at, status]
+      properties:
+        name: { type: string }
+        summary: { type: [string, 'null'] }
+        started_at: { type: string, format: date-time }
+        status: { type: string, enum: [ok, error, blocked, running] }
+    SessionDetail:
+      allOf:
+        - { $ref: '#/components/schemas/SessionSummary' }
+        - type: object
+          required: [transcript_available, usage, cache, cache_rewrites, context, tools, turns, subagents, blocks]
+          properties:
+            transcript_available: { type: boolean }
+            cache:
+              description: Eficiencia de la caché de la Sesión y sus Subagentes; `null` sin Transcript (AC-72).
+              oneOf:
+                - { $ref: '#/components/schemas/CacheEfficiency' }
+                - { type: 'null' }
+            cache_rewrites:
+              description: Reescrituras de caché del agente principal y de sus Subagentes, en orden (AC-72).
+              type: array
+              items: { $ref: '#/components/schemas/CacheRewrite' }
+            usage:
+              description: Uso de la Sesión y sus Subagentes; `null` sin Transcript.
+              oneOf:
+                - type: object
+                  required: [tokens, estimated_cost_usd, requests, models]
+                  properties:
+                    tokens: { $ref: '#/components/schemas/TokenUsage' }
+                    estimated_cost_usd: { type: [number, 'null'], description: '`null` si algún modelo no tiene Tarifa.' }
+                    requests: { type: integer, minimum: 0 }
+                    models: { type: array, items: { type: string } }
+                - { type: 'null' }
+            context:
+              description: Ventana de contexto estimada con la última respuesta del agente principal.
+              oneOf:
+                - type: object
+                  required: [model, used, limit]
+                  properties:
+                    model: { type: string }
+                    used: { type: integer, minimum: 0 }
+                    limit: { type: integer, minimum: 1 }
+                - { type: 'null' }
+            tools:
+              type: array
+              items:
+                type: object
+                required: [name, count]
+                properties:
+                  name: { type: string }
+                  count: { type: integer, minimum: 1 }
+            turns:
+              type: array
+              items:
+                type: object
+                required: [id, index, started_at, ended_at, duration_ms, prompt, tool_count]
+                properties:
+                  id: { type: string, description: 'Id del `prompt.submitted` que abre el Turno; identifica el Turno al evaluarlo (AC-54).' }
+                  index: { type: integer, minimum: 1 }
+                  started_at: { type: string, format: date-time }
+                  ended_at: { type: [string, 'null'], format: date-time }
+                  duration_ms: { type: integer, minimum: 0 }
+                  prompt: { type: [string, 'null'] }
+                  tool_count: { type: integer, minimum: 0 }
+            subagents:
+              type: array
+              items:
+                type: object
+                required: [subagent_id, tool_use_id, agent_type, internal, started_at, stopped_at, duration_ms, tool_count, model, tokens, task, tools, result]
+                properties:
+                  subagent_id:
+                    type: [string, 'null']
+                    description: '`null` en un lanzamiento que aún no se ha enlazado con su Subagente (AC-33).'
+                  tool_use_id:
+                    type: [string, 'null']
+                    description: Invocación de `Agent`/`Task` que lo lanzó; `null` si no se conoce.
+                  internal: { type: boolean, description: Subagente interno del Harness (AC-33). }
+                  agent_type: { type: [string, 'null'] }
+                  started_at: { type: string, format: date-time }
+                  stopped_at: { type: [string, 'null'], format: date-time }
+                  duration_ms: { type: integer, minimum: 0 }
+                  tool_count: { type: integer, minimum: 0 }
+                  model: { type: [string, 'null'] }
+                  tokens:
+                    oneOf:
+                      - { $ref: '#/components/schemas/TokenUsage' }
+                      - { type: 'null' }
+                  task:
+                    description: Tarea del Subagente (AC-23), del Transcript o de su lanzamiento; `null` si no hay ninguno.
+                    oneOf:
+                      - { $ref: '#/components/schemas/SubagentTask' }
+                      - { type: 'null' }
+                  tools:
+                    description: Herramientas en orden; de los Eventos si los hay, si no del Transcript.
+                    type: array
+                    items: { $ref: '#/components/schemas/SubagentToolCall' }
+                  result:
+                    type: [string, 'null']
+                    description: Respuesta final; `null` mientras sigue en marcha o sin Transcript.
+            blocks:
+              type: array
+              items:
+                type: object
+                required: [event_id, occurred_at, subagent_id, tool_name, summary, rule, reason]
+                properties:
+                  event_id: { type: string }
+                  occurred_at: { type: string, format: date-time }
+                  subagent_id: { type: [string, 'null'] }
+                  tool_name: { type: [string, 'null'] }
+                  summary: { type: [string, 'null'] }
+                  rule: { type: string }
+                  reason: { type: string }
+    TokenUsage:
+      type: object
+      required: [input, output, cache_read, cache_creation]
+      properties:
+        input: { type: integer, minimum: 0 }
+        output: { type: integer, minimum: 0 }
+        cache_read: { type: integer, minimum: 0 }
+        cache_creation: { type: integer, minimum: 0 }
+    UsageMetrics:
+      type: object
+      required: [since, generated_at, sessions, subagents_running, activity, tokens, estimated_cost_usd, unpriced_models, cache, by_model, transcripts, breakdown]
+      properties:
+        since: { type: string, format: date-time }
+        generated_at: { type: string, format: date-time }
+        sessions:
+          description: Sesiones con Eventos desde `since`, por Actividad y Estado de la Sesión.
+          type: object
+          required: [total, working, paused, orphaned, closed]
+          properties:
+            total: { type: integer, minimum: 0 }
+            working: { type: integer, minimum: 0, description: Trabajando. }
+            paused: { type: integer, minimum: 0, description: En pausa. }
+            orphaned: { type: integer, minimum: 0, description: Huérfanas. }
+            closed: { type: integer, minimum: 0, description: Cerradas. }
+        subagents_running: { type: integer, minimum: 0, description: Subagentes en marcha; sin los internos (AC-34). }
+        activity:
+          type: object
+          required: [events, tool_calls, prompts, blocks]
+          properties:
+            events: { type: integer, minimum: 0 }
+            tool_calls: { type: integer, minimum: 0, description: Eventos `tool.pre`. }
+            prompts: { type: integer, minimum: 0, description: Eventos `prompt.submitted`. }
+            blocks: { type: integer, minimum: 0, description: Eventos `tool.blocked` (AC-21). }
+        tokens: { $ref: '#/components/schemas/TokenUsage' }
+        estimated_cost_usd: { type: number, minimum: 0 }
+        unpriced_models:
+          description: Modelos con tokens pero sin Tarifa; no suman coste.
+          type: array
+          items: { type: string }
+        cache: { $ref: '#/components/schemas/CacheEfficiency' }
+        by_model:
+          description: Uso por modelo, de mayor a menor Coste estimado.
+          type: array
+          items:
+            type: object
+            required: [model, tokens, estimated_cost_usd]
+            properties:
+              model: { type: string }
+              tokens: { $ref: '#/components/schemas/TokenUsage' }
+              estimated_cost_usd: { type: [number, 'null'] }
+        transcripts:
+          type: object
+          required: [read, unavailable]
+          properties:
+            read: { type: integer, minimum: 0 }
+            unavailable: { type: integer, minimum: 0 }
+        breakdown:
+          description: Solo con `breakdown=true`; si no, `null` (AC-38).
+          oneOf:
+            - type: object
+              required: [by_directory, by_model]
+              properties:
+                by_directory:
+                  type: array
+                  items: { $ref: '#/components/schemas/DirectoryBreakdown' }
+                by_model:
+                  type: array
+                  items: { $ref: '#/components/schemas/ModelBreakdown' }
+            - { type: 'null' }
+    MetricsSlice:
+      description: Las cifras de las fichas para una parte de la ventana; las filas de un desglose suman el total (AC-38).
+      type: object
+      required: [sessions, subagents_running, activity, tokens, estimated_cost_usd, unpriced_models, cache]
+      properties:
+        sessions:
+          type: object
+          required: [working, paused, orphaned]
+          properties:
+            working: { type: integer, minimum: 0 }
+            paused: { type: integer, minimum: 0 }
+            orphaned: { type: integer, minimum: 0 }
+        subagents_running: { type: integer, minimum: 0 }
+        activity:
+          type: object
+          required: [tool_calls, prompts, blocks]
+          properties:
+            tool_calls: { type: integer, minimum: 0 }
+            prompts: { type: integer, minimum: 0 }
+            blocks: { type: integer, minimum: 0 }
+        tokens: { $ref: '#/components/schemas/TokenUsage' }
+        estimated_cost_usd: { type: number, minimum: 0, description: Sin los modelos sin Tarifa. }
+        unpriced_models: { type: array, items: { type: string } }
+        cache: { $ref: '#/components/schemas/CacheEfficiency' }
+    CacheEfficiency:
+      description: Eficiencia de la caché de prompts de un conjunto de respuestas del modelo (AC-69, AC-70).
+      type: object
+      required: [hit_rate, read_tokens, write_5m_tokens, write_1h_tokens, savings_gross_usd, write_overhead_usd, savings_net_usd, rewrites, rewrite_cost_usd, unpriced_models]
+      properties:
+        hit_rate:
+          type: [number, 'null']
+          minimum: 0
+          maximum: 1
+          description: '`cache_read / (input + cache_read + cache_creation)`; `null` sin tokens de entrada.'
+        read_tokens: { type: integer, minimum: 0 }
+        write_5m_tokens: { type: integer, minimum: 0, description: Escritura con TTL de 5 min. }
+        write_1h_tokens: { type: integer, minimum: 0, description: Escritura con TTL de 1 h. }
+        savings_gross_usd:
+          type: number
+          minimum: 0
+          description: Lo que habrían costado los tokens leídos de caché a Tarifa de entrada, menos lo que costaron a Tarifa de lectura.
+        write_overhead_usd:
+          type: number
+          minimum: 0
+          description: Lo que se pagó de más al escribir en caché frente a la entrada normal (×0,25 con TTL de 5 min y ×1 con 1 h).
+        savings_net_usd:
+          type: number
+          description: Ahorro bruto menos sobrecoste de escritura. Puede ser negativo. Sin los modelos sin Tarifa.
+        rewrites: { type: integer, minimum: 0, description: Reescrituras de caché (AC-70). }
+        rewrite_cost_usd: { type: number, minimum: 0, description: Lo que costó escribir en caché en esas Reescrituras. }
+        unpriced_models: { type: array, items: { type: string }, description: Modelos con tokens de caché pero sin Tarifa; no suman. }
+    CacheRewrite:
+      description: Respuesta del modelo que vuelve a escribir en caché la mayor parte de su contexto en lugar de leerlo (AC-70).
+      type: object
+      required: [message_id, subagent_id, occurred_at, model, cause, written_tokens, cost_usd, gap_ms]
+      properties:
+        message_id: { type: string }
+        subagent_id: { type: [string, 'null'], description: '`null` en el agente principal.' }
+        occurred_at: { type: string, format: date-time }
+        model: { type: string }
+        cause: { type: string, enum: [expired, model_change, compaction, other] }
+        written_tokens: { type: integer, minimum: 1 }
+        cost_usd: { type: [number, 'null'], description: Coste de escribir esos tokens; `null` sin Tarifa. }
+        gap_ms: { type: [integer, 'null'], minimum: 0, description: Tiempo desde la respuesta anterior del mismo agente. }
+    DirectoryBreakdown:
+      allOf:
+        - { $ref: '#/components/schemas/MetricsSlice' }
+        - type: object
+          required: [directory, project, main_model, transcripts_unavailable]
+          properties:
+            directory: { type: string }
+            project: { type: string }
+            main_model: { type: [string, 'null'], description: El de más tokens de salida en el periodo. }
+            transcripts_unavailable: { type: integer, minimum: 0 }
+    ModelBreakdown:
+      allOf:
+        - { $ref: '#/components/schemas/MetricsSlice' }
+        - type: object
+          required: [model, rate, cost_breakdown]
+          properties:
+            model: { type: [string, 'null'], description: '`null` agrupa lo que no tiene modelo conocido ("Modelo desconocido").' }
+            rate:
+              description: Tarifa aplicada, USD por millón de tokens (ADR-0005); `null` sin Tarifa.
+              oneOf:
+                - type: object
+                  required: [input, output, cache_read, cache_write_5m, cache_write_1h]
+                  properties:
+                    input: { type: number }
+                    output: { type: number }
+                    cache_read: { type: number }
+                    cache_write_5m: { type: number }
+                    cache_write_1h: { type: number }
+                - { type: 'null' }
+            cost_breakdown:
+              description: Coste estimado por clase de token; `null` sin Tarifa.
+              oneOf:
+                - type: object
+                  required: [input, output, cache_read, cache_creation]
+                  properties:
+                    input: { type: number, minimum: 0 }
+                    output: { type: number, minimum: 0 }
+                    cache_read: { type: number, minimum: 0 }
+                    cache_creation: { type: number, minimum: 0 }
+                - { type: 'null' }
+    EventType:
+      type: string
+      enum:
+        - session.started
+        - prompt.submitted
+        - tool.pre
+        - tool.post
+        - subagent.started
+        - subagent.stopped
+        - turn.ended
+        - session.ended
+        - tool.blocked
+    Block:
+      description: Bloqueo aplicado por una Regla de bloqueo en el Adaptador (ADR-0004, ADR-0006).
+      type: object
+      additionalProperties: false
+      required: [rule, reason]
+      properties:
+        rule: { type: string, minLength: 1, description: Id de la Regla de bloqueo., examples: [dangerous-rm] }
+        reason: { type: string, minLength: 1, description: Motivo legible para el usuario. }
+    EventInput:
+      type: object
+      additionalProperties: false
+      required:
+        - schema_version
+        - harness
+        - project
+        - directory
+        - session_id
+        - event_type
+        - native_event_type
+        - occurred_at
+        - payload
+      properties:
+        schema_version: { type: integer, const: 1 }
+        harness: { type: string, minLength: 1, examples: [claude-code] }
+        project: { type: string, minLength: 1 }
+        directory: { type: string, minLength: 1 }
+        session_id: { type: string, minLength: 1 }
+        subagent_id: { type: [string, 'null'] }
+        event_type: { $ref: '#/components/schemas/EventType' }
+        native_event_type: { type: string, minLength: 1 }
+        tool_name: { type: [string, 'null'] }
+        occurred_at: { type: string, format: date-time }
+        transcript_path: { type: [string, 'null'] }
+        payload: { type: object }
+        block:
+          description: Solo en `tool.blocked`.
+          oneOf:
+            - { $ref: '#/components/schemas/Block' }
+            - { type: 'null' }
+    Event:
+      type: object
+      required:
+        - id
+        - schema_version
+        - harness
+        - project
+        - directory
+        - session_id
+        - subagent_id
+        - event_type
+        - native_event_type
+        - tool_name
+        - occurred_at
+        - received_at
+        - transcript_path
+        - payload
+        - block
+        - subagent
+        - warnings
+      properties:
+        id: { type: string }
+        schema_version: { type: integer }
+        harness: { type: string }
+        project: { type: string }
+        directory: { type: string }
+        session_id: { type: string }
+        subagent_id: { type: [string, 'null'] }
+        event_type: { $ref: '#/components/schemas/EventType' }
+        native_event_type: { type: string }
+        tool_name: { type: [string, 'null'] }
+        occurred_at: { type: string, format: date-time }
+        received_at: { type: string, format: date-time }
+        transcript_path: { type: [string, 'null'] }
+        payload:
+          type: object
+          description: JSON nativo del Harness con los secretos y los datos personales enmascarados con marcadores (`[REDACTED_API_KEY]`; AC-60, AC-61).
+        block:
+          oneOf:
+            - { $ref: '#/components/schemas/Block' }
+            - { type: 'null' }
+        subagent:
+          description: Solo en `subagent.started` y `subagent.stopped`; derivado al leer (AC-34).
+          oneOf:
+            - { $ref: '#/components/schemas/EventSubagent' }
+            - { type: 'null' }
+        warnings:
+          description: Avisos de inyección que salen de este Evento, derivados al leer (AC-64); vacío en casi todos.
+          type: array
+          items:
+            type: object
+            required: [id, pattern, severity, dismissed]
+            properties:
+              id: { type: string }
+              pattern: { type: string }
+              severity: { $ref: '#/components/schemas/InjectionSeverity' }
+              dismissed: { type: boolean }
+    BudgetScope:
+      description: 'Ámbito de un Presupuesto (AC-76): cada Sesión, un Proyecto en el día o todos los Proyectos en el día.'
+      type: string
+      enum: [session, project_day, global_day]
+    BudgetState:
+      description: 'Dentro, Cerca (pasado su umbral de aviso) o Superado (AC-77).'
+      type: string
+      enum: [within, near, exceeded]
+    BudgetInput:
+      type: object
+      additionalProperties: false
+      required: [scope, limit_usd]
+      properties:
+        scope: { $ref: '#/components/schemas/BudgetScope' }
+        project:
+          type: [string, 'null']
+          description: 'Obligatorio en `project_day`; opcional en `session` (sin él, las Sesiones de todos los Proyectos); debe ser `null` en `global_day`.'
+        limit_usd: { type: number, exclusiveMinimum: 0, description: Límite de Coste estimado, incluidos los Subagentes. }
+        warn_ratio: { type: number, exclusiveMinimum: 0, maximum: 1, default: 0.8, description: Parte del límite a partir de la cual pasa a Cerca. }
+        action: { type: string, enum: [warn, stop], default: stop, description: Al superarse, solo avisar o detener al agente. }
+        enabled: { type: boolean, default: true }
+    BudgetSubject:
+      description: A quién se aplica el Presupuesto y lo que lleva gastado (AC-77).
+      type: object
+      required: [session_id, project, spent_usd, ratio, state, allowed]
+      properties:
+        session_id: { type: [string, 'null'], description: 'La Sesión, en un Presupuesto por Sesión; `null` en los del día.' }
+        project: { type: [string, 'null'], description: '`null` en el global del día.' }
+        spent_usd: { type: number, minimum: 0 }
+        ratio: { type: number, minimum: 0, description: Gastado entre el límite; puede pasar de 1. }
+        state: { $ref: '#/components/schemas/BudgetState' }
+        allowed: { type: boolean, description: Hay una excepción vigente que le deja seguir (AC-78). }
+    BudgetAllowance:
+      type: object
+      required: [id, budget_id, session_id, project, until, created_at]
+      properties:
+        id: { type: string }
+        budget_id: { type: string }
+        session_id: { type: [string, 'null'] }
+        project: { type: [string, 'null'] }
+        until: { type: [string, 'null'], format: date-time, description: 'Fin del día natural de un Proyecto; `null` mientras dure la Sesión.' }
+        created_at: { type: string, format: date-time }
+    Budget:
+      description: Un Presupuesto con su estado y lo gastado (AC-76, AC-77).
+      type: object
+      required: [id, scope, project, limit_usd, warn_ratio, action, enabled, state, spent_usd, subjects, sessions_tracked, allowances, created_at, updated_at]
+      properties:
+        id: { type: string }
+        scope: { $ref: '#/components/schemas/BudgetScope' }
+        project: { type: [string, 'null'] }
+        limit_usd: { type: number, exclusiveMinimum: 0 }
+        warn_ratio: { type: number }
+        action: { type: string, enum: [warn, stop] }
+        enabled: { type: boolean }
+        state: { $ref: '#/components/schemas/BudgetState' }
+        spent_usd: { type: number, minimum: 0, description: 'Lo gastado hoy en los del día; en uno por Sesión, lo de la Sesión que más lleva.' }
+        subjects:
+          description: 'Uno en los del día. En uno por Sesión, las Sesiones de hoy Cerca o Superadas, las peores primero y como máximo 20.'
+          type: array
+          maxItems: 20
+          items: { $ref: '#/components/schemas/BudgetSubject' }
+        sessions_tracked: { type: integer, minimum: 0, description: Sesiones de hoy a las que se aplica (0 en los del día). }
+        allowances:
+          type: array
+          items: { $ref: '#/components/schemas/BudgetAllowance' }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    BudgetStop:
+      type: object
+      required: [budget_id, scope, reason, spent_usd, limit_usd]
+      properties:
+        budget_id: { type: string }
+        scope: { $ref: '#/components/schemas/BudgetScope' }
+        reason: { type: string, description: 'Frase para la persona usuaria: qué presupuesto se superó y cuánto.' }
+        spent_usd: { type: number }
+        limit_usd: { type: number }
+    BudgetStatus:
+      type: object
+      required: [stop, checked_at]
+      properties:
+        stop:
+          oneOf:
+            - { $ref: '#/components/schemas/BudgetStop' }
+            - { type: 'null' }
+        checked_at: { type: string, format: date-time }
+    InjectionSeverity:
+      description: Severidad de un Aviso de inyección (AC-63).
+      type: string
+      enum: [low, medium, high]
+    InjectionWarning:
+      description: Contenido leído por una herramienta que parece dar órdenes al agente (AC-63, AC-64).
+      type: object
+      required: [id, event_id, session_id, project, subagent_id, tool_name, source, pattern, category, severity, snippet, occurred_at, dismissed, followed_by]
+      properties:
+        id: { type: string, description: 'Id del Evento y del patrón: `<event_id>:<pattern>`.' }
+        event_id: { type: string, description: Id del `tool.post` que trajo el contenido. }
+        session_id: { type: string }
+        project: { type: string }
+        subagent_id: { type: [string, 'null'] }
+        tool_name: { type: string }
+        source:
+          type: [string, 'null']
+          description: De dónde se leyó, en una línea (URL, ruta, `servidor · herramienta` o comando).
+        pattern: { type: string, description: Identificador estable del patrón que saltó. }
+        category: { type: string, enum: [override, impersonation, hidden, exfiltration] }
+        severity: { $ref: '#/components/schemas/InjectionSeverity' }
+        snippet: { type: string, description: El fragmento con el patrón, en una línea, de hasta 200 caracteres y enmascarado. }
+        occurred_at: { type: string, format: date-time }
+        dismissed: { type: boolean }
+        followed_by:
+          description: Hasta 3 herramientas que el mismo agente invocó a continuación, en el mismo Turno.
+          type: array
+          maxItems: 3
+          items:
+            type: object
+            required: [event_id, tool_name, summary]
+            properties:
+              event_id: { type: string }
+              tool_name: { type: string }
+              summary: { type: [string, 'null'] }
+    MaskingStats:
+      type: object
+      required: [since, totals, items]
+      properties:
+        since: { type: string, format: date-time }
+        totals:
+          description: Marcadores por tipo (`API_KEY`, `TOKEN`, `PRIVATE_KEY`, `PASSWORD`, `EMAIL`, `PHONE`, `IBAN`, `CARD`, `ID`).
+          type: object
+          additionalProperties: { type: integer, minimum: 0 }
+        items:
+          description: Una fila por Proyecto con marcadores, la de más marcadores primero.
+          type: array
+          items:
+            type: object
+            required: [project, total, counts]
+            properties:
+              project: { type: string }
+              total: { type: integer, minimum: 1 }
+              counts:
+                type: object
+                additionalProperties: { type: integer, minimum: 0 }
+    EventSubagent:
+      description: Datos del Subagente de un Evento `subagent.*`, para resumirlo sin buscar su lanzamiento (AC-34).
+      type: object
+      required: [type, description, duration_ms, internal]
+      properties:
+        type: { type: [string, 'null'], description: Tipo de Subagente. }
+        description: { type: [string, 'null'], description: Descripción de la Tarea del Subagente. }
+        duration_ms:
+          type: [integer, 'null']
+          minimum: 0
+          description: Solo en `subagent.stopped`, si se conoce el inicio.
+        internal: { type: boolean, description: Subagente interno del Harness (ver `CONTEXT.md`). }
+    LiveMessage:
+      description: Mensaje enviado por el WebSocket `/ws`; los clientes ignoran los tipos que no conocen.
+      oneOf:
+        - $ref: '#/components/schemas/EventIngestedMessage'
+        - $ref: '#/components/schemas/BudgetStateMessage'
+    EventIngestedMessage:
+      description: Un Evento aceptado.
+      type: object
+      required: [type, event]
+      properties:
+        type: { type: string, const: event.ingested }
+        event: { $ref: '#/components/schemas/Event' }
+    BudgetStateMessage:
+      description: Un Presupuesto ha cambiado de estado, p. ej. de Dentro a Cerca o a Superado (AC-81).
+      type: object
+      required: [type, budget_id, scope, project, action, state, previous_state, spent_usd, limit_usd, session_id]
+      properties:
+        type: { type: string, const: budget.state }
+        budget_id: { type: string }
+        scope: { $ref: '#/components/schemas/BudgetScope' }
+        project: { type: [string, 'null'] }
+        session_id: { type: [string, 'null'], description: 'La Sesión que cambió, en un Presupuesto por Sesión.' }
+        action: { type: string, enum: [warn, stop] }
+        state: { $ref: '#/components/schemas/BudgetState' }
+        previous_state: { $ref: '#/components/schemas/BudgetState' }
+        spent_usd: { type: number }
+        limit_usd: { type: number }
+    TestKind:
+      description: Tipo de tests (ver `CONTEXT.md`).
+      type: string
+      enum: [unit, e2e]
+    TestFailure:
+      description: Test fallido, con lo que la salida del runner deje leer.
+      type: object
+      required: [name, file, message, ac]
+      properties:
+        name: { type: string }
+        file: { type: [string, 'null'] }
+        message:
+          type: [string, 'null']
+          description: Primera línea del error.
+        ac:
+          type: [string, 'null']
+          description: Criterio `AC-*` que cita el nombre del test.
+    TestRun:
+      description: Ejecución de tests (AC-26).
+      type: object
+      required: [id, event_id, project, directory, session_id, subagent_id, kind, runner, command, status, counts, duration_ms, finished_at, failures]
+      properties:
+        id:
+          type: string
+          description: '`<event_id>:<runner>`: una salida puede traer resúmenes de varios runners.'
+        event_id: { type: string }
+        project: { type: string }
+        directory: { type: string }
+        session_id: { type: string }
+        subagent_id: { type: [string, 'null'] }
+        kind: { $ref: '#/components/schemas/TestKind' }
+        runner: { type: string, enum: [vitest, jest, node-test, playwright] }
+        command:
+          type: [string, 'null']
+          description: Comando resumido en una línea, con los secretos enmascarados.
+        status: { type: string, enum: [passed, failed] }
+        counts:
+          type: object
+          required: [total, passed, failed, skipped]
+          properties:
+            total: { type: integer, minimum: 0 }
+            passed: { type: integer, minimum: 0 }
+            failed: { type: integer, minimum: 0 }
+            skipped: { type: integer, minimum: 0 }
+        duration_ms: { type: [number, 'null'], minimum: 0 }
+        finished_at: { type: string, format: date-time }
+        failures:
+          type: array
+          maxItems: 20
+          items: { $ref: '#/components/schemas/TestFailure' }
+    SkillInvoker:
+      description: 'Quién cargó la Skill: el agente de la Sesión principal, un Subagente o la persona usuaria con `/nombre`.'
+      type: string
+      enum: [agent, subagent, user]
+    SkillInvocationStatus:
+      description: Estado de la Invocación de skill (ver `CONTEXT.md`).
+      type: string
+      enum: [running, finished, failed]
+    SkillInvocation:
+      description: Invocación de skill (AC-29).
+      type: object
+      required: [id, event_id, project, directory, session_id, subagent_id, subagent_type, turn, skill, args, invoker, status, started_at, ended_at, duration_ms, error]
+      properties:
+        id: { type: string, description: 'Id del Evento que la origina (`tool.pre` de `Skill` o `prompt.submitted`), o `transcript:<tool_use_id>` si solo consta en el Transcript.' }
+        event_id: { type: [string, 'null'], description: '`null` si solo consta en el Transcript (el hook no la envió).' }
+        project: { type: string }
+        directory: { type: string }
+        session_id: { type: string }
+        subagent_id: { type: [string, 'null'] }
+        subagent_type: { type: [string, 'null'], description: Tipo del Subagente que la cargó. }
+        turn: { type: [integer, 'null'], minimum: 1, description: Número del Turno de la Sesión en que se cargó. }
+        skill:
+          type: string
+          description: Nombre tal cual (`commit`, `plugin:skill`).
+        args:
+          type: [string, 'null']
+          description: Argumentos resumidos en una línea, con los secretos enmascarados.
+        invoker: { $ref: '#/components/schemas/SkillInvoker' }
+        status: { $ref: '#/components/schemas/SkillInvocationStatus' }
+        started_at: { type: string, format: date-time }
+        ended_at: { type: [string, 'null'], format: date-time, description: Fin del Turno o del Subagente; `null` en curso o si nunca terminó. }
+        duration_ms: { type: [number, 'null'], minimum: 0 }
+        error: { type: [string, 'null'], description: Primera línea del error si es `failed`. }
+    SkillUsage:
+      description: Uso agregado de una Skill en un Proyecto (AC-30).
+      type: object
+      required: [project, skill, total, by_invoker, last_at]
+      properties:
+        project: { type: string }
+        skill: { type: string }
+        total: { type: integer, minimum: 1 }
+        by_invoker:
+          type: object
+          required: [agent, subagent, user]
+          properties:
+            agent: { type: integer, minimum: 0 }
+            subagent: { type: integer, minimum: 0 }
+            user: { type: integer, minimum: 0 }
+        last_at: { type: string, format: date-time }
+    SubagentListItem:
+      description: Subagente de la pantalla Subagentes (AC-35).
+      type: object
+      required: [session_id, project, directory, subagent_id, tool_use_id, agent_type, description, internal, status, started_at, stopped_at, duration_ms, tool_count, model, tokens, estimated_cost_usd]
+      properties:
+        session_id: { type: string }
+        project: { type: string }
+        directory: { type: string }
+        subagent_id: { type: [string, 'null'], description: '`null` en un lanzamiento pendiente de enlazar.' }
+        tool_use_id: { type: [string, 'null'] }
+        agent_type: { type: [string, 'null'], description: Tipo de Subagente. }
+        description: { type: [string, 'null'], description: Descripción de la Tarea del Subagente. }
+        internal: { type: boolean }
+        status: { $ref: '#/components/schemas/LaunchStatus' }
+        started_at: { type: string, format: date-time }
+        stopped_at: { type: [string, 'null'], format: date-time }
+        duration_ms: { type: integer, minimum: 0, description: Hasta el fin o, en marcha, hasta ahora. }
+        tool_count: { type: integer, minimum: 0 }
+        model: { type: [string, 'null'] }
+        tokens:
+          oneOf:
+            - { $ref: '#/components/schemas/TokenUsage' }
+            - { type: 'null' }
+        estimated_cost_usd: { type: [number, 'null'], description: '`null` sin Transcript o si su modelo no tiene Tarifa.' }
+    LaunchStatus:
+      description: Estado de un Lanzamiento (AC-45).
+      type: string
+      enum: [running, finished, no_response]
+    AgentTypeSummary:
+      description: Cifras de un Tipo de Subagente en el periodo (AC-46).
+      type: object
+      required: [type, launches, running, no_response, foreground, background, duration_p50_ms, duration_p95_ms, tokens, estimated_cost_usd, cost_per_launch_usd, tool_errors_per_launch, blocks_per_launch, cache_hit_rate, cache_savings_net_usd, rated_up, rated_down, sessions, projects, last_at]
+      properties:
+        type: { type: [string, 'null'], description: '`null` agrupa los Lanzamientos sin Tipo conocido ("Sin Tipo").' }
+        launches: { type: integer, minimum: 1 }
+        running: { type: integer, minimum: 0 }
+        no_response: { type: integer, minimum: 0 }
+        foreground: { type: integer, minimum: 0 }
+        background: { type: integer, minimum: 0, description: 'Lanzados con `run_in_background`.' }
+        duration_p50_ms: { type: [integer, 'null'], minimum: 0, description: De los terminados. }
+        duration_p95_ms: { type: [integer, 'null'], minimum: 0 }
+        tokens: { $ref: '#/components/schemas/TokenUsage' }
+        estimated_cost_usd: { type: number, minimum: 0, description: Suma de los que tienen Coste estimado. }
+        cost_per_launch_usd: { type: [number, 'null'], minimum: 0, description: Media de los Lanzamientos con Coste estimado. }
+        tool_errors_per_launch: { type: number, minimum: 0 }
+        blocks_per_launch: { type: number, minimum: 0 }
+        cache_hit_rate: { type: [number, 'null'], minimum: 0, maximum: 1, description: Tasa de acierto de caché de todos sus Lanzamientos (AC-73). }
+        cache_savings_net_usd: { type: number, description: Ahorro neto por caché de todos sus Lanzamientos; puede ser negativo (AC-73). }
+        rated_up: { type: integer, minimum: 0, description: Lanzamientos cuyo Subagente tiene una Evaluación con +1 (AC-59). }
+        rated_down: { type: integer, minimum: 0, description: Lanzamientos cuyo Subagente tiene una Evaluación con −1 (AC-59). }
+        sessions: { type: integer, minimum: 1 }
+        projects: { type: array, items: { type: string } }
+        last_at: { type: string, format: date-time }
+    AgentLaunch:
+      description: Un Lanzamiento del Tipo, con lo que hizo su Subagente (AC-45).
+      type: object
+      required: [session_id, project, subagent_id, tool_use_id, description, status, background, started_at, stopped_at, duration_ms, tool_count, tool_errors, blocks, model, tokens, estimated_cost_usd, cache_hit_rate, cache_savings_net_usd, result]
+      properties:
+        session_id: { type: string }
+        project: { type: string }
+        subagent_id: { type: [string, 'null'] }
+        tool_use_id: { type: [string, 'null'] }
+        description: { type: [string, 'null'], description: Descripción de la Tarea del Subagente. }
+        status: { $ref: '#/components/schemas/LaunchStatus' }
+        background: { type: boolean }
+        started_at: { type: string, format: date-time }
+        stopped_at: { type: [string, 'null'], format: date-time }
+        duration_ms: { type: integer, minimum: 0 }
+        tool_count: { type: integer, minimum: 0 }
+        tool_errors: { type: integer, minimum: 0 }
+        blocks: { type: integer, minimum: 0 }
+        model: { type: [string, 'null'] }
+        tokens:
+          oneOf:
+            - { $ref: '#/components/schemas/TokenUsage' }
+            - { type: 'null' }
+        estimated_cost_usd: { type: [number, 'null'] }
+        cache_hit_rate: { type: [number, 'null'], minimum: 0, maximum: 1, description: Tasa de acierto de caché de este Lanzamiento; `null` sin Transcript (AC-73). }
+        cache_savings_net_usd: { type: [number, 'null'], description: Ahorro neto por caché de este Lanzamiento; `null` sin Transcript (AC-73). }
+        result: { type: [string, 'null'], description: Respuesta final resumida; `null` en marcha o sin Transcript. }
+    AgentProfile:
+      description: Perfil de un Tipo de Subagente (AC-46).
+      type: object
+      required: [summary, launched_by, models, tools, skills, mcp_servers, test_runs, launches]
+      properties:
+        summary: { $ref: '#/components/schemas/AgentTypeSummary' }
+        launched_by:
+          description: 'Quién lo lanza: `null` es el agente principal; un Tipo, la Sesión arrancada como ese agente o un Subagente que lanzó.'
+          type: array
+          items:
+            type: object
+            required: [launcher, launches]
+            properties:
+              launcher: { type: [string, 'null'] }
+              launches: { type: integer, minimum: 1 }
+        models:
+          type: array
+          items:
+            type: object
+            required: [model, launches]
+            properties:
+              model: { type: string }
+              launches: { type: integer, minimum: 1 }
+        tools:
+          description: Herramientas que invocan sus Subagentes, por llamadas.
+          type: array
+          items:
+            type: object
+            required: [name, calls, errors, blocks]
+            properties:
+              name: { type: string }
+              calls: { type: integer, minimum: 0 }
+              errors: { type: integer, minimum: 0 }
+              blocks: { type: integer, minimum: 0 }
+        skills:
+          type: array
+          items:
+            type: object
+            required: [skill, invocations]
+            properties:
+              skill: { type: string }
+              invocations: { type: integer, minimum: 1 }
+        mcp_servers:
+          type: array
+          items:
+            type: object
+            required: [server, calls, errors]
+            properties:
+              server: { type: string }
+              calls: { type: integer, minimum: 1 }
+              errors: { type: integer, minimum: 0 }
+        test_runs:
+          type: object
+          required: [total, passed, failed]
+          properties:
+            total: { type: integer, minimum: 0 }
+            passed: { type: integer, minimum: 0 }
+            failed: { type: integer, minimum: 0 }
+        launches:
+          description: El más reciente primero; como máximo 500.
+          type: array
+          maxItems: 500
+          items: { $ref: '#/components/schemas/AgentLaunch' }
+    McpInvocationStatus:
+      description: Estado de una invocación de Herramienta MCP (AC-41).
+      type: string
+      enum: [ok, error, interrupted, blocked, running, no_response]
+    McpInvocation:
+      description: Invocación de una Herramienta MCP (AC-41).
+      type: object
+      required: [id, event_id, project, directory, session_id, subagent_id, server, scope, tool, tool_name, summary, status, started_at, ended_at, duration_ms, response_bytes, has_image, error]
+      properties:
+        id: { type: string, description: Id del `tool.pre` (o del `tool.blocked`). }
+        event_id: { type: string }
+        project: { type: string }
+        directory: { type: string }
+        session_id: { type: string }
+        subagent_id: { type: [string, 'null'], description: '`null` si la invocó el agente principal.' }
+        server: { type: string }
+        scope:
+          type: [string, 'null']
+          description: Ámbito de su configuración (`project`, `user`, `local`, `plugin`…); `null` si el Harness no lo envía.
+        tool: { type: string, description: 'Nombre de la herramienta dentro del servidor (`browser_navigate`).' }
+        tool_name: { type: string, description: 'Nombre completo (`mcp__playwright__browser_navigate`).' }
+        summary: { type: [string, 'null'], description: Entrada resumida en una línea. }
+        status: { $ref: '#/components/schemas/McpInvocationStatus' }
+        started_at: { type: string, format: date-time }
+        ended_at: { type: [string, 'null'], format: date-time }
+        duration_ms: { type: [integer, 'null'], minimum: 0 }
+        response_bytes: { type: [integer, 'null'], minimum: 0, description: Bytes del JSON de `tool_response`; `null` sin respuesta. }
+        has_image: { type: boolean }
+        error: { type: [string, 'null'], description: Primera línea del error. }
+    McpUsageStats:
+      description: Cifras de uso de un Servidor MCP o de una de sus herramientas (AC-42).
+      type: object
+      required: [calls, ok, errors, interrupted, blocked, running, no_response, failure_rate, latency_p50_ms, latency_p95_ms, response_avg_bytes, response_max_bytes, has_image, last_at, sessions]
+      properties:
+        calls: { type: integer, minimum: 1 }
+        ok: { type: integer, minimum: 0 }
+        errors: { type: integer, minimum: 0 }
+        interrupted: { type: integer, minimum: 0 }
+        blocked: { type: integer, minimum: 0 }
+        running: { type: integer, minimum: 0 }
+        no_response: { type: integer, minimum: 0 }
+        failure_rate: { type: [number, 'null'], minimum: 0, maximum: 1, description: '`errors / (ok + errors)`; `null` si ninguna terminó.' }
+        latency_p50_ms: { type: [integer, 'null'], minimum: 0 }
+        latency_p95_ms: { type: [integer, 'null'], minimum: 0 }
+        response_avg_bytes: { type: [integer, 'null'], minimum: 0 }
+        response_max_bytes: { type: [integer, 'null'], minimum: 0 }
+        has_image: { type: boolean }
+        last_at: { type: string, format: date-time }
+        sessions: { type: integer, minimum: 1 }
+    McpToolUsage:
+      description: Uso agregado de una Herramienta MCP (AC-42).
+      allOf:
+        - { $ref: '#/components/schemas/McpUsageStats' }
+        - type: object
+          required: [tool, tool_name]
+          properties:
+            tool: { type: string }
+            tool_name: { type: string }
+    McpServerUsage:
+      description: Uso agregado de un Servidor MCP y de cada una de sus herramientas (AC-42).
+      allOf:
+        - { $ref: '#/components/schemas/McpUsageStats' }
+        - type: object
+          required: [server, scopes, projects, tools]
+          properties:
+            server: { type: string }
+            scopes: { type: array, items: { type: string } }
+            projects: { type: array, items: { type: string } }
+            tools:
+              description: Ordenadas por llamadas.
+              type: array
+              items: { $ref: '#/components/schemas/McpToolUsage' }
+    ExportState:
+      description: Estado de la Exportación OTLP de un Turno (ADR-0008).
+      type: string
+      enum: [pending, exported, failed]
+    ExportedTurn:
+      description: Un Turno y su Exportación OTLP (AC-52).
+      type: object
+      required: [turn_id, session_id, project, state, attempts, last_error, updated_at]
+      properties:
+        turn_id: { type: string, description: Id del `prompt.submitted` que abre el Turno. }
+        session_id: { type: string }
+        project: { type: string }
+        state: { $ref: '#/components/schemas/ExportState' }
+        attempts: { type: integer, minimum: 0 }
+        last_error: { type: [string, 'null'], description: Último error del colector; `null` si no falló. }
+        updated_at: { type: string, format: date-time }
+    ExporterStatus:
+      description: Estado de la Exportación OTLP (AC-52).
+      type: object
+      required: [enabled, endpoint_host, include_content, enabled_since, counts, last_exported_at, recent]
+      properties:
+        enabled: { type: boolean }
+        endpoint_host:
+          type: [string, 'null']
+          description: Host (y puerto) del colector, sin ruta ni credenciales; `null` si está desactivado.
+        include_content:
+          type: boolean
+          description: Si se exportan prompts y entradas y salidas de herramientas (`MANDARINA_OTLP_INCLUDE_CONTENT`).
+        enabled_since:
+          type: [string, 'null']
+          format: date-time
+          description: Desde cuándo exporta; los Turnos terminados antes no se exportan.
+        counts:
+          type: object
+          required: [pending, exported, failed]
+          properties:
+            pending: { type: integer, minimum: 0 }
+            exported: { type: integer, minimum: 0 }
+            failed: { type: integer, minimum: 0 }
+        last_exported_at: { type: [string, 'null'], format: date-time }
+        recent:
+          description: Los 50 Turnos cambiados más recientemente, el más reciente primero.
+          type: array
+          maxItems: 50
+          items: { $ref: '#/components/schemas/ExportedTurn' }
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string }

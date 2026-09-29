@@ -1,0 +1,134 @@
+@if (internalCount() > 0) {
+  <app-check-filter
+    class="internal-filter"
+    data-testid="subagent-internal-filter"
+    [label]="'Mostrar internos (' + internalCount() + ')'"
+    [checked]="showInternal()"
+    (changed)="showInternal.set($event)"
+  />
+}
+<div class="card table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th scope="col">Tipo</th>
+        <th scope="col">Tarea</th>
+        <th scope="col">Inicio</th>
+        <th scope="col" class="right">Duración</th>
+        <th scope="col" class="right">Herramientas</th>
+        <th scope="col">Modelo</th>
+        <th scope="col" class="right">Tokens (entrada / salida)</th>
+        <th scope="col"><span class="visually-hidden">Detalle</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (sub of visible(); track sub.key) {
+        @let open = isExpanded(sub.key);
+        <tr data-testid="subagent-row">
+          <td>
+            <span class="badge badge--subagent" [title]="sub.subagentId ?? sub.toolUseId ?? ''">{{ sub.agentType ?? 'Subagente' }}</span>
+            @if (sub.internal) {
+              <span class="badge" title="Lanzado por el propio Harness, no por el agente">interno</span>
+            }
+          </td>
+          <td class="task-cell" [title]="sub.task?.description ?? ''">{{ sub.task?.description ?? (sub.subagentId ? short(sub.subagentId) : '—') }}</td>
+          <td class="mono">{{ sub.startedAt | date: 'HH:mm:ss' }}</td>
+          <td class="right num">{{ sub.stoppedAt ? formatDuration(sub.durationMs) : 'En marcha' }}</td>
+          <td class="right num">{{ sub.toolCount }}</td>
+          <td>
+            @if (sub.model) {
+              <app-model-badge [model]="sub.model" />
+            } @else {
+              —
+            }
+          </td>
+          <td class="right num">
+            @if (sub.tokens) {
+              {{ formatCompact(sub.tokens.input + sub.tokens.cacheRead + sub.tokens.cacheCreation) }} /
+              {{ formatCompact(sub.tokens.output) }}
+            } @else {
+              —
+            }
+          </td>
+          <td class="toggle">
+            <button
+              type="button"
+              class="toggle__button"
+              data-testid="subagent-toggle"
+              [attr.aria-expanded]="open"
+              [attr.aria-controls]="'subagent-' + sub.key"
+              (click)="toggle(sub.key)"
+            >
+              <span class="visually-hidden">{{ open ? 'Ocultar actividad' : 'Ver actividad' }}</span>
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+            </button>
+          </td>
+        </tr>
+        @if (open) {
+          <tr class="detail" [id]="'subagent-' + sub.key" data-testid="subagent-detail">
+            <td colspan="8">
+              <section class="block">
+                <h4 class="overline">Tarea</h4>
+                @if (sub.task) {
+                  @if (sub.task.description) {
+                    <p class="task__description">{{ sub.task.description }}</p>
+                  }
+                  <pre class="text" data-testid="subagent-prompt">{{ sub.task.prompt ?? '(sin prompt en el Transcript)' }}</pre>
+                } @else {
+                  <p class="muted" data-testid="subagent-task-unavailable">
+                    Tarea no disponible: sale del Transcript del Subagente, que no se ha podido leer.
+                  </p>
+                }
+              </section>
+
+              <section class="block">
+                <h4 class="overline">Herramientas ({{ sub.tools.length }})</h4>
+                @if (sub.tools.length === 0) {
+                  <p class="muted">Todavía no ha invocado herramientas.</p>
+                } @else {
+                  <ol class="calls">
+                    @for (call of sub.tools; track $index) {
+                      <li class="call" data-testid="subagent-tool" [attr.data-status]="call.status">
+                        <time class="mono num" [attr.datetime]="call.startedAt.toISOString()">{{ call.startedAt | date: 'HH:mm:ss' }}</time>
+                        <span class="mono call__name">{{ toolLabel(call.name) }}</span>
+                        <span class="mono call__summary" [title]="call.summary ?? ''">{{ call.summary ?? '—' }}</span>
+                        <span class="call__status">{{ statusLabels[call.status] }}</span>
+                      </li>
+                    }
+                  </ol>
+                }
+              </section>
+
+              @if (sub.subagentId && !sub.internal) {
+                <section class="block" data-testid="subagent-evaluation">
+                  <h4 class="overline">Evaluación</h4>
+                  <app-evaluation-controls
+                    objectType="subagent"
+                    [objectId]="sub.subagentId"
+                    [evaluation]="evaluationOf(sub.subagentId)"
+                    [label]="'Evaluación del Subagente ' + (sub.agentType ?? short(sub.subagentId))"
+                  />
+                </section>
+              }
+
+              <section class="block">
+                <h4 class="overline">Respuesta</h4>
+                @if (sub.result) {
+                  <pre class="text" data-testid="subagent-result">{{ sub.result }}</pre>
+                } @else if (!sub.stoppedAt) {
+                  <p class="muted" data-testid="subagent-running">Sigue en marcha: la respuesta aparecerá al terminar.</p>
+                } @else {
+                  <p class="muted">Respuesta no disponible en el Transcript.</p>
+                }
+              </section>
+            </td>
+          </tr>
+        }
+      } @empty {
+        <tr>
+          <td colspan="8" class="muted">Solo hay Subagentes internos del Harness.</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

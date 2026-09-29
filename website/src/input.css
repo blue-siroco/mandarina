@@ -1,0 +1,174 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   TEMAS  (colores como "R G B" para que funcionen los modificadores /90, /10…)
+   Claro = :root   ·   Oscuro = .dark   (la clase se activa desde assets/js/app.js)
+   ========================================================================== */
+:root {
+  --c-on-primary-fixed: 55 14 0;
+  --c-on-tertiary-fixed-variant: 0 78 92;
+  --c-surface-container-high: 223 233 250;
+  --c-on-surface-variant: 90 65 56;
+  --c-secondary-fixed: 233 221 255;
+  --c-on-primary-container: 255 251 255;
+  --c-inverse-primary: 255 181 153;
+  --c-tertiary: 0 101 119;
+  --c-surface-container: 229 238 255;
+  --c-surface-bright: 248 249 255;
+  --c-outline: 142 113 102;
+  --c-on-tertiary-fixed: 0 31 38;
+  --c-primary-container: 204 73 0;
+  --c-tertiary-fixed: 172 237 255;
+  --c-on-background: 18 28 40;
+  --c-tertiary-fixed-dim: 76 215 246;
+  --c-error: 186 26 26;
+  --c-surface-variant: 217 227 244;
+  --c-on-primary-fixed-variant: 127 43 0;
+  --c-tertiary-container: 0 128 150;
+  --c-outline-variant: 226 191 178;
+  --c-on-primary: 255 255 255;
+  --c-on-secondary-container: 255 251 255;
+  --c-background: 248 249 255;
+  --c-on-error: 255 255 255;
+  --c-secondary-fixed-dim: 208 188 255;
+  --c-inverse-on-surface: 234 241 255;
+  --c-on-tertiary: 255 255 255;
+  --c-on-secondary: 255 255 255;
+  --c-on-tertiary-container: 249 253 255;
+  --c-on-error-container: 147 0 10;
+  --c-surface: 248 249 255;
+  --c-surface-tint: 167 58 0;
+  --c-on-secondary-fixed-variant: 85 22 190;
+  --c-secondary: 107 56 212;
+  --c-primary-fixed-dim: 255 181 153;
+  --c-primary-fixed: 255 219 206;
+  --c-error-container: 255 218 214;
+  --c-on-surface: 18 28 40;
+  --c-inverse-surface: 39 49 62;
+  --c-surface-dim: 209 219 236;
+  --c-on-secondary-fixed: 35 0 92;
+  --c-surface-container-highest: 217 227 244;
+  --c-surface-container-lowest: 255 255 255;
+  --c-primary: 163 57 0;
+  --c-surface-container-low: 238 244 255;
+  --c-secondary-container: 132 85 239;
+  color-scheme: light;
+}
+.dark {
+  --c-on-primary-fixed: 49 19 0;
+  --c-on-tertiary-fixed-variant: 0 78 90;
+  --c-surface-container-high: 39 39 42;
+  --c-on-surface-variant: 161 161 170;
+  --c-secondary-fixed: 221 214 254;
+  --c-on-primary-container: 0 0 0;
+  --c-inverse-primary: 150 73 0;
+  --c-tertiary: 52 211 153;
+  --c-surface-container: 35 35 38;
+  --c-surface-bright: 50 50 56;
+  --c-outline: 82 82 91;
+  --c-on-tertiary-fixed: 0 32 34;
+  --c-primary-container: 255 157 77;
+  --c-tertiary-fixed: 153 246 228;
+  --c-on-background: 250 250 250;
+  --c-tertiary-fixed-dim: 94 234 212;
+  --c-error: 251 113 133;
+  --c-surface-variant: 39 39 42;
+  --c-on-primary-fixed-variant: 114 54 0;
+  --c-tertiary-container: 6 78 59;
+  --c-outline-variant: 52 52 58;
+  --c-on-primary: 0 0 0;
+  --c-on-secondary-container: 224 231 255;
+  --c-background: 14 14 16;
+  --c-on-error: 255 255 255;
+  --c-secondary-fixed-dim: 196 181 253;
+  --c-inverse-on-surface: 24 24 27;
+  --c-on-tertiary: 2 44 34;
+  --c-on-secondary: 30 27 75;
+  --c-on-tertiary-container: 153 246 228;
+  --c-on-error-container: 254 205 211;
+  --c-surface: 14 14 16;
+  --c-surface-tint: 6 182 212;
+  --c-on-secondary-fixed-variant: 67 56 202;
+  --c-secondary: 167 139 250;
+  --c-primary-fixed-dim: 251 191 36;
+  --c-primary-fixed: 255 220 198;
+  --c-error-container: 42 18 21;
+  --c-on-surface: 250 250 250;
+  --c-inverse-surface: 244 244 245;
+  --c-surface-dim: 14 14 16;
+  --c-on-secondary-fixed: 30 27 75;
+  --c-surface-container-highest: 63 63 70;
+  --c-surface-container-lowest: 19 19 21;
+  --c-primary: 255 138 42;
+  --c-surface-container-low: 24 24 27;
+  --c-secondary-container: 46 16 101;
+  color-scheme: dark;
+}
+
+@layer base {
+  html { scroll-behavior: smooth; scroll-padding-top: 8rem; }
+  html, body { margin: 0; padding: 0; }
+  body { overscroll-behavior: none; }
+  main > :first-child { margin-top: 0 !important; }
+  main > :last-child { margin-bottom: 0 !important; }
+  ::-webkit-scrollbar { display: none; }
+}
+
+/* Iconos Material Symbols */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal; font-style: normal; line-height: 1;
+  letter-spacing: normal; text-transform: none; display: inline-block;
+  white-space: nowrap; word-wrap: normal; direction: ltr;
+  -webkit-font-feature-settings: 'liga'; font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  /* Caja fija de 1em: si la fuente de iconos no carga, el nombre del icono se recorta
+     en vez de desbordarse sobre los elementos vecinos. */
+  width: 1em; height: 1em; overflow: hidden; flex-shrink: 0;
+}
+
+/* Evita el parpadeo de idioma: init.js añade .i18n-pending si hay que traducir.
+   Si app.js no llegara a cargar, la página se muestra sola tras 1 s. */
+.i18n-pending body { visibility: hidden; animation: i18n-reveal 0s 1s forwards; }
+@keyframes i18n-reveal { to { visibility: visible; } }
+
+@layer components {
+  /* Selector segmentado (idioma) */
+  .seg-btn {
+    @apply px-space-sm py-space-2xs font-code-sm text-code-sm font-medium text-on-surface-variant rounded-DEFAULT transition-colors hover:text-on-surface;
+  }
+  .seg-btn[aria-pressed="true"] {
+    @apply bg-surface-container-lowest text-primary font-bold shadow-[0_1px_2px_rgba(0,0,0,0.05)];
+  }
+  /* Navegación principal (el scroll-spy pone aria-current="true") */
+  .nav-link {
+    @apply px-space-md py-space-sm font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all rounded-lg;
+  }
+  .nav-link[aria-current="true"] {
+    @apply bg-surface-container text-on-surface font-semibold;
+  }
+}
+
+/* ==========================================================================
+   Detalles propios del tema oscuro (bordes finos y brillos del diseño original)
+   ========================================================================== */
+.dark header { border-bottom: 1px solid rgb(var(--c-outline-variant)); box-shadow: 0 4px 20px rgba(0,0,0,.5); }
+.dark .sticky.top-16 { border-bottom: 1px solid rgb(var(--c-outline-variant)); box-shadow: none; }
+.dark :is(.bg-surface-container-lowest, .bg-surface-container-low):is(.rounded-xl, .rounded-lg, .rounded-full) {
+  border: 1px solid rgb(var(--c-outline-variant));
+}
+.dark :is(.shadow-sm, .shadow-md, .shadow-xl) { box-shadow: none; }
+.dark a.bg-primary, .dark button.bg-primary { box-shadow: 0 0 15px rgba(255,138,42,.3); }
+.dark .cta-band { --c-on-primary: 255 255 255; }  /* texto blanco sobre el degradado naranja */
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .animate-ping, .animate-pulse { animation: none; }
+}
+
+/* Capturas de la app: una por tema (la clase `dark` la pone init.js en <html>). */
+.shot-dark { display: none; }
+.dark .shot-light { display: none; }
+.dark .shot-dark { display: block; }

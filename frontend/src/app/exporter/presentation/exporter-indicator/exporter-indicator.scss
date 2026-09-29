@@ -1,0 +1,90 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.exporter {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-top: 1px solid var(--border);
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+
+  --dot: var(--ok);
+
+  &[data-failed='true'] {
+    --dot: var(--danger);
+  }
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+}
+
+.exporter__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-top: 4px;
+  border-radius: var(--radius-full);
+  background: var(--dot);
+}
+
+.exporter__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.exporter__label {
+  overflow-wrap: anywhere;
+}
+
+// Los Turnos fallidos se dicen con texto, no solo con el color del punto.
+.exporter__failed {
+  color: var(--danger);
+  font-weight: 500;
+}
+
+// < 1024 px la barra lateral solo tiene iconos: queda el punto, y el texto sigue
+// disponible para lectores de pantalla y en el `title`.
+@media (max-width: 1024px) {
+  .exporter {
+    justify-content: center;
+  }
+
+  .exporter__dot {
+    margin-top: 0;
+  }
+
+  .exporter__text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+}
+
+// < 768 px la barra lateral es una franja superior: sin borde ni relleno.
+@media (max-width: 768px) {
+  .exporter {
+    width: auto;
+    padding: 0 var(--space-2);
+    border-top: 0;
+  }
+}

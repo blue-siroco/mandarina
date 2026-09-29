@@ -1,0 +1,114 @@
+@let s = state();
+
+<section class="skills" aria-labelledby="skills-title">
+  <header class="page-header">
+    <div>
+      <h2 id="skills-title">Skills</h2>
+      <p class="page-header__subtitle">Qué skills cargan los agentes y la persona usuaria en cada Proyecto · {{ range().title }}</p>
+    </div>
+  </header>
+
+  <div class="filters" role="group" aria-label="Filtros de skills">
+    <app-toggle-group
+      data-testid="range-filter"
+      label="Periodo"
+      [labels]="rangeLabels"
+      [selectedIndex]="rangeIndex()"
+      [optionWidth]="64"
+      (selected)="onRangeChange($event)"
+    />
+    <app-select-filter
+      data-testid="project-filter"
+      label="Proyecto"
+      [allLabel]="allProjects"
+      [options]="s.projects"
+      [value]="project()"
+      (changed)="selectProject($event)"
+    />
+  </div>
+
+  @if (s.failed) {
+    <p class="notice notice--warn" role="alert" data-testid="skills-error">
+      No se pudieron cargar las Invocaciones de skill. Se reintentará con el siguiente Evento.
+    </p>
+  }
+
+  @if (!s.loaded) {
+    <div class="card skeleton" aria-busy="true">
+      <p class="visually-hidden">Cargando Invocaciones de skill…</p>
+      <div class="skeleton__row" aria-hidden="true"></div>
+      <div class="skeleton__row" aria-hidden="true"></div>
+    </div>
+  } @else if (stats().length === 0) {
+    <div class="card empty" data-testid="skills-empty">
+      <p class="empty__title">Ninguna skill usada en este periodo</p>
+      <p>
+        Aparecen aquí las skills que carga un agente o un Subagente con la herramienta <code>Skill</code> y las que pide la persona
+        usuaria con <code>/nombre</code> al principio del prompt.
+      </p>
+    </div>
+  } @else {
+    <div class="card table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col"><span class="visually-hidden">Desplegar</span></th>
+            <th scope="col">Proyecto</th>
+            <th scope="col">Skill</th>
+            <th scope="col" class="num-col">Invocaciones</th>
+            <th scope="col">Agente · Persona usuaria · Subagente</th>
+            <th scope="col">Última</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (usage of stats(); track key(usage)) {
+            @let open = isExpanded(usage);
+            <tr data-testid="skill-usage">
+              <td>
+                <button
+                  type="button"
+                  class="expand"
+                  [attr.aria-expanded]="open"
+                  [attr.aria-label]="(open ? 'Plegar ' : 'Desplegar ') + usage.skill + ' en ' + usage.project"
+                  (click)="toggle(usage)"
+                >
+                  {{ open ? '▾' : '▸' }}
+                </button>
+              </td>
+              <td>{{ usage.project }}</td>
+              <td class="mono">{{ usage.skill }}</td>
+              <td class="mono num num-col">{{ usage.total }}</td>
+              <td class="mono num">{{ usage.byInvoker.agent }} · {{ usage.byInvoker.user }} · {{ usage.byInvoker.subagent }}</td>
+              <td>
+                <time [attr.datetime]="usage.lastAt.toISOString()" [title]="usage.lastAt | date: 'd MMM HH:mm:ss'">
+                  {{ relativeTime(usage.lastAt, now()) }}
+                </time>
+              </td>
+            </tr>
+            @if (open) {
+              <tr class="detail-row">
+                <td colspan="6">
+                  <ul class="invocations" data-testid="skill-usage-invocations">
+                    @for (invocation of invocationsOf(usage); track invocation.id) {
+                      <li class="invocation" data-testid="skill-usage-invocation">
+                        <span class="mono num">{{ invocation.startedAt | date: 'd MMM HH:mm:ss' }}</span>
+                        <a class="mono" [routerLink]="['/sesiones', invocation.sessionId]" [queryParams]="{ pestana: 'skills' }">
+                          {{ shortId(invocation.sessionId) }}
+                        </a>
+                        <span class="badge">{{ invokerLabel(invocation) }}</span>
+                        <span class="status" [attr.data-status]="invocation.status">{{ statusLabels[invocation.status] }}</span>
+                        <span class="args">{{ invocation.args ?? '' }}</span>
+                      </li>
+                    } @empty {
+                      <li class="muted">Solo se cargan las 500 invocaciones más recientes; esta no está entre ellas.</li>
+                    }
+                  </ul>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

@@ -1,0 +1,139 @@
+@let s = state();
+
+<section class="evaluations" aria-labelledby="evaluations-title">
+  <header class="page-header">
+    <div>
+      <h2 id="evaluations-title">Evaluaciones</h2>
+      <p class="page-header__subtitle">Tu juicio sobre Sesiones, Turnos y Subagentes · {{ range().title }}</p>
+    </div>
+    <a class="export" data-testid="export-dataset" download="evaluaciones.jsonl" [href]="exportHref()">Exportar dataset</a>
+  </header>
+
+  <div class="filters" role="group" aria-label="Filtros de Evaluaciones">
+    <app-toggle-group
+      data-testid="range-filter"
+      label="Periodo"
+      [labels]="rangeLabels"
+      [selectedIndex]="rangeIndex()"
+      [optionWidth]="64"
+      (selected)="onRangeChange($event)"
+    />
+    <app-select-filter
+      data-testid="type-filter"
+      label="Tipo"
+      [allLabel]="allTypes"
+      [options]="typeLabels"
+      [value]="type()?.label ?? null"
+      (changed)="selectType($event)"
+    />
+    <app-select-filter
+      data-testid="score-filter"
+      label="Puntuación"
+      [allLabel]="allScores"
+      [options]="scoreLabels"
+      [value]="score()?.label ?? null"
+      (changed)="selectScore($event)"
+    />
+    <app-select-filter
+      data-testid="tag-filter"
+      label="Etiqueta"
+      [allLabel]="allTags"
+      [options]="tagNames()"
+      [value]="tag()"
+      (changed)="selectTag($event)"
+    />
+    <app-select-filter
+      data-testid="project-filter"
+      label="Proyecto"
+      [allLabel]="allProjects"
+      [options]="s.projects"
+      [value]="project()"
+      (changed)="selectProject($event)"
+    />
+  </div>
+
+  @if (s.failed) {
+    <p class="notice notice--warn" role="alert" data-testid="evaluations-error">
+      No se pudieron cargar las Evaluaciones. Se reintentará en unos segundos.
+    </p>
+  }
+
+  @if (!s.loaded) {
+    <div class="card skeleton" aria-busy="true">
+      <p class="visually-hidden">Cargando Evaluaciones…</p>
+      <div class="skeleton__row" aria-hidden="true"></div>
+      <div class="skeleton__row" aria-hidden="true"></div>
+    </div>
+  } @else if (s.items.length === 0) {
+    <div class="card empty" data-testid="evaluations-empty">
+      <p class="empty__title">Ninguna Evaluación en este periodo</p>
+      <p>
+        Se crean desde el detalle de una Sesión, con los controles de la cabecera, de cada Turno de la Línea de tiempo y de cada Subagente.
+      </p>
+    </div>
+  } @else {
+    @if (s.tags.length > 0) {
+      <ul class="tag-counts" aria-label="Uso de las Etiquetas" data-testid="tag-counts">
+        @for (item of s.tags; track item.tag) {
+          <li>
+            <button type="button" class="tag-count" [attr.aria-pressed]="tag() === item.tag" (click)="selectTag(tag() === item.tag ? null : item.tag)">
+              <span>{{ item.tag }}</span>
+              <span class="tag-count__n mono">{{ formatInteger(item.count) }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+
+    <div class="card table-wrap">
+      <table class="table" data-testid="evaluations-table">
+        <thead>
+          <tr>
+            <th scope="col">Objeto</th>
+            <th scope="col">Proyecto</th>
+            <th scope="col">Puntuación</th>
+            <th scope="col">Etiquetas</th>
+            <th scope="col">Nota</th>
+            <th scope="col">Actualizada</th>
+            <th scope="col"><span class="visually-hidden">Enlace</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of s.items; track item.objectType + ':' + item.objectId) {
+            @let target = objectLink(item);
+            <tr data-testid="evaluation-row" [attr.data-type]="item.objectType">
+              <th scope="row" class="object">
+                <span class="object__type">{{ typeLabel(item.objectType) }}@if (item.agentType) {
+                  · {{ item.agentType }}
+                }</span>
+                @if (item.summary) {
+                  <span class="object__summary" [title]="item.summary">{{ item.summary }}</span>
+                }
+              </th>
+              <td>{{ item.project }}</td>
+              <td>
+                <span class="score" [attr.data-score]="item.score">
+                  {{ item.score === 1 ? 'Bien' : item.score === -1 ? 'Mal' : '—' }}
+                </span>
+              </td>
+              <td>
+                <div class="tags">
+                  @for (t of item.tags; track t) {
+                    <span class="tag">{{ t }}</span>
+                  } @empty {
+                    <span class="muted">—</span>
+                  }
+                </div>
+              </td>
+              <td class="note" [title]="item.note ?? ''">{{ item.note ?? '—' }}</td>
+              <td class="mono">{{ item.updatedAt | date: 'd MMM HH:mm' }}</td>
+              <td>
+                <a [routerLink]="target.link" [queryParams]="target.queryParams">Ver<span class="visually-hidden"> {{ typeLabel(item.objectType) }} en la Sesión</span></a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

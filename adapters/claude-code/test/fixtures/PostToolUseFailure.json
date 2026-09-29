@@ -1,0 +1,14 @@
+{
+  "session_id": "7f3c2a10-1b2c-4d5e-9f00-aa11bb22cc33",
+  "transcript_path": "C:\\Users\\dev\\.claude\\projects\\C--Codev-demo\\7f3c2a10-1b2c-4d5e-9f00-aa11bb22cc33.jsonl",
+  "cwd": "C:\\Codev\\demo",
+  "permission_mode": "default",
+  "hook_event_name": "PostToolUseFailure",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "npx vitest run"
+  },
+  "tool_use_id": "toolu_01DEF",
+  "error": "Exit code 1\n FAIL  src/sum.test.ts > sum > AC-01: suma dos números\nAssertionError: expected 3 to be 4\n\n Test Files  1 failed (1)\n      Tests  1 failed | 2 passed (3)\n   Duration  812ms",
+  "is_interrupt": false
+}

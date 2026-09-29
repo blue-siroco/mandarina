@@ -1,0 +1,18 @@
+{
+  "name": "@mandarina/mock-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Servidor mock y simulador de Eventos de Mandarina para probar frontend y backend sin Claude Code.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "serve": "node cli.mjs serve",
+    "send": "node cli.mjs send",
+    "test": "node --test \"test/*.test.mjs\""
+  },
+  "dependencies": {
+    "ws": "^8.18.3"
+  }
+}

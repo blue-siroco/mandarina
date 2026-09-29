@@ -1,0 +1,297 @@
+{
+    "_": "Fixtures del enmascarado (AC-60, AC-61). Este fichero existe idéntico en adapters/claude-code/test/fixtures y en backend/test/fixtures: un test del Adaptador comprueba que no divergen.",
+    "text": [
+        {
+            "name": "clave de Anthropic",
+            "input": "curl -H \"x: sk-ant-api03-abcdefghijklmnop\" https://api",
+            "expected": "curl -H \"x: [REDACTED_API_KEY]\" https://api"
+        },
+        {
+            "name": "clave de OpenAI",
+            "input": "OPENAI=sk-proj-abcdefghijklmnopqrstuv listo",
+            "expected": "OPENAI=[REDACTED_API_KEY] listo"
+        },
+        {
+            "name": "token de GitHub",
+            "input": "git clone ghp_abcdefghijklmnopqrstuvwxyz0123 repo",
+            "expected": "git clone [REDACTED_API_KEY] repo"
+        },
+        {
+            "name": "PAT de GitHub",
+            "input": "github_pat_11ABCDEFG0123456789_abcdefghij",
+            "expected": "[REDACTED_API_KEY]"
+        },
+        {
+            "name": "clave de AWS",
+            "input": "aws AKIAIOSFODNN7EXAMPLE fin",
+            "expected": "aws [REDACTED_API_KEY] fin"
+        },
+        {
+            "name": "clave de Figma",
+            "input": "figd_FAKEfakeFAKEfake_0123456789abc",
+            "expected": "[REDACTED_API_KEY]"
+        },
+        {
+            "name": "token de Slack",
+            "input": "xoxb-1234567890-abcdefghij",
+            "expected": "[REDACTED_API_KEY]"
+        },
+        {
+            "name": "clave de Google",
+            "input": "key=AIzaSyDaGmWKa4JsXZ-HjGw7ISLn_3namBGewQe&x=1",
+            "expected": "key=[REDACTED_API_KEY]&x=1"
+        },
+        {
+            "name": "clave de Stripe",
+            "input": "sk_live_51H8abcdefghijklmnop y rk_live_51H8abcdefghijklmnop",
+            "expected": "[REDACTED_API_KEY] y [REDACTED_API_KEY]"
+        },
+        {
+            "name": "token de npm",
+            "input": "//registry:_authToken=npm_abcdefghijklmnopqrstuvwxyz0123456789",
+            "expected": "//registry:_authToken=[REDACTED_API_KEY]"
+        },
+        {
+            "name": "webhook de Slack",
+            "input": "curl https://hooks.slack.com/services/EXAMPLE -d x",
+            "expected": "curl [REDACTED_API_KEY] -d x"
+        },
+        {
+            "name": "cabecera Bearer",
+            "input": "Authorization: Bearer abc.def.ghi-123",
+            "expected": "Authorization: Bearer [REDACTED_TOKEN]"
+        },
+        {
+            "name": "JWT",
+            "input": "sesión eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U fin",
+            "expected": "sesión [REDACTED_TOKEN] fin"
+        },
+        {
+            "name": "clave privada PEM completa",
+            "input": "cat key\n-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA0Z3VS5JJcds3xfn\nabc123==\n-----END RSA PRIVATE KEY-----\nlisto",
+            "expected": "cat key\n[REDACTED_PRIVATE_KEY]\nlisto"
+        },
+        {
+            "name": "clave privada PEM sin línea END",
+            "input": "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAA\nAAAA",
+            "expected": "[REDACTED_PRIVATE_KEY]"
+        },
+        {
+            "name": "asignación API_KEY",
+            "input": "API_KEY=supersecreto",
+            "expected": "API_KEY=[REDACTED_PASSWORD]"
+        },
+        {
+            "name": "asignación con comillas y export",
+            "input": "export GITHUB_TOKEN=\"abc123\"",
+            "expected": "export GITHUB_TOKEN=\"[REDACTED_PASSWORD]\""
+        },
+        {
+            "name": "asignación con dos puntos",
+            "input": "DB_PASSWORD: hunter2",
+            "expected": "DB_PASSWORD: [REDACTED_PASSWORD]"
+        },
+        {
+            "name": "una asignación cuyo valor es una clave conocida queda como clave",
+            "input": "GITHUB_TOKEN=ghp_abcdefghijklmnopqrstu",
+            "expected": "GITHUB_TOKEN=[REDACTED_API_KEY]"
+        },
+        {
+            "name": "URL de conexión",
+            "input": "postgres://admin:s3cr3t@db.local:5432/app",
+            "expected": "postgres://admin:[REDACTED_PASSWORD]@db.local:5432/app"
+        },
+        {
+            "name": "URL sin credenciales",
+            "input": "https://example.com:8080/ruta",
+            "expected": "https://example.com:8080/ruta"
+        },
+        {
+            "name": "texto normal",
+            "input": "npm test -- --reporter=verbose; tokens: 5; git push origin main",
+            "expected": "npm test -- --reporter=verbose; tokens: 5; git push origin main"
+        },
+        {
+            "name": "un valor que ya es un marcador no cambia",
+            "input": "API_KEY=[REDACTED_API_KEY] Bearer [REDACTED_TOKEN]",
+            "expected": "API_KEY=[REDACTED_API_KEY] Bearer [REDACTED_TOKEN]"
+        },
+        {
+            "name": "correo",
+            "input": "escribe a ana.lopez+eval@example.com hoy",
+            "expected": "escribe a [REDACTED_EMAIL] hoy"
+        },
+        {
+            "name": "teléfono E.164 pegado",
+            "input": "llama al +34612345678 ya",
+            "expected": "llama al [REDACTED_PHONE] ya"
+        },
+        {
+            "name": "teléfono E.164 con espacios",
+            "input": "tel +34 612 34 56 78.",
+            "expected": "tel [REDACTED_PHONE]."
+        },
+        {
+            "name": "móvil español con espacios",
+            "input": "móvil 612 345 678 fin",
+            "expected": "móvil [REDACTED_PHONE] fin"
+        },
+        {
+            "name": "móvil español con guiones",
+            "input": "612-34-56-78",
+            "expected": "[REDACTED_PHONE]"
+        },
+        {
+            "name": "nueve cifras sin separadores no se toca",
+            "input": "bytes 612345678 leídos",
+            "expected": "bytes 612345678 leídos"
+        },
+        {
+            "name": "IBAN pegado",
+            "input": "cuenta ES9121000418450200051332 ok",
+            "expected": "cuenta [REDACTED_IBAN] ok"
+        },
+        {
+            "name": "IBAN con espacios",
+            "input": "ES91 2100 0418 4502 0005 1332",
+            "expected": "[REDACTED_IBAN]"
+        },
+        {
+            "name": "IBAN con dígito de control inválido",
+            "input": "ES9121000418450200051333",
+            "expected": "ES9121000418450200051333"
+        },
+        {
+            "name": "tarjeta con espacios",
+            "input": "pago 4111 1111 1111 1111 ok",
+            "expected": "pago [REDACTED_CARD] ok"
+        },
+        {
+            "name": "tarjeta con guiones",
+            "input": "4111-1111-1111-1111",
+            "expected": "[REDACTED_CARD]"
+        },
+        {
+            "name": "tarjeta que no pasa Luhn",
+            "input": "4111 1111 1111 1112",
+            "expected": "4111 1111 1111 1112"
+        },
+        {
+            "name": "marca de tiempo en milisegundos",
+            "input": "t=1790337605000",
+            "expected": "t=1790337605000"
+        },
+        {
+            "name": "IBAN y tarjeta seguidos de otro número",
+            "input": "echo ES9121000418450200051332 4111 1111 1111 1111 12345678Z",
+            "expected": "echo [REDACTED_IBAN] [REDACTED_CARD] [REDACTED_ID]"
+        },
+        {
+            "name": "tarjeta seguida de más dígitos",
+            "input": "4111 1111 1111 1111 123",
+            "expected": "[REDACTED_CARD] 123"
+        },
+        {
+            "name": "DNI válido",
+            "input": "dni 12345678Z fin",
+            "expected": "dni [REDACTED_ID] fin"
+        },
+        {
+            "name": "DNI con la letra mal",
+            "input": "dni 12345678A fin",
+            "expected": "dni 12345678A fin"
+        },
+        {
+            "name": "NIE válido",
+            "input": "nie X1234567L fin",
+            "expected": "nie [REDACTED_ID] fin"
+        },
+        {
+            "name": "con PII desactivada solo se tapan los secretos",
+            "pii": "none",
+            "input": "ana@example.com +34612345678 12345678Z API_KEY=abc",
+            "expected": "ana@example.com +34612345678 12345678Z API_KEY=[REDACTED_PASSWORD]"
+        },
+        {
+            "name": "solo las categorías pedidas",
+            "pii": ["email", "id"],
+            "input": "ana@example.com +34612345678 12345678Z 4111 1111 1111 1111",
+            "expected": "[REDACTED_EMAIL] +34612345678 [REDACTED_ID] 4111 1111 1111 1111"
+        }
+    ],
+    "json": [
+        {
+            "name": "propiedades con nombre de secreto, por tipo",
+            "input": {
+                "tool_input": {
+                    "command": "echo ok",
+                    "env": {
+                        "apiKey": "plain",
+                        "OPENAI_API_KEY": "x",
+                        "access_key": "k"
+                    }
+                },
+                "auth": {
+                    "token": "t",
+                    "authorization": "Basic abc",
+                    "password": "p",
+                    "passwd": "q",
+                    "secret": "s",
+                    "credentials": "c"
+                },
+                "list": ["API_KEY=abc", 1, null, true],
+                "usage": {
+                    "input_tokens": 1200
+                }
+            },
+            "expected": {
+                "tool_input": {
+                    "command": "echo ok",
+                    "env": {
+                        "apiKey": "[REDACTED_API_KEY]",
+                        "OPENAI_API_KEY": "[REDACTED_API_KEY]",
+                        "access_key": "[REDACTED_API_KEY]"
+                    }
+                },
+                "auth": {
+                    "token": "[REDACTED_TOKEN]",
+                    "authorization": "[REDACTED_TOKEN]",
+                    "password": "[REDACTED_PASSWORD]",
+                    "passwd": "[REDACTED_PASSWORD]",
+                    "secret": "[REDACTED_PASSWORD]",
+                    "credentials": "[REDACTED_PASSWORD]"
+                },
+                "list": ["API_KEY=[REDACTED_PASSWORD]", 1, null, true],
+                "usage": {
+                    "input_tokens": 1200
+                }
+            }
+        },
+        {
+            "name": "una propiedad cuyo valor ya es un marcador no cambia",
+            "input": {
+                "token": "[REDACTED_TOKEN]",
+                "password": "[REDACTED_API_KEY]"
+            },
+            "expected": {
+                "token": "[REDACTED_TOKEN]",
+                "password": "[REDACTED_API_KEY]"
+            }
+        },
+        {
+            "name": "los valores no textuales de una propiedad secreta se recorren",
+            "input": {
+                "credentials": {
+                    "user": "ana@example.com"
+                },
+                "token": 5
+            },
+            "expected": {
+                "credentials": {
+                    "user": "[REDACTED_EMAIL]"
+                },
+                "token": 5
+            }
+        }
+    ]
+}

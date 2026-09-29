@@ -1,0 +1,144 @@
+// Bloque de un Tipo de tests (spec/design.md §6.4b).
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+}
+
+:host([data-status='failed']) {
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+}
+
+p {
+  margin: 0;
+}
+
+.suite__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+
+  h4 {
+    color: var(--text-muted);
+  }
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 20px;
+
+  svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  &[data-status='passed'] {
+    background: var(--ok-soft);
+    color: var(--ok);
+  }
+
+  &[data-status='failed'] {
+    background: var(--danger-soft);
+    color: var(--danger);
+  }
+}
+
+.suite__value {
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 600;
+
+  :host([data-status='failed']) & {
+    color: var(--danger);
+  }
+}
+
+.suite__unit {
+  color: var(--text-subtle);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.suite__detail,
+.suite__more,
+.suite__empty {
+  color: var(--text-subtle);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.suite__command {
+  overflow: hidden;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.suite__runner {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.suite__links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+}
+
+.failures {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: var(--space-3) 0 0;
+  border-top: 1px solid var(--border);
+  list-style: none;
+}
+
+.failure {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.failure__title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.failure__name {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.failure__file {
+  color: var(--text-subtle);
+  overflow-wrap: anywhere;
+}
+
+.failure__message {
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}

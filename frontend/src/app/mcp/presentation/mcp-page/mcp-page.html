@@ -1,0 +1,135 @@
+@let s = state();
+
+<section class="mcp" aria-labelledby="mcp-title">
+  <header class="page-header">
+    <div>
+      <h2 id="mcp-title">MCP</h2>
+      <p class="page-header__subtitle">Qué Servidores MCP usan los agentes, cuánto fallan y cuánto tardan · {{ range().title }}</p>
+    </div>
+  </header>
+
+  <div class="filters" role="group" aria-label="Filtros de MCP">
+    <app-toggle-group
+      data-testid="range-filter"
+      label="Periodo"
+      [labels]="rangeLabels"
+      [selectedIndex]="rangeIndex()"
+      [optionWidth]="64"
+      (selected)="onRangeChange($event)"
+    />
+    <app-select-filter
+      data-testid="server-filter"
+      label="Servidor"
+      [allLabel]="allServers"
+      [options]="s.serverNames"
+      [value]="server()"
+      (changed)="selectServer($event)"
+    />
+    <app-select-filter
+      data-testid="project-filter"
+      label="Proyecto"
+      [allLabel]="allProjects"
+      [options]="s.projects"
+      [value]="project()"
+      (changed)="selectProject($event)"
+    />
+  </div>
+
+  @if (s.failed) {
+    <p class="notice notice--warn" role="alert" data-testid="mcp-error">
+      No se pudieron cargar las invocaciones MCP. Se reintentará con el siguiente Evento de una Herramienta MCP.
+    </p>
+  }
+
+  @if (!s.loaded) {
+    <div class="card skeleton" aria-busy="true">
+      <p class="visually-hidden">Cargando invocaciones MCP…</p>
+      <div class="skeleton__row" aria-hidden="true"></div>
+      <div class="skeleton__row" aria-hidden="true"></div>
+    </div>
+  } @else if (s.servers.length === 0) {
+    <div class="card empty" data-testid="mcp-empty">
+      <p class="empty__title">Ninguna Herramienta MCP usada en este periodo</p>
+      <p>Aparecen aquí las herramientas <code>mcp__…</code> que invocan los agentes, agrupadas por Servidor MCP.</p>
+    </div>
+  } @else {
+    <div class="card table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col"><span class="visually-hidden">Desplegar</span></th>
+            <th scope="col">Servidor</th>
+            <th scope="col" class="num-col">Herramientas</th>
+            <th scope="col" class="num-col">Llamadas</th>
+            <th scope="col" class="num-col">Fallos</th>
+            <th scope="col" class="num-col">Sin respuesta</th>
+            <th scope="col" class="num-col">Latencia (mediana / p95)</th>
+            <th scope="col" class="num-col">Respuesta (media / máx.)</th>
+            <th scope="col">Última</th>
+            <th scope="col" class="num-col">Sesiones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (usage of s.servers; track usage.server) {
+            @let open = isExpanded(usage);
+            <tr data-testid="mcp-server">
+              <td>
+                <button
+                  type="button"
+                  class="expand"
+                  [attr.aria-expanded]="open"
+                  [attr.aria-label]="(open ? 'Plegar ' : 'Desplegar ') + usage.server"
+                  (click)="toggle(usage)"
+                >
+                  {{ open ? '▾' : '▸' }}
+                </button>
+              </td>
+              <td>
+                <span class="mono">{{ usage.server }}</span>
+                @for (scope of usage.scopes; track scope) {
+                  <span class="badge">{{ scope }}</span>
+                }
+              </td>
+              <td class="mono num num-col">{{ usage.tools.length }}</td>
+              <td class="mono num num-col">{{ formatInteger(usage.calls) }}</td>
+              <td class="mono num num-col">{{ formatRate(usage.failureRate) }}</td>
+              <td class="mono num num-col">{{ formatInteger(usage.noResponse) }}</td>
+              <td class="mono num num-col">{{ formatLatency(usage.latencyP50Ms) }} / {{ formatLatency(usage.latencyP95Ms) }}</td>
+              <td class="mono num num-col">
+                {{ formatBytes(usage.responseAvgBytes) }} / {{ formatBytes(usage.responseMaxBytes) }}
+                @if (usage.hasImage) {
+                  <span class="image" title="Alguna respuesta incluye imagen">▣ imagen</span>
+                }
+              </td>
+              <td>{{ relativeTime(usage.lastAt, now()) }}</td>
+              <td class="mono num num-col">{{ usage.sessions }}</td>
+            </tr>
+            @if (open) {
+              @for (tool of usage.tools; track tool.toolName) {
+                <tr class="tool-row" data-testid="mcp-tool">
+                  <td></td>
+                  <td>
+                    <a class="mono" [routerLink]="['/eventos']" [queryParams]="{ herramienta: tool.toolName }">{{ tool.tool }}</a>
+                  </td>
+                  <td></td>
+                  <td class="mono num num-col">{{ formatInteger(tool.calls) }}</td>
+                  <td class="mono num num-col">{{ formatRate(tool.failureRate) }}</td>
+                  <td class="mono num num-col">{{ formatInteger(tool.noResponse) }}</td>
+                  <td class="mono num num-col">{{ formatLatency(tool.latencyP50Ms) }} / {{ formatLatency(tool.latencyP95Ms) }}</td>
+                  <td class="mono num num-col">
+                    {{ formatBytes(tool.responseAvgBytes) }} / {{ formatBytes(tool.responseMaxBytes) }}
+                    @if (tool.hasImage) {
+                      <span class="image" title="Alguna respuesta incluye imagen">▣ imagen</span>
+                    }
+                  </td>
+                  <td>{{ relativeTime(tool.lastAt, now()) }}</td>
+                  <td class="mono num num-col">{{ tool.sessions }}</td>
+                </tr>
+              }
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

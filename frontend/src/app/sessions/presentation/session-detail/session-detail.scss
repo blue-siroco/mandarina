@@ -1,0 +1,256 @@
+// Detalle de Sesión (spec/design.md §6.3).
+:host {
+  display: block;
+}
+
+.back {
+  display: inline-block;
+  margin-bottom: var(--space-4);
+  color: var(--text-muted);
+  font-size: 13px;
+  text-decoration: none;
+
+  &:hover {
+    color: var(--text);
+  }
+}
+
+.detail__header {
+  margin-bottom: var(--space-5);
+}
+
+// Reescrituras de caché de la Línea de tiempo (AC-75).
+.rewrites {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rewrite {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--warn);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+}
+
+.rewrite__cause {
+  font-weight: 500;
+}
+
+.detail__evaluation {
+  display: block;
+  margin-top: var(--space-3);
+}
+
+// Los controles de un Turno ocupan su propia fila bajo el prompt.
+.turn__evaluation {
+  display: block;
+  grid-column: 1 / -1;
+}
+
+.detail__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+
+  h2 {
+    margin: 0;
+    font-size: 22px;
+    line-height: 28px;
+    font-weight: 600;
+  }
+}
+
+.copy {
+  height: 26px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text);
+  }
+}
+
+.detail__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  margin: var(--space-2) 0 0;
+  color: var(--text-muted);
+
+  span + span::before {
+    content: '·';
+    margin-right: var(--space-2);
+    color: var(--text-subtle);
+  }
+}
+
+.detail__working {
+  display: flex;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  color: var(--success-text);
+  font-weight: 500;
+
+  .mono {
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+}
+
+.tabs {
+  display: block;
+  margin-bottom: var(--space-5);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+
+  .section-title {
+    margin: var(--space-2) 0 0;
+  }
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space-3);
+}
+
+.muted {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.turns {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.turn {
+  display: grid;
+  grid-template-columns: 3rem 5.5rem minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+}
+
+// Turno al que se llega desde una Invocación de skill (AC-31).
+.turn--selected {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.turn__index {
+  color: var(--text-subtle);
+}
+
+.turn__prompt {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.turn__meta {
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.prompt {
+  padding: var(--space-3) var(--space-4);
+}
+
+.prompt__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.prompt__text {
+  max-height: 320px;
+  margin: var(--space-2) 0 0;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th,
+  td {
+    height: 36px;
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+
+  th {
+    background: var(--surface-2);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .right {
+    text-align: right;
+  }
+
+  .entry {
+    max-width: 24rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.card:has(> .table) {
+  overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+  .turn {
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+
+    time,
+    .turn__meta {
+      grid-column: 2;
+    }
+  }
+
+  .summary-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

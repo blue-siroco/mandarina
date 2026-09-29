@@ -1,0 +1,132 @@
+@let s = state();
+
+<section class="board" aria-labelledby="board-title">
+  <header class="page-header">
+    <div>
+      <h2 id="board-title">Sesiones</h2>
+      <p class="page-header__subtitle" data-testid="state-summary">
+        @if (s.loaded) {
+          {{ summary() }}
+        } @else {
+          Cargando Sesiones…
+        }
+      </p>
+    </div>
+  </header>
+
+  <div class="filters" role="group" aria-label="Filtros del board">
+    <app-toggle-group
+      data-testid="state-filter"
+      label="Estado"
+      [labels]="stateLabels"
+      [selectedIndex]="stateIndex()"
+      [optionWidth]="100"
+      (selected)="onStateChange($event)"
+    />
+    <app-toggle-group
+      data-testid="range-filter"
+      label="Periodo"
+      [labels]="rangeLabels"
+      [selectedIndex]="rangeIndex()"
+      [optionWidth]="64"
+      (selected)="onRangeChange($event)"
+    />
+    <app-select-filter
+      data-testid="directory-filter"
+      label="Directorio"
+      [allLabel]="allDirectories"
+      [options]="directories()"
+      [value]="directory()"
+      (changed)="selectDirectory($event)"
+    />
+    @if (directory(); as dir) {
+      <span class="active-filter mono" data-testid="active-directory">
+        {{ dir }}
+        <button type="button" class="active-filter__remove" [attr.aria-label]="'Quitar filtro ' + dir" (click)="selectDirectory(null)">
+          ×
+        </button>
+      </span>
+    }
+    @if (filtering()) {
+      <button type="button" class="link-button" (click)="clearFilters()">Limpiar filtros</button>
+    }
+  </div>
+
+  <app-usage-summary
+    [windowMs]="range().ms"
+    [title]="range().title"
+    [directory]="directory()"
+    (directorySelected)="selectDirectory($event)"
+  />
+
+  @if (s.failed) {
+    <p class="notice notice--warn" role="alert" data-testid="board-error">
+      @if (s.list) {
+        No se pudo actualizar el board; se muestran las últimas Sesiones conocidas.
+      } @else {
+        No se pudieron cargar las Sesiones. Se reintentará en unos segundos.
+      }
+    </p>
+  }
+
+  @if (!s.loaded) {
+    <div class="grid" aria-busy="true">
+      <p class="visually-hidden">Cargando Sesiones…</p>
+      @for (card of skeletonCards; track card) {
+        <div class="card skeleton" aria-hidden="true">
+          <div class="skeleton__row"></div>
+          <div class="skeleton__row"></div>
+          <div class="skeleton__row"></div>
+        </div>
+      }
+    </div>
+  } @else if (s.list && s.list.items.length === 0) {
+    <div class="card empty" data-testid="board-empty">
+      <p class="empty__title">No hay Sesiones en este periodo</p>
+      <p>Amplía el rango de tiempo o comprueba en <a routerLink="/eventos">Eventos</a> que el Adaptador está enviando datos.</p>
+    </div>
+  } @else if (groups().length === 0) {
+    <div class="card empty" data-testid="board-no-matches">
+      <p class="empty__title">Ninguna Sesión coincide con los filtros</p>
+      <button type="button" class="link-button" (click)="clearFilters()">Limpiar filtros</button>
+    </div>
+  } @else {
+    @for (group of groups(); track group.project) {
+      @let collapsed = isCollapsed(group.project);
+      <section class="project" data-testid="project-group" [attr.aria-label]="'Proyecto ' + group.project">
+        <header class="project__header">
+          <button
+            type="button"
+            class="project__toggle"
+            [attr.aria-expanded]="!collapsed"
+            (click)="toggleProject(group.project)"
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+            <h3 class="project__name">{{ group.project }}</h3>
+          </button>
+          <span class="project__count">
+            {{ plural(group.open.length + group.closed.length, 'Sesión', 'Sesiones') }} ·
+            {{ plural(group.activeCount, 'activa', 'activas') }}
+          </span>
+        </header>
+        @if (!collapsed) {
+          <div class="grid">
+            @for (session of group.open; track session.sessionId) {
+              <app-session-card [session]="session" [now]="now()" (directorySelected)="selectDirectory($event)" />
+            }
+            @if (isShowingClosed(group.project)) {
+              @for (session of group.closed; track session.sessionId) {
+                <app-session-card [session]="session" [now]="now()" (directorySelected)="selectDirectory($event)" />
+              }
+            }
+          </div>
+          @if (group.closed.length > 0) {
+            <button type="button" class="link-button project__closed" (click)="toggleClosed(group.project)">
+              {{ isShowingClosed(group.project) ? 'Ocultar cerradas' : 'Mostrar ' + group.closed.length + (group.closed.length === 1 ? ' cerrada' : ' cerradas') }}
+            </button>
+          }
+        }
+      </section>
+    }
+  }
+</section>

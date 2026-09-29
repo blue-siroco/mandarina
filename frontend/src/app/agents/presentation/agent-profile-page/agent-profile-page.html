@@ -1,0 +1,204 @@
+@let s = state();
+
+<section class="profile" aria-labelledby="profile-title">
+  <a class="back" routerLink="/agentes" queryParamsHandling="preserve">← Agentes</a>
+
+  <header class="page-header">
+    <div>
+      <h2 id="profile-title" class="mono">{{ typeLabel(type()) }}</h2>
+      <p class="page-header__subtitle" data-testid="profile-subtitle">
+        {{ range().title }}
+        @if (s.profile; as p) {
+          @if (p.summary.projects.length > 0) {
+            · {{ p.summary.projects.join(', ') }}
+          }
+          @for (l of p.launchedBy; track l.launcher) {
+            · Lanzado por {{ l.launcher ?? 'el agente principal' }} ({{ l.launches }})
+          }
+        }
+      </p>
+    </div>
+  </header>
+
+  @if (s.failed) {
+    <p class="notice notice--warn" role="alert" data-testid="profile-error">
+      No se pudo actualizar el perfil; se muestran los últimos datos conocidos.
+    </p>
+  }
+
+  @if (!s.loaded) {
+    <p class="muted" aria-busy="true">Cargando el perfil…</p>
+  } @else if (s.profile; as p) {
+    @if (p.summary.launches === 0) {
+      <div class="card empty" data-testid="profile-empty">
+        <p class="empty__title">Ningún Lanzamiento de {{ typeLabel(type()) }} en este periodo</p>
+        <a routerLink="/agentes" queryParamsHandling="preserve">Volver a Agentes</a>
+      </div>
+    } @else {
+      <div class="kpi-grid" data-testid="profile-kpis">
+        <article class="kpi">
+          <h3 class="overline">Lanzamientos</h3>
+          <p class="kpi__value">{{ formatInteger(p.summary.launches) }}</p>
+          <p class="kpi__detail">{{ p.summary.running }} en marcha · {{ p.summary.noResponse }} sin respuesta</p>
+        </article>
+        <article class="kpi">
+          <h3 class="overline">Duración</h3>
+          <p class="kpi__value">{{ p.summary.durationP50Ms === null ? '—' : formatDuration(p.summary.durationP50Ms) }}</p>
+          <p class="kpi__detail">Mediana · p95 {{ p.summary.durationP95Ms === null ? '—' : formatDuration(p.summary.durationP95Ms) }}</p>
+        </article>
+        <article class="kpi" data-accent="brand">
+          <h3 class="overline">Coste estimado</h3>
+          <p class="kpi__value">{{ formatCost(p.summary.estimatedCostUsd) }}</p>
+          <p class="kpi__detail">
+            {{ p.summary.costPerLaunchUsd === null ? 'Sin Transcripts' : formatCost(p.summary.costPerLaunchUsd) + ' por Lanzamiento' }}
+          </p>
+        </article>
+        <article class="kpi">
+          <h3 class="overline">Plano</h3>
+          <p class="kpi__value">{{ p.summary.foreground }} / {{ p.summary.background }}</p>
+          <p class="kpi__detail">Primer / segundo plano</p>
+        </article>
+        <article class="kpi" data-testid="profile-cache">
+          <h3 class="overline">Caché</h3>
+          <p class="kpi__value">{{ p.summary.cacheHitRate === null ? '—' : formatPercent(p.summary.cacheHitRate) }}</p>
+          <p class="kpi__detail" [attr.data-tone]="p.summary.cacheSavingsNetUsd < 0 ? 'danger' : null">
+            {{ p.summary.cacheSavingsNetUsd < 0 ? 'Sobrecoste ' : 'Ahorro ' }}{{ formatCost(abs(p.summary.cacheSavingsNetUsd)) }}
+          </p>
+        </article>
+        <article class="kpi" data-testid="profile-rating">
+          <h3 class="overline">Evaluación</h3>
+          @if (p.summary.ratedUp + p.summary.ratedDown === 0) {
+            <p class="kpi__value">—</p>
+            <p class="kpi__detail">Sin puntuar</p>
+          } @else {
+            <p class="kpi__value">{{ p.summary.ratedUp }} bien · {{ p.summary.ratedDown }} mal</p>
+            <p class="kpi__detail">Lanzamientos con Subagente puntuado</p>
+          }
+        </article>
+      </div>
+
+      <h3 class="section-title">Lanzamientos por día</h3>
+      <div class="card chart">
+        <app-bars-chart [data$]="perDay$" ariaLabel="Lanzamientos por día" />
+      </div>
+
+      <div class="grid">
+        <section class="card block" aria-labelledby="tools-title">
+          <h3 id="tools-title" class="section-title">Herramientas</h3>
+          <table class="table" data-testid="profile-tools">
+            <thead>
+              <tr>
+                <th scope="col">Herramienta</th>
+                <th scope="col" class="num-col">Llamadas</th>
+                <th scope="col" class="num-col">Con error</th>
+                <th scope="col" class="num-col">Bloqueos</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (t of p.tools; track t.name) {
+                <tr>
+                  <td class="mono">{{ toolLabel(t.name) }}</td>
+                  <td class="mono num num-col">{{ t.calls }}</td>
+                  <td class="mono num num-col">{{ t.errors }}</td>
+                  <td class="mono num num-col">{{ t.blocks }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="4" class="muted">Sin herramientas registradas.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </section>
+
+        <section class="card block" aria-labelledby="uses-title">
+          <h3 id="uses-title" class="section-title">Skills, MCP y tests</h3>
+          <dl class="uses" data-testid="profile-uses">
+            <dt>Skills</dt>
+            <dd>
+              @for (sk of p.skills; track sk.skill) {
+                <span class="mono">{{ sk.skill }} ({{ sk.invocations }})</span>
+              } @empty {
+                —
+              }
+            </dd>
+            <dt>Servidores MCP</dt>
+            <dd>
+              @for (m of p.mcpServers; track m.server) {
+                <span class="mono">{{ m.server }} ({{ m.calls }}, {{ m.errors }} con error)</span>
+              } @empty {
+                —
+              }
+            </dd>
+            <dt>Ejecuciones de tests</dt>
+            <dd>
+              @if (p.testRuns.total > 0) {
+                {{ p.testRuns.passed }} pasan · {{ p.testRuns.failed }} fallan
+              } @else {
+                —
+              }
+            </dd>
+            <dt>Modelos</dt>
+            <dd>
+              @for (m of p.models; track m.model) {
+                <app-model-badge [model]="m.model" />
+              } @empty {
+                —
+              }
+            </dd>
+          </dl>
+        </section>
+      </div>
+
+      <h3 class="section-title">Lanzamientos</h3>
+      <div class="card table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Inicio</th>
+              <th scope="col">Sesión</th>
+              <th scope="col">Tarea</th>
+              <th scope="col">Estado</th>
+              <th scope="col">Plano</th>
+              <th scope="col" class="num-col">Duración</th>
+              <th scope="col" class="num-col">Con error</th>
+              <th scope="col" class="num-col">Bloqueos</th>
+              <th scope="col" class="num-col">Coste</th>
+              <th scope="col" class="num-col">Caché</th>
+              <th scope="col">Respuesta</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (l of p.launches; track l.sessionId + l.key) {
+              <tr data-testid="agent-launch" [attr.data-status]="l.status">
+                <td class="mono num">{{ l.startedAt | date: 'd MMM HH:mm' }}</td>
+                <td>
+                  <a class="mono" [routerLink]="['/sesiones', l.sessionId]" [queryParams]="{ pestana: 'subagentes', subagente: l.key }">
+                    {{ shortId(l.sessionId) }}
+                  </a>
+                </td>
+                <td class="task" [title]="l.description ?? ''">{{ l.description ?? '—' }}</td>
+                <td><span class="status" [attr.data-status]="l.status">{{ statusLabels[l.status] }}</span></td>
+                <td>{{ l.background ? 'Segundo' : 'Primer' }}</td>
+                <td class="mono num num-col">{{ formatDuration(l.durationMs) }}</td>
+                <td class="mono num num-col">{{ l.toolErrors }}</td>
+                <td class="mono num num-col">{{ l.blocks }}</td>
+                <td class="mono num num-col">{{ l.estimatedCostUsd === null ? '—' : formatCost(l.estimatedCostUsd) }}</td>
+                <td class="mono num num-col" data-testid="launch-cache">
+                  {{ l.cacheHitRate === null ? '—' : formatPercent(l.cacheHitRate) }}
+                  @if (l.cacheSavingsNetUsd !== null) {
+                    <span class="muted">· {{ l.cacheSavingsNetUsd < 0 ? 'Sobrecoste ' : 'Ahorro ' }}{{ formatCost(abs(l.cacheSavingsNetUsd)) }}</span>
+                  }
+                </td>
+                <td class="result" [title]="l.result ?? ''">{{ l.result ?? '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="muted" data-testid="cache-note">
+        Un Subagente arranca con el contexto vacío, así que su tasa de caché suele ser menor que la de la Sesión: compárala entre Tipos, no con la de la Sesión.
+      </p>
+    }
+  }
+</section>

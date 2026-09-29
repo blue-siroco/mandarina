@@ -1,0 +1,71 @@
+// Pegado bajo la barra superior para verse en cualquier pantalla y con cualquier scroll (AC-83).
+:host {
+  position: sticky;
+  top: 52px;
+  z-index: 1;
+  display: block;
+}
+
+.budget-alert {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-6);
+  border-bottom: 1px solid var(--border);
+  background: var(--warn-soft);
+  color: var(--text);
+  font-size: 13px;
+
+  &[data-state='exceeded'] {
+    background: color-mix(in srgb, var(--danger) 14%, var(--bg));
+    border-bottom-color: color-mix(in srgb, var(--danger) 40%, transparent);
+  }
+}
+
+// El estado se dice con texto además del color.
+.budget-alert__state {
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--warn);
+  color: var(--bg);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+
+  [data-state='exceeded'] & {
+    background: var(--danger);
+  }
+}
+
+.budget-alert__message {
+  font-variant-numeric: tabular-nums;
+}
+
+.budget-alert__more {
+  color: var(--text-muted);
+}
+
+.budget-alert__link {
+  margin-left: auto;
+}
+
+.budget-alert__mute {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  // La barra superior se oculta en pantalla estrecha: el aviso pasa a lo más alto.
+  :host {
+    top: 0;
+  }
+
+  .budget-alert {
+    padding: var(--space-2) var(--space-4);
+  }
+}

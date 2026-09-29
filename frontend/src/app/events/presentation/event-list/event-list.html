@@ -1,0 +1,85 @@
+@let s = state();
+
+<section class="event-list" aria-labelledby="event-list-title">
+  <header class="page-header">
+    <div>
+      <h2 id="event-list-title">Eventos recientes</h2>
+      <p class="page-header__subtitle" data-testid="event-count">
+        @if (s.loaded && s.events.length > 0) {
+          Eventos: {{ formatInteger(filtered().length) }} / {{ formatInteger(s.events.length) }} · se actualizan en vivo
+        } @else {
+          Lo que hacen tus agentes, en cuanto ocurre
+        }
+      </p>
+    </div>
+  </header>
+
+  <div class="filters" role="group" aria-label="Filtros de Eventos">
+    <app-toggle-group
+      data-testid="category-filter"
+      label="Categoría"
+      [labels]="categoryLabels"
+      [selectedIndex]="categoryIndex()"
+      [optionWidth]="112"
+      (selected)="onCategoryChange($event)"
+    />
+    @if (toolOptions().length > 0) {
+      <div class="tools" role="group" aria-label="Herramienta">
+        @for (tool of toolOptions(); track tool) {
+          <button
+            type="button"
+            class="chip mono"
+            data-testid="tool-filter"
+            [attr.aria-pressed]="selectedTools().includes(tool)"
+            (click)="toggleTool(tool)"
+          >
+            {{ tool }}
+          </button>
+        }
+      </div>
+    }
+    <app-check-filter
+      data-testid="internal-filter"
+      label="Mostrar internos"
+      [checked]="showInternal()"
+      (changed)="setShowInternal($event)"
+    />
+    @if (filtering()) {
+      <button type="button" class="link-button" (click)="clearFilters()">Limpiar filtros</button>
+    }
+  </div>
+
+  @if (s.historyFailed) {
+    <p class="notice notice--warn" role="alert">
+      No se pudo cargar el historial de Eventos. Se muestran solo los que lleguen en vivo.
+    </p>
+  }
+
+  @if (!s.loaded) {
+    <div class="card skeleton" aria-busy="true">
+      <p class="visually-hidden">Cargando Eventos…</p>
+      @for (row of skeletonRows; track row) {
+        <div class="skeleton__row" aria-hidden="true"></div>
+      }
+    </div>
+  } @else if (s.events.length === 0) {
+    <div class="card empty" data-testid="empty-state">
+      <svg class="empty__icon" viewBox="0 0 24 24" width="40" height="40" aria-hidden="true">
+        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+      </svg>
+      <p class="empty__title">Todavía no hay Eventos</p>
+      <p>Registra el Adaptador de Claude Code en el <code>.claude/settings.json</code> de tu proyecto, para cada hook:</p>
+      <pre><code>{{ hookSetupExample }}</code></pre>
+      <p class="empty__hint">Los Eventos aparecerán aquí en cuanto uses Claude Code.</p>
+    </div>
+  } @else if (filtered().length === 0) {
+    <div class="card empty" data-testid="no-matches">
+      <p class="empty__title">Ningún Evento coincide con los filtros</p>
+      <button type="button" class="link-button" (click)="clearFilters()">Limpiar filtros</button>
+    </div>
+  } @else {
+    <div class="card">
+      <app-event-rows [events]="filtered()" />
+    </div>
+  }
+</section>

@@ -1,0 +1,110 @@
+@let s = state();
+
+<section class="subagents" aria-labelledby="subagents-title">
+  <header class="page-header">
+    <div>
+      <h2 id="subagents-title">Subagentes</h2>
+      <p class="page-header__subtitle">En qué delegan los agentes de todas las Sesiones y cuánto cuesta · {{ range().title }}</p>
+    </div>
+  </header>
+
+  <div class="filters" role="group" aria-label="Filtros de Subagentes">
+    <app-toggle-group
+      data-testid="range-filter"
+      label="Periodo"
+      [labels]="rangeLabels"
+      [selectedIndex]="rangeIndex()"
+      [optionWidth]="64"
+      (selected)="onRangeChange($event)"
+    />
+    <app-select-filter
+      data-testid="type-filter"
+      label="Tipo"
+      [allLabel]="allTypes"
+      [options]="s.types"
+      [value]="type()"
+      (changed)="selectType($event)"
+    />
+    <app-select-filter
+      data-testid="project-filter"
+      label="Proyecto"
+      [allLabel]="allProjects"
+      [options]="s.projects"
+      [value]="project()"
+      (changed)="selectProject($event)"
+    />
+    <app-check-filter data-testid="internal-filter" label="Mostrar internos" [checked]="showInternal()" (changed)="setShowInternal($event)" />
+  </div>
+
+  @if (s.failed) {
+    <p class="notice notice--warn" role="alert" data-testid="subagents-error">
+      No se pudieron cargar los Subagentes. Se reintentará con el siguiente Evento de Subagente.
+    </p>
+  }
+
+  @if (!s.loaded) {
+    <div class="card skeleton" aria-busy="true">
+      <p class="visually-hidden">Cargando Subagentes…</p>
+      <div class="skeleton__row" aria-hidden="true"></div>
+      <div class="skeleton__row" aria-hidden="true"></div>
+    </div>
+  } @else if (s.subagents.length === 0) {
+    <div class="card empty" data-testid="subagents-empty">
+      <p class="empty__title">Ningún Subagente en este periodo</p>
+      <p>
+        Aparecen aquí los Subagentes en que delega un agente con la herramienta <code>Agent</code>, y los que avisan los hooks
+        <code>SubagentStart</code> y <code>SubagentStop</code>.
+      </p>
+    </div>
+  } @else {
+    <h3 class="section-title">Subagentes</h3>
+    <div class="card table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Inicio</th>
+            <th scope="col">Tipo</th>
+            <th scope="col">Tarea</th>
+            <th scope="col">Proyecto</th>
+            <th scope="col">Sesión</th>
+            <th scope="col">Estado</th>
+            <th scope="col" class="num-col">Duración</th>
+            <th scope="col" class="num-col">Herramientas</th>
+            <th scope="col" class="num-col">Tokens</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (sub of s.subagents; track sub.sessionId + sub.key) {
+            <tr data-testid="subagent-item" [attr.data-status]="sub.status">
+              <td class="mono num">{{ sub.startedAt | date: 'd MMM HH:mm:ss' }}</td>
+              <td>
+                <a class="mono" [routerLink]="['/agentes', sub.agentType ?? noType]" title="Perfil del Tipo de Subagente">{{ sub.agentType ?? 'Sin Tipo' }}</a>
+                @if (sub.internal) {
+                  <span class="badge" title="Lanzado por el propio Harness, no por el agente">interno</span>
+                }
+              </td>
+              <td class="task" [title]="sub.description ?? ''">{{ sub.description ?? '—' }}</td>
+              <td>{{ sub.project }}</td>
+              <td>
+                <a
+                  class="mono"
+                  [routerLink]="['/sesiones', sub.sessionId]"
+                  [queryParams]="{ pestana: 'subagentes', subagente: sub.key }"
+                  [title]="'Ver el Subagente en su Sesión'"
+                >
+                  {{ shortId(sub.sessionId) }}
+                </a>
+              </td>
+              <td><span class="status" [attr.data-status]="sub.status">{{ statusLabels[sub.status] }}</span></td>
+              <td class="mono num num-col">{{ formatDuration(sub.durationMs) }}</td>
+              <td class="mono num num-col">{{ sub.toolCount }}</td>
+              <td class="mono num num-col">
+                {{ sub.tokens ? formatCompact(sub.tokens.input + sub.tokens.cacheRead + sub.tokens.cacheCreation + sub.tokens.output) : '—' }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

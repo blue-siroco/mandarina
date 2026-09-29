@@ -1,0 +1,13 @@
+{
+  "name": "mandarina-web",
+  "version": "0.9.4",
+  "private": true,
+  "description": "Web estática de Mandarina (ES/EN, claro/oscuro) para GitHub Pages",
+  "scripts": {
+    "build": "tailwindcss -c tailwind.config.js -i src/input.css -o assets/css/styles.css --minify",
+    "watch": "tailwindcss -c tailwind.config.js -i src/input.css -o assets/css/styles.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}

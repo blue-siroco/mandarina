@@ -1,0 +1,98 @@
+@if (isOpen()) {
+  @let s = status();
+  <div
+    class="modal-overlay"
+    data-testid="exporter-overlay"
+    tabindex="-1"
+    (click)="onOverlayClick($event)"
+    (keydown.escape)="close()"
+  >
+    <div
+      #window
+      class="modal-window"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="exporter-title"
+      tabindex="-1"
+      data-testid="exporter-modal"
+    >
+      <div class="modal-close" data-testid="exporter-close">
+        <lucia--button [button]="closeButton" aria-label="Cerrar" (callback)="onCloseButtonClick()"></lucia--button>
+      </div>
+
+      <div class="modal-content">
+        <header class="exporter__header">
+          <h2 id="exporter-title" class="exporter__title">Exportación OTLP</h2>
+          <p class="muted" data-testid="exporter-target">
+            Cada Turno terminado se envía a <span class="mono">{{ s.endpointHost }}</span
+            >@if (s.includeContent) {
+              , con el contenido de prompts y herramientas
+            }.
+          </p>
+        </header>
+
+        <dl class="counts" data-testid="exporter-counts">
+          <div>
+            <dt>Pendientes</dt>
+            <dd class="mono">{{ formatInteger(s.counts.pending) }}</dd>
+          </div>
+          <div>
+            <dt>Exportados</dt>
+            <dd class="mono">{{ formatInteger(s.counts.exported) }}</dd>
+          </div>
+          <div>
+            <dt>Fallidos</dt>
+            <dd class="mono" [class.counts__failed]="s.counts.failed > 0">{{ formatInteger(s.counts.failed) }}</dd>
+          </div>
+          <div>
+            <dt>Última exportación</dt>
+            <dd class="mono" data-testid="exporter-last">
+              @if (s.lastExportedAt; as last) {
+                {{ last | date: 'd MMM HH:mm:ss' }}
+              } @else {
+                —
+              }
+            </dd>
+          </div>
+        </dl>
+
+        @if (s.recent.length === 0) {
+          <p class="muted" data-testid="exporter-empty">
+            Aún no hay Turnos. Se exportan los que terminan desde que se activó el exportador.
+          </p>
+        } @else {
+          <div class="table-wrap">
+            <table class="table" data-testid="exporter-table">
+              <thead>
+                <tr>
+                  <th scope="col">Proyecto</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col" class="num-col">Intentos</th>
+                  <th scope="col">Último error</th>
+                  <th scope="col">Cuándo</th>
+                  <th scope="col">Sesión</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (turn of s.recent; track turn.turnId) {
+                  <tr data-testid="exporter-row" [attr.data-state]="turn.state">
+                    <th scope="row">{{ turn.project }}</th>
+                    <td>
+                      <span class="state" [attr.data-state]="turn.state">{{ stateLabels[turn.state] }}</span>
+                    </td>
+                    <td class="mono num-col">{{ turn.attempts }}</td>
+                    <td class="error">{{ turn.lastError ?? '—' }}</td>
+                    <td class="mono">{{ turn.updatedAt | date: 'd MMM HH:mm:ss' }}</td>
+                    <td>
+                      <a [routerLink]="['/sesiones', turn.sessionId]" (click)="close()">Ver Sesión</a>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}

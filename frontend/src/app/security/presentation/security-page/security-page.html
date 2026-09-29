@@ -1,0 +1,34 @@
+<section class="security" aria-labelledby="security-title">
+  <header class="page-header">
+    <div>
+      <h2 id="security-title">Seguridad</h2>
+      <p class="page-header__subtitle">Contenido que parece dar órdenes al agente y datos que se han tapado · {{ range().title }}</p>
+    </div>
+    <app-toggle-group
+      data-testid="range-filter"
+      label="Periodo"
+      [labels]="rangeLabels"
+      [selectedIndex]="rangeIndex()"
+      [optionWidth]="64"
+      (selected)="onRangeChange($event)"
+    />
+  </header>
+
+  <app-toggle-group
+    data-testid="security-tabs"
+    label="Pestañas de Seguridad"
+    [labels]="tabLabels"
+    [selectedIndex]="tabIndex()"
+    [optionWidth]="180"
+    (selected)="onTabChange($event)"
+  />
+
+  @switch (tab()) {
+    @case ('enmascarado') {
+      <app-masking-tab [windowMs]="range().ms" />
+    }
+    @default {
+      <app-injection-warnings-tab [windowMs]="range().ms" />
+    }
+  }
+</section>

@@ -1,0 +1,136 @@
+// Modal de desglose de una ficha (spec/design.md §5.3b), con la estructura de
+// la skill `angular-modal` y los colores de los tokens para seguir el tema.
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: var(--scrim);
+  z-index: 1000;
+}
+
+.modal-window {
+  position: relative;
+  box-sizing: border-box;
+  width: 960px;
+  max-width: 100%;
+  min-height: 300px;
+  max-height: 90vh;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--bg-overlay);
+  box-shadow: var(--shadow-3);
+  color: var(--text);
+  overflow: auto;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+// Botón de cerrar en la esquina superior derecha.
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
+}
+
+.modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: 48px var(--space-5) var(--space-5);
+}
+
+.breakdown__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.breakdown__title {
+  margin: 0;
+  font-size: 18px;
+}
+
+.breakdown__filter,
+.muted,
+.project {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.project {
+  margin-left: var(--space-2);
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th,
+  td {
+    height: 36px;
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  thead th {
+    background: var(--surface-2);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  tbody th {
+    font-weight: 400;
+  }
+
+  .num-col {
+    text-align: right;
+  }
+
+  .total th,
+  .total td {
+    font-weight: 700;
+  }
+
+  tbody tr:last-child td,
+  tbody tr:last-child th {
+    border-bottom: 0;
+  }
+}
+
+.sort {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+}
+
+.sort__arrow {
+  display: inline-block;
+  min-width: 1ch;
+}

@@ -1,0 +1,92 @@
+@let s = state();
+
+<section class="tests" aria-labelledby="tests-title">
+  <header class="page-header">
+    <div>
+      <h2 id="tests-title">Tests</h2>
+      <p class="page-header__subtitle">Último resultado de los tests que lanzaron los agentes, por Proyecto, en los últimos 7 días</p>
+    </div>
+    <app-select-filter
+      data-testid="project-filter"
+      label="Proyecto"
+      [allLabel]="allProjects"
+      [options]="s.projects"
+      [value]="project()"
+      (changed)="selectProject($event)"
+    />
+  </header>
+
+  @if (s.failed) {
+    <p class="notice notice--warn" role="alert" data-testid="tests-error">
+      No se pudieron cargar las Ejecuciones de tests. Se reintentará cuando un agente termine un comando.
+    </p>
+  }
+
+  @if (!s.loaded) {
+    <div class="card skeleton" aria-busy="true">
+      <p class="visually-hidden">Cargando Ejecuciones de tests…</p>
+      <div class="skeleton__row" aria-hidden="true"></div>
+      <div class="skeleton__row" aria-hidden="true"></div>
+    </div>
+  } @else if (statuses().length === 0) {
+    <div class="card empty" data-testid="tests-empty">
+      <p class="empty__title">Ninguna Ejecución de tests en 7 días</p>
+      <p>
+        Aparecen aquí los tests que los agentes lanzan con <code>Bash</code> (Vitest, Jest, <code>node:test</code> o Playwright).
+        Para ver los que fallan, el hook <code>PostToolUseFailure</code> debe estar instalado.
+      </p>
+    </div>
+  } @else {
+    <div class="projects">
+      @for (status of statuses(); track status.project) {
+        <article class="card project" data-testid="test-project" [attr.aria-labelledby]="'project-' + $index">
+          <h3 class="section-title" [id]="'project-' + $index">{{ status.project }}</h3>
+          <div class="project__suites">
+            <app-test-suite kind="unit" [run]="status.unit" [now]="now()" />
+            <app-test-suite kind="e2e" [run]="status.e2e" [now]="now()" />
+          </div>
+        </article>
+      }
+    </div>
+
+    <h3 class="section-title history-title">Historial</h3>
+    @if (runs().length === 0) {
+      <div class="card empty">
+        <p class="empty__title">Este Proyecto no tiene Ejecuciones de tests en 7 días</p>
+      </div>
+    } @else {
+      <div class="card table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Hora</th>
+              <th scope="col">Proyecto</th>
+              <th scope="col">Tipo</th>
+              <th scope="col">Runner</th>
+              <th scope="col">Resultado</th>
+              <th scope="col" class="num-col">Pasados</th>
+              <th scope="col" class="num-col">Duración</th>
+              <th scope="col">Sesión</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (run of runs(); track run.id) {
+              <tr data-testid="test-run-row" [attr.data-status]="run.status">
+                <td class="mono num">{{ run.finishedAt | date: 'd MMM HH:mm:ss' }}</td>
+                <td>{{ run.project }}</td>
+                <td>{{ kindLabels[run.kind] }}</td>
+                <td class="mono" [title]="run.command ?? ''">{{ runnerLabel(run.runner) }}</td>
+                <td><span class="result" [attr.data-status]="run.status">{{ statusLabels[run.status] }}</span></td>
+                <td class="mono num num-col">{{ run.counts.passed }} / {{ run.counts.total }}</td>
+                <td class="mono num num-col">{{ run.durationMs === null ? '—' : formatTestDuration(run.durationMs) }}</td>
+                <td>
+                  <a class="mono" [routerLink]="['/sesiones', run.sessionId]">{{ shortId(run.sessionId) }}</a>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</section>

@@ -1,0 +1,3 @@
+# Fuerza LF en scripts ejecutados dentro de contenedores Linux, independientemente
+# del core.autocrlf del cliente Windows (evita el "bad interpreter: /bin/sh^M").
+*.sh text eol=lf

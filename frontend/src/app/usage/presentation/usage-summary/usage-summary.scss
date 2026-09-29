@@ -1,0 +1,75 @@
+// Fila de tarjetas KPI (spec/design.md §5.3); `.kpi` y `.kpi-grid` son globales.
+:host {
+  display: block;
+  margin-bottom: var(--space-6);
+}
+
+.usage__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.usage__updated {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+// Progreso del Presupuesto global del día en la ficha de coste (AC-84).
+.day-budget {
+  margin-top: var(--space-2);
+
+  --fill: var(--ok);
+
+  &[data-state='near'] {
+    --fill: var(--warn);
+  }
+
+  &[data-state='exceeded'] {
+    --fill: var(--danger);
+  }
+}
+
+.day-budget__label {
+  margin: 0 0 var(--space-1);
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.day-budget__bar {
+  height: 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.day-budget__fill {
+  display: block;
+  height: 100%;
+  background: var(--fill);
+}
+
+.kpi--skeleton .skeleton__row:last-child {
+  width: 60%;
+  height: 28px;
+}
+
+// Cada ficha abre su desglose (AC-39).
+.kpi--button {
+  cursor: pointer;
+  transition: border-color 120ms ease;
+
+  &:hover {
+    border-color: var(--border-strong);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+}

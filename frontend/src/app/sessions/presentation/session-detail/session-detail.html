@@ -1,0 +1,223 @@
+@let s = state();
+
+<section class="detail" aria-labelledby="detail-title">
+  <a class="back" routerLink="/sesiones">← Sesiones</a>
+
+  @if (!s.loaded) {
+    <div class="card skeleton" aria-busy="true">
+      <p class="visually-hidden">Cargando Sesión…</p>
+      <div class="skeleton__row"></div>
+      <div class="skeleton__row"></div>
+      <div class="skeleton__row"></div>
+    </div>
+  } @else if (s.notFound) {
+    <div class="card empty" data-testid="session-not-found">
+      <p class="empty__title" id="detail-title">No existe la Sesión {{ shortId() }}</p>
+      <p>Puede que aún no haya enviado Eventos. <a routerLink="/sesiones">Volver al board</a></p>
+    </div>
+  } @else if (!s.detail) {
+    <p class="notice notice--warn" role="alert">No se pudo cargar la Sesión. Se reintentará en unos segundos.</p>
+  } @else {
+    @let d = s.detail;
+    <header class="detail__header">
+      <div class="detail__title">
+        <h2 id="detail-title" class="mono" [title]="d.sessionId">{{ shortId() }}</h2>
+        <button type="button" class="copy" (click)="copyId()">{{ copied() ? 'Copiado' : 'Copiar ID' }}</button>
+        <app-state-dot [state]="d.state" [reason]="reason()" />
+        @if (d.model) {
+          <app-model-badge [model]="d.model" />
+        }
+        <span class="badge">{{ d.harness }}</span>
+      </div>
+      <p class="detail__meta" data-testid="session-meta">
+        <span>{{ d.project }}</span>
+        <span class="mono" [title]="d.directory">{{ directory() }}</span>
+        <span>{{ d.startedAt | date: 'd MMM y, HH:mm' }}</span>
+        <span class="num">{{ durations()?.active }} Duración activa / {{ durations()?.clock }} Duración de reloj</span>
+        <span>{{ plural(d.turnCount, 'Turno', 'Turnos') }}</span>
+      </p>
+      <app-evaluation-controls
+        class="detail__evaluation"
+        data-testid="session-evaluation"
+        objectType="session"
+        [objectId]="d.sessionId"
+        [evaluation]="evaluationOf('session', d.sessionId)"
+        label="Evaluación de la Sesión"
+      />
+      @if (d.activity === 'working') {
+        <p class="detail__working" data-testid="working">
+          Trabajando…
+          @if (d.currentTool) {
+            <span class="mono">{{ toolLabel(d.currentTool.name) }}{{ d.currentTool.summary ? ' · ' + d.currentTool.summary : '' }}</span>
+          }
+        </p>
+      }
+    </header>
+
+    @if (s.failed) {
+      <p class="notice notice--warn" role="alert">No se pudo actualizar la Sesión; se muestran los últimos datos conocidos.</p>
+    }
+
+    <app-toggle-group
+      class="tabs"
+      data-testid="detail-tabs"
+      label="Pestañas del detalle"
+      [labels]="tabLabels()"
+      [selectedIndex]="tabIndex()"
+      [optionWidth]="136"
+      (selected)="onTabChange($event)"
+    />
+
+    @switch (tab()) {
+      @case ('resumen') {
+        <div class="panel" data-testid="panel-resumen">
+          <div class="summary-grid">
+            <app-context-card [context]="d.context" [transcriptAvailable]="d.transcriptAvailable" />
+            <app-tool-bars [tools]="d.tools" />
+          </div>
+          <h3 class="section-title">Tokens</h3>
+          @if (d.usage) {
+            <div class="kpi-grid" data-testid="token-cards">
+              @for (card of tokenCards(); track card.key) {
+                <article class="kpi" [attr.data-kpi]="card.key" [attr.data-accent]="card.accent">
+                  <h4 class="overline">{{ card.label }}</h4>
+                  <p class="kpi__value">{{ card.value }}</p>
+                  <p class="kpi__detail">{{ card.detail }}</p>
+                </article>
+              }
+            </div>
+          } @else {
+            <lucia--info data-testid="tokens-unavailable" [infoMessage]="transcriptUnavailable"></lucia--info>
+          }
+          <h3 class="section-title">Actividad</h3>
+          <app-activity-lanes [events]="s.events" [turns]="d.turns" [subagents]="d.subagents" [end]="lanesEnd()" />
+          <h3 class="section-title">Eventos</h3>
+          <div class="card">
+            <app-event-rows [events]="s.events" [compact]="true" />
+          </div>
+        </div>
+      }
+      @case ('linea') {
+        <div class="panel" data-testid="panel-linea">
+          <app-activity-lanes [events]="s.events" [turns]="d.turns" [subagents]="d.subagents" [end]="lanesEnd()" [tall]="true" />
+          <h3 class="section-title">Turnos</h3>
+          @if (d.turns.length === 0) {
+            <p class="muted">Todavía no hay Turnos.</p>
+          } @else {
+            <ol class="turns">
+              @for (turn of d.turns; track turn.index) {
+                <li
+                  class="turn"
+                  data-testid="turn"
+                  [class.turn--selected]="turn.index === selectedTurn()"
+                  [attr.aria-current]="turn.index === selectedTurn() ? 'true' : null"
+                >
+                  <span class="turn__index num">#{{ turn.index }}</span>
+                  <time class="mono" [attr.datetime]="turn.startedAt.toISOString()">{{ turn.startedAt | date: 'HH:mm:ss' }}</time>
+                  <span class="turn__prompt">{{ turn.prompt ?? '(sin texto de prompt)' }}</span>
+                  <span class="turn__meta num">
+                    {{ turn.endedAt ? formatDuration(turn.durationMs) : 'En curso' }} · {{ plural(turn.toolCount, 'herramienta', 'herramientas') }}
+                  </span>
+                  <app-evaluation-controls
+                    class="turn__evaluation"
+                    data-testid="turn-evaluation"
+                    objectType="turn"
+                    [objectId]="turn.id"
+                    [evaluation]="evaluationOf('turn', turn.id)"
+                    [label]="'Evaluación del Turno ' + turn.index"
+                  />
+                </li>
+              }
+            </ol>
+          }
+          @if (d.cacheRewrites.length > 0) {
+            <h3 class="section-title">Reescrituras de caché</h3>
+            <p class="muted">Respuestas que volvieron a escribir en caché casi todo su contexto en lugar de leerlo.</p>
+            <ol class="rewrites" data-testid="cache-rewrites">
+              @for (rewrite of d.cacheRewrites; track rewrite.messageId) {
+                <li class="rewrite" data-testid="cache-rewrite" [attr.data-cause]="rewrite.cause">
+                  <time class="mono" [attr.datetime]="rewrite.occurredAt.toISOString()">{{ rewrite.occurredAt | date: 'HH:mm:ss' }}</time>
+                  <span class="rewrite__cause">{{ rewriteCauses[rewrite.cause] }}</span>
+                  <span class="num">{{ formatCompact(rewrite.writtenTokens) }} tokens escritos</span>
+                  <span class="num">{{ rewrite.costUsd === null ? 'Sin Tarifa' : formatCost(rewrite.costUsd) }}</span>
+                  @if (rewrite.subagentId) {
+                    <span class="badge badge--subagent" [title]="rewrite.subagentId">Subagente</span>
+                  }
+                </li>
+              }
+            </ol>
+          }
+        </div>
+      }
+      @case ('prompts') {
+        <div class="panel" data-testid="panel-prompts">
+          @if (d.turns.length === 0) {
+            <p class="muted">Todavía no hay prompts.</p>
+          }
+          @for (turn of d.turns; track turn.index) {
+            <article class="prompt card" data-testid="prompt">
+              <header class="prompt__header num">
+                <time [attr.datetime]="turn.startedAt.toISOString()">{{ turn.startedAt | date: 'HH:mm:ss' }}</time>
+                <span>Turno {{ turn.index }}</span>
+                <span>{{ turn.endedAt ? formatDuration(turn.durationMs) : 'En curso' }}</span>
+                <span>{{ plural(turn.toolCount, 'herramienta', 'herramientas') }}</span>
+              </header>
+              <pre class="prompt__text">{{ turn.prompt ?? '(sin texto de prompt)' }}</pre>
+            </article>
+          }
+        </div>
+      }
+      @case ('subagentes') {
+        <div class="panel" data-testid="panel-subagentes">
+          @if (d.subagents.length === 0) {
+            <p class="muted">Esta Sesión no ha lanzado Subagentes.</p>
+          } @else {
+            <app-subagent-list [subagents]="d.subagents" [expandedKey]="expandedSubagent()" [evaluations]="evaluations()" />
+          }
+        </div>
+      }
+      @case ('skills') {
+        <div class="panel" data-testid="panel-skills">
+          <app-session-skills [state]="skills()" />
+        </div>
+      }
+      @case ('mcp') {
+        <div class="panel" data-testid="panel-mcp">
+          <app-session-mcp [state]="mcp()" />
+        </div>
+      }
+      @case ('bloqueos') {
+        <div class="panel" data-testid="panel-bloqueos">
+          @if (d.blocks.length === 0) {
+            <p class="muted">Ninguna Regla de bloqueo ha actuado en esta Sesión.</p>
+          } @else {
+            <div class="card">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th scope="col">Hora</th>
+                    <th scope="col">Herramienta</th>
+                    <th scope="col">Entrada</th>
+                    <th scope="col">Regla</th>
+                    <th scope="col">Motivo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (block of d.blocks; track block.eventId) {
+                    <tr data-testid="session-block-row">
+                      <td class="mono">{{ block.occurredAt | date: 'HH:mm:ss' }}</td>
+                      <td class="mono">{{ block.toolName ?? '—' }}</td>
+                      <td class="mono entry" [title]="block.summary ?? ''">{{ block.summary ?? '—' }}</td>
+                      <td><span class="badge badge--block">{{ block.rule }}</span></td>
+                      <td>{{ block.reason }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      }
+    }
+  }
+</section>

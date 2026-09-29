@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" fill="none">
+  <circle cx="60" cy="60" r="54" fill="#17171a" stroke="#ff8a2a" stroke-width="3" stroke-opacity="0.8"/>
+  <!-- stylized segmented citrus slice / radar eye telemetry icon -->
+  <circle cx="60" cy="60" r="42" stroke="#2e2e34" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <path d="M60 20 C78 20 94 34 98 52 L60 60 Z" fill="#ff8a2a" fill-opacity="0.9"/>
+  <path d="M98 68 C94 86 78 100 60 100 L60 60 Z" fill="#ff8a2a" fill-opacity="0.75"/>
+  <path d="M52 100 C34 96 20 80 20 60 L60 60 Z" fill="#ff8a2a" fill-opacity="0.6"/>
+  <path d="M20 60 C20 40 34 24 52 20 L60 60 Z" fill="#ff8a2a" fill-opacity="0.45"/>
+  <circle cx="60" cy="60" r="9" fill="#0f0f11" stroke="#ff8a2a" stroke-width="2.5"/>
+  <circle cx="60" cy="60" r="3.5" fill="#22c55e"/>
+  <!-- telemetry pulse node -->
+  <circle cx="94" cy="36" r="3" fill="#22d3ee"/>
+</svg>

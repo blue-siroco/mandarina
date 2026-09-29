@@ -1,0 +1,63 @@
+@let s = state();
+
+<div class="masking" data-testid="masking-tab">
+  <p class="explanation" data-testid="masking-explanation">
+    Se cuentan los marcadores <span class="mono">[REDACTED_…]</span> que hay guardados en los Eventos. Los secretos siempre se enmascaran; los datos
+    personales se configuran con <span class="mono">MANDARINA_MASK_PII</span>. Lo enmascarado con <span class="mono">***</span> antes de ADR-0009 no cuenta.
+  </p>
+
+  @if (s.failed) {
+    <p class="notice notice--warn" role="alert" data-testid="masking-error">
+      No se pudieron cargar las estadísticas de Enmascarado. Se reintentará en unos segundos.
+    </p>
+  }
+
+  @if (!s.loaded) {
+    <div class="card skeleton" aria-busy="true">
+      <p class="visually-hidden">Cargando el Enmascarado…</p>
+      <div class="skeleton__row" aria-hidden="true"></div>
+      <div class="skeleton__row" aria-hidden="true"></div>
+    </div>
+  } @else if (s.stats; as stats) {
+    @if (stats.items.length === 0) {
+      <div class="card empty" data-testid="masking-empty">
+        <p class="empty__title">Ningún marcador en este periodo</p>
+        <p>Aparecen cuando el Adaptador o el servidor tapan un secreto o un dato personal antes de guardar un Evento.</p>
+      </div>
+    } @else {
+      <div class="card table-wrap">
+        <table class="table" data-testid="masking-table">
+          <thead>
+            <tr>
+              <th scope="col">Proyecto</th>
+              @for (column of columns; track column.type) {
+                <th scope="col" class="num">{{ column.label }}</th>
+              }
+              <th scope="col" class="num">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of stats.items; track item.project) {
+              <tr data-testid="masking-row">
+                <th scope="row">{{ item.project }}</th>
+                @for (column of columns; track column.type) {
+                  <td class="mono num">{{ formatInteger(item.counts[column.type]) }}</td>
+                }
+                <td class="mono num total">{{ formatInteger(item.total) }}</td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr data-testid="masking-totals">
+              <th scope="row">Total</th>
+              @for (column of columns; track column.type) {
+                <td class="mono num">{{ formatInteger(stats.totals[column.type]) }}</td>
+              }
+              <td class="mono num total">{{ formatInteger(grandTotal()) }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    }
+  }
+</div>
