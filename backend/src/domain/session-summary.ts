@@ -248,7 +248,10 @@ export function summarizeSession(
   const turns = buildTurns(rows);
   const count = (type: EventType) => rows.filter((r) => r.event_type === type).length;
   const tools = live ? openTools(rows) : new Map<string, SessionEventRow>();
-  const running = live ? subagents.filter((s) => s.stopped_at === null) : [];
+  // Con el Turno terminado ya no hay nada en marcha: un Subagente al que nunca llegó su `SubagentStop`
+  // (hook perdido, lanzamiento sin enlazar) se quedaría en la ficha como si siguiera trabajando (AC-125).
+  const turnOpen = wait !== null || rawActivity === 'working';
+  const running = live && turnOpen ? subagents.filter((s) => s.stopped_at === null) : [];
 
   return {
     session_id: first.session_id,

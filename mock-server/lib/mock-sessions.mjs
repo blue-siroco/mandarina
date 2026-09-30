@@ -101,7 +101,9 @@ function summarize(events, now) {
 
   // Sin los internos; los lanzamientos pendientes cuentan como en marcha (AC-34).
   const lives = subagentLives(events).filter((l) => !l.internal);
-  const running = live ? lives.filter((l) => l.stopped_at === null) : [];
+  // Con el Turno terminado no queda nada en marcha (AC-125): igual que el backend.
+  const turnOpen = wait !== null || rawActivity === 'working';
+  const running = live && turnOpen ? lives.filter((l) => l.stopped_at === null) : [];
   const sparkline = new Array(BUCKETS).fill(0);
   const from = now - BUCKETS * BUCKET_MS;
   for (const e of events) {

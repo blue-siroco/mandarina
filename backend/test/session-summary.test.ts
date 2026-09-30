@@ -181,6 +181,29 @@ describe('AC-15: resumen para el board', () => {
   });
 });
 
+describe('AC-125: fin de turno y Subagentes en marcha', () => {
+  const launched = [row('prompt.submitted', 6), row('subagent.started', 5, { subagent_id: 'a1' }), row('subagent.started', 5, { subagent_id: 'a2' })];
+
+  it('con el Turno terminado no quedan Subagentes en marcha aunque no llegara su subagent.stopped', () => {
+    const summary = summarizeSession([...launched, row('turn.ended', 2)], NOW);
+    expect(summary.activity).toBe('paused');
+    expect(summary.running_subagents).toBe(0);
+    expect(summary.running_subagents_list).toStrictEqual([]);
+    expect(summary.open_tools).toStrictEqual({});
+    expect(summary.subagent_count).toBe(2);
+  });
+
+  it('con el Turno en curso siguen contando', () => {
+    const summary = summarizeSession(launched, NOW);
+    expect(summary.running_subagents).toBe(2);
+  });
+
+  it('un prompt nuevo reabre el Turno y vuelven a contar', () => {
+    const summary = summarizeSession([...launched, row('turn.ended', 3), row('prompt.submitted', 1)], NOW);
+    expect(summary.running_subagents).toBe(2);
+  });
+});
+
 describe('AC-15, AC-31: summarizeToolInput', () => {
   it.each([
     ['Bash', { command: 'npm test\nnpm run lint' }, 'npm test'],
