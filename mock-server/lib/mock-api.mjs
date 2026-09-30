@@ -1,6 +1,7 @@
 // Imitación en memoria de la API del backend (`spec/api-spec.yaml`) + WebSocket
 // `/ws`, alimentada por la simulación. Sirve para probar el frontend sin
-// backend real. No persiste ni enmascara secretos: eso es trabajo del backend.
+// backend real. No persiste ni enmascara al ingerir (eso es del backend); solo
+// enmascara las descargas con `content=true` (mock-download.mjs).
 import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
@@ -15,7 +16,8 @@ import { listMcpInvocations } from './mock-mcp.mjs';
 import { createEvaluationBook, isObjectType } from './mock-evaluations.mjs';
 import { createInjectionBook } from './mock-injection.mjs';
 import { exporterStatus } from './mock-exporter.mjs';
-import { createSimulation, waitingSeedEvents } from './scenario.mjs';
+import { DOWNLOAD_LIMIT, capEvents, eventsDownloadLines, filterEvents, parseContent, parseEventFilters, previewOf, sessionDownload } from './mock-download.mjs';
+import { createSimulation,waitingSeedEvents } from './scenario.mjs';
 
 const REQUIRED = ['schema_version', 'harness', 'project', 'directory', 'session_id', 'event_type', 'native_event_type', 'occurred_at', 'payload'];
 const EVENT_TYPES = new Set(['session.started', 'prompt.submitted', 'tool.pre', 'tool.post', 'subagent.started', 'subagent.stopped', 'turn.ended', 'session.ended', 'tool.blocked', 'permission.requested', 'session.notified']);
@@ -58,9 +60,10 @@ function readJson(req) {
  * @param {number} [options.historySize] Eventos precargados al arrancar.
  * @param {number} [options.seed] Semilla de la simulación.
  * @param {boolean} [options.waitingSeeds] Añade tres Sesiones que esperan (permiso, pregunta y Subagente; AC-93).
+ * @param {number} [options.downloadLimit] Tope de Eventos por descarga (AC-145); los tests lo bajan.
  * @param {boolean} [options.subscriptionSeed] Arranca con una cuenta de suscripción con datos; si no, `usage` es `null` (AC-132).
  */
-export function createMockApi({ intervalMs = 1500, historySize = 40, seed = 1, waitingSeeds = false, subscriptionSeed = false } = {}) {
+export function createMockApi({ intervalMs = 1500, historySize = 40, seed = 1, waitingSeeds = false, subscriptionSeed = false, downloadLimit = DOWNLOAD_LIMIT } = {}) {
   const simulation = createSimulation({ seed, waits: waitingSeeds });
   /** Más antiguo primero; se sirve invertido. */
   const events = [];
@@ -75,6 +78,10 @@ export function createMockApi({ intervalMs = 1500, historySize = 40, seed = 1, w
     const url = new URL(req.url, 'http://mock');
     if (req.method === 'GET' && url.pathname === '/api/v1/health') return sendJson(res, 200, { status: 'ok' });
     if (req.method === 'GET' && url.pathname === '/api/v1/events') return list(url, res);
+    if (req.method === 'GET' && url.pathname === '/api/v1/events/export') return eventsDownload(url, res, false);
+    if (req.method === 'GET' && url.pathname === '/api/v1/events/export/preview') return eventsDownload(url, res, true);
+    const sessionExport = /^\/api\/v1\/sessions\/(.+)\/export(\/preview)?$/.exec(url.pathname);
+    if (req.method === 'GET' && sessionExport) return sessionDownloadRoute(decodeURIComponent(sessionExport[1]), url, res, sessionExport[2] !== undefined);
     if (req.method === 'GET' && url.pathname === '/api/v1/metrics') return metrics(url, res);
     if (req.method === 'GET' && url.pathname === '/api/v1/sessions') return sessions(url, res);
     if (req.method === 'GET' && url.pathname === '/api/v1/test-runs') return testRuns(url, res);
@@ -123,6 +130,30 @@ export function createMockApi({ intervalMs = 1500, historySize = 40, seed = 1, w
       .filter((e) => (sessionId === null || e.session_id === sessionId) && (project === null || e.project === project) && (types.length === 0 || types.includes(e.event_type)))
       .filter((e) => since === null || e.received_at >= new Date(since).toISOString());
     sendJson(res, 200, { items: describeEvents(matching.slice(-limit).reverse(), events, injections.ofEvent) });
+  }
+
+  function eventsDownload(url, res, preview) {
+    const includeContent = parseContent(url);
+    if (includeContent === undefined) return sendJson(res, 400, { message: 'content debe ser true o false' });
+    const { filters, error } = parseEventFilters(url, EVENT_TYPES);
+    if (error) return sendJson(res, 400, { message: error });
+    const matching = filterEvents(events, filters);
+    if (preview) return sendJson(res, 200, previewOf(capEvents(matching, downloadLimit).counts, includeContent));
+    const lines = eventsDownloadLines(matching, includeContent, filters, downloadLimit);
+    const day = new Date().toISOString().slice(0, 10);
+    res.writeHead(200, { 'content-type': 'application/x-ndjson', 'content-disposition': `attachment; filename="mandarina-eventos-${day}.jsonl"` });
+    res.end(lines.map((line) => `${JSON.stringify(line)}\n`).join(''));
+  }
+
+  function sessionDownloadRoute(id, url, res, preview) {
+    const includeContent = parseContent(url);
+    if (includeContent === undefined) return sendJson(res, 400, { message: 'content debe ser true o false' });
+    const detail = sessionDetail(events, id, Date.now(), book.scores('session'), injections.alertsBySession(events));
+    if (!detail) return sendJson(res, 404, { message: 'No existe la Sesión' });
+    const own = events.filter((e) => e.session_id === id);
+    if (preview) return sendJson(res, 200, previewOf(capEvents(own, downloadLimit).counts, includeContent));
+    res.writeHead(200, { 'content-type': 'application/json', 'content-disposition': `attachment; filename="mandarina-sesion-${id.slice(0, 8)}.json"` });
+    res.end(JSON.stringify(sessionDownload(detail, own, includeContent, downloadLimit)));
   }
 
   function sessions(url, res) {

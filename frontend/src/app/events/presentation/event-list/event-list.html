@@ -72,7 +72,21 @@
     @if (filtering()) {
       <button type="button" class="link-button" (click)="clearFilters()">Limpiar filtros</button>
     }
+    <button
+      type="button"
+      class="download"
+      data-testid="download-events"
+      aria-haspopup="dialog"
+      [disabled]="!s.loaded || filtered().length === 0"
+      (click)="openDownload()"
+    >
+      Descargar Eventos
+    </button>
   </div>
+
+  @if (downloadTarget(); as target) {
+    <app-download-dialog [target]="target" (closed)="closeDownload()" />
+  }
 
   @if (s.historyFailed) {
     <p class="notice notice--warn" role="alert">

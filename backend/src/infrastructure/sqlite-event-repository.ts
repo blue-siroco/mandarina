@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import type { Block, EventType, StoredEvent } from '../domain/event.js';
-import type { EventQuery, EventRepository, InjectionCandidate, MaskingCounts, McpCandidate, SessionRowsFilter } from '../application/ports.js';
+import type { EventFilter, EventQuery, EventRepository, EventWindow, InjectionCandidate, MaskingCounts, McpCandidate, SessionRowsFilter } from '../application/ports.js';
 import type { McpPostDigest } from '../domain/mcp-invocations.js';
 import type { SessionEventRow } from '../domain/session-summary.js';
 
@@ -77,6 +77,9 @@ const HINT_COLUMNS = [
   "CASE WHEN event_type = 'tool.pre' AND tool_name = 'AskUserQuestion' THEN substr(json_extract(payload, '$.tool_input.questions[0].question'), 1, 300) END AS wait_question",
 ].join(', ');
 const ROW_COLUMNS = `id, session_id, project, directory, harness, subagent_id, event_type, tool_name, occurred_at, received_at, transcript_path, ${HINT_COLUMNS}`;
+
+// Eventos por lote al recorrer una descarga: acota la memoria sin una consulta por Evento.
+const DOWNLOAD_BATCH = 500;
 
 const COLUMNS =
   'id, schema_version, harness, project, directory, session_id, subagent_id, event_type, native_event_type, tool_name, occurred_at, received_at, transcript_path, payload, block';
@@ -228,36 +231,55 @@ export class SqliteEventRepository implements EventRepository {
     });
   }
 
-  list({ limit, before, sessionId, project, eventTypes, since }: EventQuery): StoredEvent[] | undefined {
-    const where: string[] = [];
-    const params: unknown[] = [];
+  list({ limit, before, ...filter }: EventQuery): StoredEvent[] | undefined {
+    const { where, params } = whereOf(filter);
     if (before !== undefined) {
       const anchor = this.exists.get(before);
       if (!anchor) return undefined;
       where.push('seq < ?');
       params.push(anchor.seq);
     }
-    if (sessionId !== undefined) {
-      where.push('session_id = ?');
-      params.push(sessionId);
-    }
-    if (project !== undefined) {
-      where.push('project = ?');
-      params.push(project);
-    }
-    if (eventTypes !== undefined && eventTypes.length > 0) {
-      where.push(`event_type IN (${eventTypes.map(() => '?').join(', ')})`);
-      params.push(...eventTypes);
-    }
-    if (since !== undefined) {
-      where.push('received_at >= ?');
-      params.push(since);
-    }
     const clause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
     const rows = this.db
       .prepare<unknown[], EventRow>(`SELECT ${COLUMNS} FROM events ${clause} ORDER BY seq DESC LIMIT ?`)
       .all(...params, limit);
     return rows.map(toEvent);
+  }
+
+  countEvents(filter: EventFilter): number {
+    const { where, params } = whereOf(filter);
+    const clause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+    return this.db.prepare<unknown[], { n: number }>(`SELECT COUNT(*) AS n FROM events ${clause}`).get(...params)!.n;
+  }
+
+  eventWindow(filter: EventFilter, cap: number): EventWindow {
+    const { where, params } = whereOf(filter);
+    const clause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+    // Los `cap` más recientes: su `seq` mínimo y máximo acotan lo que se lee después.
+    const bounds = this.db
+      .prepare<unknown[], { first: number | null; last: number | null }>(
+        `SELECT MIN(seq) AS first, MAX(seq) AS last FROM (SELECT seq FROM events ${clause} ORDER BY seq DESC LIMIT ?)`,
+      )
+      .get(...params, cap)!;
+    return { total: this.countEvents(filter), events: this.batches(clause, params, bounds.first, bounds.last) };
+  }
+
+  // Lotes por `seq` en vez de un cursor abierto (`.iterate()`): un cursor mantiene la conexión
+  // ocupada mientras el cliente lee despacio y bloquearía la ingesta (ADR-0004). El límite
+  // superior fija la instantánea: los Eventos que llegan durante la descarga no se cuelan.
+  private *batches(clause: string, params: unknown[], first: number | null, last: number | null): Generator<StoredEvent> {
+    if (first === null || last === null) return;
+    const bounded = clause === '' ? 'WHERE seq > ? AND seq <= ?' : `${clause} AND seq > ? AND seq <= ?`;
+    const statement = this.db.prepare<unknown[], EventRow & { seq: number }>(
+      `SELECT seq, ${COLUMNS} FROM events ${bounded} ORDER BY seq LIMIT ${DOWNLOAD_BATCH}`,
+    );
+    let after = first - 1;
+    for (;;) {
+      const rows = statement.all(...params, after, last);
+      for (const row of rows) yield toEvent(row);
+      if (rows.length < DOWNLOAD_BATCH) return;
+      after = rows[rows.length - 1]!.seq;
+    }
   }
 
   findById(id: string): StoredEvent | undefined {
@@ -357,6 +379,33 @@ export class SqliteEventRepository implements EventRepository {
   close(): void {
     this.db.close();
   }
+}
+
+/** Filtros comunes de `list`, `countEvents` y `eventWindow`. */
+function whereOf({ sessionId, project, eventTypes, toolNames, since }: EventFilter): { where: string[]; params: unknown[] } {
+  const where: string[] = [];
+  const params: unknown[] = [];
+  if (sessionId !== undefined) {
+    where.push('session_id = ?');
+    params.push(sessionId);
+  }
+  if (project !== undefined) {
+    where.push('project = ?');
+    params.push(project);
+  }
+  if (eventTypes !== undefined && eventTypes.length > 0) {
+    where.push(`event_type IN (${eventTypes.map(() => '?').join(', ')})`);
+    params.push(...eventTypes);
+  }
+  if (toolNames !== undefined && toolNames.length > 0) {
+    where.push(`tool_name IN (${toolNames.map(() => '?').join(', ')})`);
+    params.push(...toolNames);
+  }
+  if (since !== undefined) {
+    where.push('received_at >= ?');
+    params.push(since);
+  }
+  return { where, params };
 }
 
 function parseJson(text: string | null): unknown {

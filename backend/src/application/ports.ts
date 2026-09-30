@@ -15,8 +15,19 @@ export interface EventQuery {
   sessionId?: string;
   project?: string;
   eventTypes?: EventType[];
+  /** Solo Eventos de estas herramientas (`tool_name`). */
+  toolNames?: string[];
   /** Solo Eventos recibidos desde esta fecha (ISO). */
   since?: string;
+}
+
+/** Filtros de una descarga: los de `EventQuery` sin paginación. */
+export type EventFilter = Omit<EventQuery, 'limit' | 'before'>;
+
+/** Los Eventos de una descarga: su recuento total y, en cronológico, los que caben en el tope. */
+export interface EventWindow {
+  total: number;
+  events: Iterable<StoredEvent>;
 }
 
 export interface SessionRowsFilter {
@@ -33,6 +44,13 @@ export interface EventRepository {
   /** Más recientes primero. Devuelve `undefined` si `before` no existe. */
   list(query: EventQuery): StoredEvent[] | undefined;
   findById(id: string): StoredEvent | undefined;
+  /** Cuántos Eventos pasan el filtro, sin leerlos (AC-145). */
+  countEvents(filter: EventFilter): number;
+  /**
+   * Los `cap` Eventos más recientes que pasan el filtro, en orden cronológico y leídos por
+   * lotes al recorrer `events`: no se cargan todos en memoria (AC-144, AC-145).
+   */
+  eventWindow(filter: EventFilter, cap: number): EventWindow;
   /** Todos los Eventos de una Sesión, en orden de llegada. */
   sessionEvents(sessionId: string): StoredEvent[];
   /** Eventos sin payload de las Sesiones del filtro, en orden de llegada. */

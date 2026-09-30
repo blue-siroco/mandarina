@@ -13,11 +13,13 @@ import { ListSubagents } from './application/list-subagents.js';
 import { ListMcpInvocations } from './application/list-mcp-invocations.js';
 import { ListAgents } from './application/list-agents.js';
 import { ExportTurns } from './application/export-turns.js';
+import { ExportEvents } from './application/export-events.js';
+import { ExportSession } from './application/export-session.js';
 import { InjectionWarnings, type WarningFilter } from './application/injection-warnings.js';
 import { ManageBudgets } from './application/manage-budgets.js';
 import { ManageEvaluations } from './application/manage-evaluations.js';
 import { ManageSubscriptionUsage } from './application/manage-subscription-usage.js';
-import type { EvaluationFilter } from './application/ports.js';
+import type { EvaluationFilter, EventFilter } from './application/ports.js';
 import type { EvaluationObjectType } from './domain/evaluation.js';
 import { SqliteBudgetStore } from './infrastructure/sqlite-budget-store.js';
 import { SqliteEvaluationStore } from './infrastructure/sqlite-evaluation-store.js';
@@ -27,6 +29,7 @@ import type { SubscriptionReading } from './domain/subscription-usage.js';
 import { parseOtlpConfig } from './domain/otlp-config.js';
 import { SqliteExportStore } from './infrastructure/sqlite-export-store.js';
 import type { TestKind } from './domain/test-results.js';
+import { Readable } from 'node:stream';
 import { IngestEvent } from './application/ingest-event.js';
 import type { Clock } from './application/ports.js';
 import { FsTranscriptReader } from './infrastructure/fs-transcript-reader.js';
@@ -34,6 +37,8 @@ import { SqliteEventRepository } from './infrastructure/sqlite-event-repository.
 import { WebSocketPublisher } from './infrastructure/websocket-publisher.js';
 import {
   eventInputSchema,
+  exportEventsQuerySchema,
+  exportSessionQuerySchema,
   listEventsQuerySchema,
   listSessionsQuerySchema,
   metricsQuerySchema,
@@ -60,6 +65,8 @@ export interface AppOptions {
   otlp?: { env?: Record<string, string | undefined>; fetch?: typeof fetch; intervalMs?: number };
   /** Presupuestos (ADR-0010): cada cuánto se revisan (0 lo apaga) y cuánto se reutiliza el gasto calculado. */
   budgets?: { intervalMs?: number; spendingTtlMs?: number };
+  /** Descargas (ADR-0013): el tope de Eventos es inyectable para probar el truncado (AC-145). */
+  downloads?: { maxEvents?: number };
 }
 
 declare module 'fastify' {
@@ -82,6 +89,7 @@ export async function buildApp({
   clock = { now: () => new Date() },
   otlp = {},
   budgets: budgetOptions = {},
+  downloads = {},
 }: AppOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger,
@@ -116,6 +124,8 @@ export async function buildApp({
   const evaluations = new ManageEvaluations(repository, transcripts, evaluationStore, clock);
   const sessions = new ListSessions(repository, transcripts, clock, evaluationStore, injections);
   const sessionDetail = new GetSessionDetail(repository, transcripts, clock, evaluationStore, injections);
+  const eventsDownload = new ExportEvents(repository, clock, downloads.maxEvents);
+  const sessionDownload = new ExportSession(repository, sessionDetail, clock, downloads.maxEvents);
   const testRuns = new ListTestRuns(repository);
   const skillInvocations = new ListSkillInvocations(repository, transcripts, clock);
   const subagentList = new ListSubagents(repository, transcripts, clock);
@@ -368,6 +378,64 @@ export async function buildApp({
       const { object_type, object_id } = request.params;
       if (!evaluations.remove(object_type, object_id)) return reply.code(404).send({ message: `${object_type} ${object_id} no tiene Evaluación` });
       return reply.code(204).send();
+    },
+  );
+
+  // Descargas (ADR-0013): solo lectura, con `Content-Disposition: attachment`. Las rutas `export`
+  // se registran antes que `/sessions/:id` por legibilidad; Fastify ya distingue los segmentos.
+  interface EventsDownloadQuery {
+    project?: string;
+    session_id?: string;
+    event_type?: EventType[];
+    tool?: string[];
+    since?: string;
+    content: boolean;
+  }
+  const toEventFilter = (q: EventsDownloadQuery): EventFilter => ({
+    project: q.project,
+    sessionId: q.session_id,
+    eventTypes: q.event_type,
+    toolNames: q.tool,
+    since: q.since === undefined ? undefined : new Date(q.since).toISOString(),
+  });
+
+  app.get<{ Querystring: EventsDownloadQuery }>(
+    '/api/v1/events/export/preview',
+    { schema: { querystring: exportEventsQuerySchema } },
+    async (request) => eventsDownload.preview(toEventFilter(request.query), request.query.content),
+  );
+
+  app.get<{ Querystring: EventsDownloadQuery }>(
+    '/api/v1/events/export',
+    { schema: { querystring: exportEventsQuerySchema } },
+    async (request, reply) => {
+      const day = clock.now().toISOString().slice(0, 10);
+      // Readable.from consume el generador según lee el cliente: los Eventos no se cargan de una vez.
+      return reply
+        .header('Content-Disposition', `attachment; filename="mandarina-eventos-${day}.jsonl"`)
+        .type('application/x-ndjson')
+        .send(Readable.from(eventsDownload.lines(toEventFilter(request.query), request.query.content)));
+    },
+  );
+
+  app.get<{ Params: { id: string }; Querystring: { content: boolean } }>(
+    '/api/v1/sessions/:id/export/preview',
+    { schema: { querystring: exportSessionQuerySchema } },
+    async (request, reply) => {
+      const preview = sessionDownload.preview(request.params.id, request.query.content);
+      return preview ?? reply.code(404).send({ message: `No existe la Sesión ${request.params.id}` });
+    },
+  );
+
+  app.get<{ Params: { id: string }; Querystring: { content: boolean } }>(
+    '/api/v1/sessions/:id/export',
+    { schema: { querystring: exportSessionQuerySchema } },
+    async (request, reply) => {
+      const download = await sessionDownload.execute(request.params.id, request.query.content);
+      if (!download) return reply.code(404).send({ message: `No existe la Sesión ${request.params.id}` });
+      // El id llega del cliente: solo caracteres seguros en el nombre del fichero.
+      const short = request.params.id.slice(0, 8).replace(/[^\w-]/g, '_');
+      return reply.header('Content-Disposition', `attachment; filename="mandarina-sesion-${short}.json"`).send(download);
     },
   );
 

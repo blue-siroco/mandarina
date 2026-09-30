@@ -1,0 +1,98 @@
+<div
+  class="modal-overlay"
+  data-testid="download-overlay"
+  tabindex="-1"
+  (click)="onOverlayClick($event)"
+  (keydown.escape)="close()"
+>
+  <div
+    #window
+    class="modal-window"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="download-title"
+    tabindex="-1"
+    data-testid="download-dialog"
+  >
+    <div class="modal-close" data-testid="download-close">
+      <lucia--button [button]="closeButton" aria-label="Cerrar" (callback)="onCloseButtonClick()"></lucia--button>
+    </div>
+
+    <div class="modal-content">
+      <header class="download__header">
+        <h2 id="download-title" class="download__title">{{ title() }}</h2>
+        <p class="muted" data-testid="download-format">Formato: {{ format() }}</p>
+      </header>
+
+      <label class="content-option">
+        <input
+          type="checkbox"
+          class="content-option__box"
+          data-testid="download-content"
+          [checked]="includeContent()"
+          (change)="onContentChange($event)"
+        />
+        <span>Incluir contenido</span>
+      </label>
+      @if (includeContent()) {
+        <p class="muted" data-testid="download-content-note">
+          Añade prompts, respuestas y entradas y salidas de herramientas. Salen siempre enmascarados.
+        </p>
+      } @else {
+        <p class="muted">Sin marcar, el fichero lleva solo estructura, tiempos, tipos, herramientas, tokens y coste.</p>
+      }
+
+      @let s = state();
+      @switch (s.status) {
+        @case ('loading') {
+          <p class="muted" aria-busy="true" data-testid="download-loading">Calculando lo que contendrá el fichero…</p>
+        }
+        @case ('failed') {
+          <div class="notice notice--warn" role="alert" data-testid="download-error">
+            <p>No se pudo calcular lo que contendrá el fichero.</p>
+            <button type="button" class="action" data-testid="download-retry" (click)="retry()">Reintentar</button>
+          </div>
+        }
+        @case ('ready') {
+          @let p = s.preview;
+          <p class="download__count" data-testid="download-count">
+            <span class="mono">{{ formatInteger(p.exported) }}</span>
+            {{ p.exported === 1 ? 'Evento' : 'Eventos' }} en el fichero
+          </p>
+          @if (p.total === 0) {
+            <p class="notice notice--warn" data-testid="download-empty">
+              No hay Eventos que descargar con estos filtros.
+            </p>
+          }
+          @if (p.truncated) {
+            <p class="notice notice--warn" role="status" data-testid="download-truncated">
+              Se incluirán los {{ formatInteger(p.exported) }} Eventos más recientes; {{ formatInteger(p.omitted) }} quedan
+              fuera. Acota con los filtros.
+            </p>
+          }
+          <section aria-labelledby="download-fields-title">
+            <h3 id="download-fields-title" class="fields__title">Campos</h3>
+            <ul class="fields mono" data-testid="download-fields">
+              @for (field of p.fields; track field) {
+                <li>{{ field }}</li>
+              }
+            </ul>
+          </section>
+        }
+      }
+
+      <p class="notice notice--danger" data-testid="download-warning">
+        El fichero sale de Mandarina y ya no tiene control posterior: quien lo reciba verá todo lo que contiene.
+      </p>
+
+      <footer class="download__actions">
+        <button type="button" class="action" data-testid="download-cancel" (click)="close()">Cancelar</button>
+        @if (canDownload()) {
+          <a class="action action--primary" data-testid="download-link" download [href]="link()">Descargar</a>
+        } @else {
+          <button type="button" class="action action--primary" data-testid="download-link" disabled>Descargar</button>
+        }
+      </footer>
+    </div>
+  </div>
+</div>

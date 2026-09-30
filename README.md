@@ -79,7 +79,7 @@ API_TARGET=http://mock-api:4000 docker compose --profile mock up mock-api fronte
 docker compose --profile simulate up
 ```
 
-En PowerShell: `$env:API_TARGET='http://mock-api:4000'` antes del primer comando. Opciones (ritmo, cantidad, semilla…) en [`mock-server/README.md`](mock-server/README.md).
+En PowerShell: `$env:API_TARGET='http://mock-api:4000'` antes del primer comando. Opciones (ritmo, cantidad, semilla…) en [`mock-server/README.md`](mock-server/README.md). El mock también sirve las descargas de Sesión y de Eventos (`/export`, AC-142 a AC-146); no lee Transcripts.
 
 ## Instalar el hook de Claude Code
 

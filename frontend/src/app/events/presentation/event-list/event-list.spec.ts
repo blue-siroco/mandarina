@@ -2,6 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { BehaviorSubject, of } from 'rxjs';
+import { stubDownloadSource } from '../../../downloads/testing/download-fixtures';
+import { DownloadTarget } from '../../../downloads/models/download';
 import { LoadEventFilterOptions } from '../../application/load-event-filter-options';
 import { INITIAL_STATE, RecentEventsState, WatchRecentEvents } from '../../application/watch-recent-events';
 import { observedEvent } from '../../testing/event-fixtures';
@@ -293,5 +295,90 @@ describe('AC-110: filtros de Proyecto, Sesión y periodo', () => {
     (noMatches.querySelector('button') as HTMLButtonElement).click();
     await harness.fixture.whenStable();
     expect(TestBed.inject(Router).url).toBe('/eventos');
+  });
+});
+
+describe('AC-148: Descargar Eventos', () => {
+  async function render(url = '/eventos', events = [observedEvent({ id: 'a' })]) {
+    const download = stubDownloadSource();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([{ path: 'eventos', component: EventList }]),
+        {
+          provide: WatchRecentEvents,
+          useValue: { execute: () => new BehaviorSubject<RecentEventsState>({ ...INITIAL_STATE, loaded: true, events }) },
+        },
+        { provide: LoadEventFilterOptions, useValue: { execute: () => of({ projects: [], sessions: [] }) } },
+        download.provider,
+      ],
+    });
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl(url);
+    return { harness, download };
+  }
+  const button = (h: RouterTestingHarness) => h.routeNativeElement!.querySelector<HTMLButtonElement>('[data-testid="download-events"]')!;
+
+  async function open(h: RouterTestingHarness) {
+    // jsdom no da foco al hacer clic, como sí hace el navegador.
+    button(h).focus();
+    button(h).click();
+    await h.fixture.whenStable();
+  }
+
+  it('el botón «Descargar Eventos» está junto a los filtros y es alcanzable por teclado', async () => {
+    const { harness } = await render();
+    const b = button(harness);
+    expect(text(b)).toBe('Descargar Eventos');
+    expect(b.closest('[aria-label="Filtros de Eventos"]')).not.toBeNull();
+    expect(b.tabIndex).toBe(0);
+    expect(b.disabled).toBe(false);
+  });
+
+  it('sin Eventos en la lista el botón está desactivado', async () => {
+    const { harness } = await render('/eventos', []);
+    expect(button(harness).disabled).toBe(true);
+  });
+
+  it('abre el diálogo en modo Eventos con los filtros vigentes', async () => {
+    const { harness, download } = await render('/eventos?proyecto=lucia&sesion=s-1&categoria=tools&herramienta=Bash&herramienta=Read');
+    await open(harness);
+    expect(text(harness.routeNativeElement!.querySelector('#download-title'))).toBe('Descarga de Eventos');
+    const target = download.calls[0]!.target as Extract<DownloadTarget, { kind: 'events' }>;
+    expect(target.filters).toMatchObject({
+      project: 'lucia',
+      sessionId: 's-1',
+      eventTypes: ['tool.pre', 'tool.post'],
+      tools: ['Bash', 'Read'],
+    });
+    expect(target.filters.since).toBeUndefined();
+  });
+
+  it('el rango se traduce a since al abrir', async () => {
+    const { harness, download } = await render('/eventos?periodo=1h');
+    const before = Date.now();
+    await open(harness);
+    const target = download.calls[0]!.target as Extract<DownloadTarget, { kind: 'events' }>;
+    expect(Math.abs(target.filters.since!.getTime() - (before - 3_600_000))).toBeLessThan(5_000);
+  });
+
+  it('sin filtros el objetivo no lleva ninguno', async () => {
+    const { harness, download } = await render();
+    await open(harness);
+    expect(download.calls[0]!.target).toStrictEqual({
+      kind: 'events',
+      filters: { project: undefined, sessionId: undefined, since: undefined, eventTypes: undefined, tools: undefined },
+    });
+  });
+
+  it('cerrar con Escape devuelve el foco al botón', async () => {
+    const { harness } = await render();
+    await open(harness);
+    harness.routeNativeElement!.querySelector<HTMLElement>('[data-testid="download-overlay"]')!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+    );
+    await harness.fixture.whenStable();
+    await new Promise((r) => setTimeout(r));
+    expect(harness.routeNativeElement!.querySelector('app-download-dialog')).toBeNull();
+    expect(document.activeElement).toBe(button(harness));
   });
 });

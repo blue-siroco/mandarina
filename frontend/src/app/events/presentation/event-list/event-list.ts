@@ -1,7 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { switchMap } from 'rxjs';
+import { DownloadDialog } from '../../../downloads/presentation/download-dialog/download-dialog';
+import { DownloadTarget } from '../../../downloads/models/download';
 import { formatInteger, shortId } from '../../../shared/format';
 import { RANGES } from '../../../shared/periods';
 import { CheckFilter } from '../../../shared/ui/check-filter/check-filter';
@@ -42,7 +44,7 @@ function parseCategory(value: string | null): EventCategory {
 /** Página de Eventos con filtros en la URL (AC-09, AC-17). */
 @Component({
   selector: 'app-event-list',
-  imports: [CheckFilter, EventRows, SelectFilter, ToggleGroup],
+  imports: [CheckFilter, DownloadDialog, EventRows, SelectFilter, ToggleGroup],
   templateUrl: './event-list.html',
   styleUrl: './event-list.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -112,6 +114,34 @@ export class EventList {
   protected readonly filtering = computed(
     () => this.category() !== 'all' || this.selectedTools().length > 0 || this.serverFiltering(),
   );
+
+  /** Objetivo de la Descarga de Eventos; solo existe con el diálogo abierto (AC-148). */
+  protected readonly downloadTarget = signal<DownloadTarget | null>(null);
+
+  /**
+   * Filtros vigentes al abrir. `since` se calcula en este momento, no al cargar la
+   * página: una ventana «1 h» abierta hace un rato no debe quedarse anclada al pasado.
+   * «Mostrar internos» y las categorías sin tipos propios (Avisos) son de cliente y no
+   * viajan; MCP viaja como los tipos de herramienta y bloqueo, sin el filtro por nombre MCP.
+   */
+  protected openDownload(): void {
+    const windowMs = this.period().ms;
+    const types = EVENT_CATEGORIES.find((c) => c.key === this.category())?.types ?? [];
+    this.downloadTarget.set({
+      kind: 'events',
+      filters: {
+        project: this.project() ?? undefined,
+        sessionId: this.sessionId() ?? undefined,
+        since: windowMs === undefined ? undefined : new Date(Date.now() - windowMs),
+        eventTypes: types.length > 0 ? [...types] : undefined,
+        tools: this.selectedTools().length > 0 ? this.selectedTools() : undefined,
+      },
+    });
+  }
+
+  protected closeDownload(): void {
+    this.downloadTarget.set(null);
+  }
 
   protected onCategoryChange(index: number): void {
     const key = EVENT_CATEGORIES[index]?.key ?? 'all';

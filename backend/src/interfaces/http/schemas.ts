@@ -209,3 +209,25 @@ export const subscriptionUsageBodySchema = {
   additionalProperties: false,
   properties: { session_id: { type: 'string', minLength: 1, maxLength: 200 }, five_hour: subscriptionWindow, seven_day: subscriptionWindow },
 } as const;
+
+// Descargas (ADR-0013; AC-143): `content` es un booleano estricto, cualquier otro valor da 400.
+const contentParam = { type: 'boolean', default: false } as const;
+
+export const exportSessionQuerySchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: { content: contentParam },
+} as const;
+
+export const exportEventsQuerySchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    project: nonEmpty,
+    session_id: nonEmpty,
+    event_type: { type: 'array', items: { type: 'string', enum: EVENT_TYPES } },
+    tool: { type: 'array', items: nonEmpty },
+    since: { type: 'string', format: 'date-time' },
+    content: contentParam,
+  },
+} as const;

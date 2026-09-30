@@ -12,6 +12,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink, convertToParamMap } from '@angular/router';
 import '@lucia/info';
 import { map, switchMap, timer } from 'rxjs';
+import { DownloadDialog } from '../../../downloads/presentation/download-dialog/download-dialog';
 import { EventRows } from '../../../events/presentation/event-rows/event-rows';
 import {
   formatCompact,
@@ -157,6 +158,7 @@ export function tokenCards(
     SessionSkills,
     SessionMcp,
     EvaluationControls,
+    DownloadDialog,
   ],
   templateUrl: './session-detail.html',
   styleUrl: './session-detail.scss',
@@ -250,6 +252,7 @@ export class SessionDetailPage {
   });
 
   protected readonly copied = signal(false);
+  protected readonly downloadOpen = signal(false);
   protected readonly transcriptUnavailable = TRANSCRIPT_UNAVAILABLE;
   protected readonly formatDuration = formatDuration;
   protected readonly formatCompact = formatCompact;
@@ -272,6 +275,10 @@ export class SessionDetailPage {
   protected evaluationOf(type: EvaluationObjectType, id: string): Evaluation | null | undefined {
     const loaded = this.evaluations();
     return loaded.loaded ? (loaded.byKey.get(evaluationKey(type, id)) ?? null) : undefined;
+  }
+
+  protected closeDownload(): void {
+    this.downloadOpen.set(false);
   }
 
   protected async copyId(): Promise<void> {

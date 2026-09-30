@@ -9,6 +9,7 @@ import { provideBudgets } from './budgets/budgets.providers';
 import { provideEvaluations } from './evaluations/evaluations.providers';
 import { provideSecurity } from './security/security.providers';
 import { provideExporter } from './exporter/exporter.providers';
+import { provideDownloads } from './downloads/downloads.providers';
 import { provideEvents } from './events/events.providers';
 import { provideSessions } from './sessions/sessions.providers';
 import { provideSubscription } from './subscription/subscription.providers';
@@ -38,6 +39,7 @@ export const appConfig: ApplicationConfig = {
     provideMcp(),
     provideAgents(),
     provideExporter(),
+    provideDownloads(),
     provideEvaluations(),
     provideSecurity(),
     provideBudgets(),

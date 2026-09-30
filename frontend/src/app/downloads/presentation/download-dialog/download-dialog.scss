@@ -1,0 +1,160 @@
+// Modal de la Descarga de Sesión y de Eventos, con la misma estructura y tokens que el del exportador OTLP.
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: var(--scrim);
+  z-index: 1000;
+}
+
+.modal-window {
+  position: relative;
+  box-sizing: border-box;
+  width: 560px;
+  max-width: 100%;
+  max-height: 90vh;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--bg-overlay);
+  box-shadow: var(--shadow-3);
+  color: var(--text);
+  overflow: auto;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
+}
+
+.modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 48px var(--space-5) var(--space-5);
+}
+
+.download__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.download__title {
+  margin: 0;
+  font-size: 18px;
+}
+
+.muted {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.notice {
+  margin: 0;
+  font-size: 13px;
+
+  p {
+    margin: 0 0 var(--space-2);
+  }
+}
+
+.content-option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.content-option__box {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--brand);
+  cursor: pointer;
+}
+
+.download__count {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.fields__title {
+  margin: 0 0 var(--space-2);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    padding: 2px var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    overflow-wrap: anywhere;
+  }
+}
+
+.download__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--surface-2);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.action--primary {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--brand-contrast);
+
+  &:hover:not(:disabled) {
+    background: var(--brand);
+    filter: brightness(1.1);
+  }
+}

@@ -28,6 +28,15 @@
           <app-model-badge [model]="d.model" />
         }
         <span class="badge">{{ d.harness }}</span>
+        <button
+          type="button"
+          class="download"
+          data-testid="download-session"
+          aria-haspopup="dialog"
+          (click)="downloadOpen.set(true)"
+        >
+          Descargar Sesión
+        </button>
       </div>
       <p class="detail__meta" data-testid="session-meta">
         <span>{{ d.project }}</span>
@@ -55,6 +64,10 @@
         </p>
       }
     </header>
+
+    @if (downloadOpen()) {
+      <app-download-dialog [target]="{ kind: 'session', sessionId: d.sessionId }" (closed)="closeDownload()" />
+    }
 
     @if (s.failed) {
       <p class="notice notice--warn" role="alert">No se pudo actualizar la Sesión; se muestran los últimos datos conocidos.</p>

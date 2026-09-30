@@ -57,6 +57,10 @@ El mock también queda publicado en `http://127.0.0.1:4001` (`MOCK_PORT`) para p
 
 `GET /api/v1/metrics` ya no trae `tool_calls`, `prompts` ni `blocks` (AC-133): `activity` solo cuenta Eventos.
 
+## Descargas de Sesión y de Eventos
+
+`GET /api/v1/sessions/{id}/export` (JSON) y `GET /api/v1/events/export` (JSONL, `application/x-ndjson`) con sus `.../preview`, como el backend (ADR-0013, AC-142 a AC-146). Solo lectura, orden cronológico ascendente, tope de 50 000 Eventos (los más recientes; `truncated`/`omitted` en la cabecera `export`) y `content=true` opt-in. Los filtros de Eventos son `project`, `session_id`, `event_type` y `tool` (repetibles) y `since`. `content` o filtros inválidos responden 400 y una Sesión inexistente 404. Con `content=true` el mock pasa `payload`, `block.reason` y el detalle de la Sesión por el enmascarado del Adaptador (`adapters/claude-code/lib/mask.mjs`). No lee Transcripts: los tokens, la Tarea y la respuesta de los Subagentes son los sintéticos de siempre.
+
 ## Opciones
 
 ```bash
@@ -77,7 +81,7 @@ Ejemplo de prueba de carga rápida contra el backend: `docker compose --profile 
 
 ## Qué no hace el mock (`serve`)
 
-No persiste, no enmascara secretos (sus Eventos no los llevan) y valida el contrato solo de forma básica. `GET /api/v1/metrics` calcula la actividad a partir de sus Eventos, pero no tiene Transcripts: el Uso de tokens y el Coste estimado son sintéticos (deterministas por Evento, con el modelo del `SessionStart`). Lo mismo pasa con la Tarea y la respuesta de cada Subagente: salen de una plantilla por tipo (`Explore`, `Plan`, `general-purpose`), mientras que sus herramientas son las de sus Eventos simulados. Para esos comportamientos, usa el backend real con `send`.
+No persiste, no enmascara al ingerir (sus Eventos no llevan secretos; solo enmascara las descargas con `content=true`) y valida el contrato solo de forma básica. `GET /api/v1/metrics` calcula la actividad a partir de sus Eventos, pero no tiene Transcripts: el Uso de tokens y el Coste estimado son sintéticos (deterministas por Evento, con el modelo del `SessionStart`). Lo mismo pasa con la Tarea y la respuesta de cada Subagente: salen de una plantilla por tipo (`Explore`, `Plan`, `general-purpose`), mientras que sus herramientas son las de sus Eventos simulados. Para esos comportamientos, usa el backend real con `send`.
 
 ## Tests
 

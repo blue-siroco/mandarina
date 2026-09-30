@@ -3,6 +3,7 @@ import { By } from '@angular/platform-browser';
 import { Router, provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { BehaviorSubject, of } from 'rxjs';
+import { stubDownloadSource } from '../../downloads/testing/download-fixtures';
 import { observedEvent } from '../../events/testing/event-fixtures';
 import { INITIAL_USAGE_STATE, WatchUsageMetrics } from '../../usage/application/watch-usage-metrics';
 import { UsageQuery } from '../../usage/models/usage-metrics';
@@ -258,6 +259,7 @@ describe('AC-19, AC-31, AC-43: SessionDetailPage', () => {
         { provide: WatchSkillInvocations, useValue: { execute: (q: SkillInvocationQuery) => (skillQueries.push(q), skills$) } },
         { provide: WatchMcpInvocations, useValue: { execute: (q: McpQuery) => (mcpQueries.push(q), mcp$) } },
         evaluations.provider,
+        stubDownloadSource().provider,
       ],
     });
     const harness = await RouterTestingHarness.create();
@@ -567,4 +569,42 @@ describe('AC-19, AC-31, AC-43: SessionDetailPage', () => {
       expect(ids).toHaveLength(before);
     });
   });
+
+  describe('AC-148: Descargar Sesión', () => {
+    const button = (harness: RouterTestingHarness) =>
+      el(harness).querySelector<HTMLButtonElement>('.detail__header [data-testid="download-session"]')!;
+
+    it('hay un botón «Descargar Sesión» en la cabecera, con nombre accesible y alcanzable por teclado', async () => {
+      state$.next(withData());
+      const harness = await render();
+      expect(text(button(harness))).toBe('Descargar Sesión');
+      expect(button(harness).tabIndex).toBe(0);
+      expect(button(harness).disabled).toBe(false);
+    });
+
+    it('abre el diálogo en modo Sesión y al cerrarlo devuelve el foco al botón', async () => {
+      state$.next(withData());
+      const harness = await render();
+      expect(el(harness).querySelector('app-download-dialog')).toBeNull();
+      // jsdom no da foco al hacer clic, como sí hace el navegador.
+      button(harness).focus();
+      button(harness).click();
+      await harness.fixture.whenStable();
+      const dialog = el(harness).querySelector('[data-testid="download-dialog"]')!;
+      expect(text(dialog.querySelector('h2'))).toBe('Descarga de Sesión');
+
+      el(harness).querySelector<HTMLElement>('[data-testid="download-overlay"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await harness.fixture.whenStable();
+      await new Promise((r) => setTimeout(r));
+      expect(el(harness).querySelector('app-download-dialog')).toBeNull();
+      expect(document.activeElement).toBe(button(harness));
+    });
+
+    it('sin Sesión cargada no hay botón que pulsar', async () => {
+      state$.next(withData({ detail: null, notFound: true }));
+      const harness = await render();
+      expect(el(harness).querySelector('[data-testid="download-session"]')).toBeNull();
+    });
+  });
+
 });
