@@ -110,16 +110,27 @@
           </span>
         </header>
         @if (!collapsed) {
-          <div class="grid">
-            @for (session of group.open; track session.sessionId) {
-              <app-session-card [session]="session" [now]="now()" (directorySelected)="selectDirectory($event)" />
+          @let showClosed = isShowingClosed(group.project);
+          @for (dir of group.directories; track dir.directory) {
+            <!-- Un Directorio con solo Sesiones Cerradas no se anuncia mientras estas siguen plegadas. -->
+            @if (dir.open.length > 0 || (showClosed && dir.closed.length > 0)) {
+              <section class="directory" data-testid="directory-group" [attr.aria-label]="'Directorio ' + dir.directory">
+                <h4 class="directory__name mono" data-testid="directory-name" [title]="dir.directory">
+                  {{ tailPath(dir.directory) }}
+                </h4>
+                <div class="grid">
+                  @for (session of dir.open; track session.sessionId) {
+                    <app-session-card [session]="session" [now]="now()" (directorySelected)="selectDirectory($event)" />
+                  }
+                  @if (showClosed) {
+                    @for (session of dir.closed; track session.sessionId) {
+                      <app-session-card [session]="session" [now]="now()" (directorySelected)="selectDirectory($event)" />
+                    }
+                  }
+                </div>
+              </section>
             }
-            @if (isShowingClosed(group.project)) {
-              @for (session of group.closed; track session.sessionId) {
-                <app-session-card [session]="session" [now]="now()" (directorySelected)="selectDirectory($event)" />
-              }
-            }
-          </div>
+          }
           @if (group.closed.length > 0) {
             <button type="button" class="link-button project__closed" (click)="toggleClosed(group.project)">
               {{ isShowingClosed(group.project) ? 'Ocultar cerradas' : 'Mostrar ' + group.closed.length + (group.closed.length === 1 ? ' cerrada' : ' cerradas') }}

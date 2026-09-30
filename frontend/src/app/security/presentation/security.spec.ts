@@ -165,6 +165,25 @@ describe('AC-66, AC-67: SecurityPage', () => {
       expect(url(harness)).not.toContain('severidad');
     });
 
+    it('AC-122: el filtro de fuente sale de la URL, se escribe en ella y filtra la lista', async () => {
+      const harness = await render('/seguridad?fuente=mcp');
+      expect(rows(harness).map((r) => r.querySelector('.pattern')?.textContent)).toStrictEqual(['ignore-previous']);
+      expect(queries.at(-1)).not.toHaveProperty('source');
+
+      await select(harness, 'source-filter', 'Web (URL)');
+      expect(url(harness)).toBe('/seguridad?fuente=url');
+      expect(rows(harness).map((r) => r.querySelector('.pattern')?.textContent)).toStrictEqual(['fake-system-tag']);
+
+      await select(harness, 'source-filter', 'Fichero');
+      expect(rows(harness)).toHaveLength(0);
+
+      await select(harness, 'source-filter', '');
+      expect(url(harness)).not.toContain('fuente');
+      expect(rows(harness)).toHaveLength(2);
+      const options = [...el(harness).querySelectorAll('[data-testid="source-filter"] option')].map((o) => text(o));
+      expect(options).toStrictEqual(['Todas las fuentes', 'Web (URL)', 'Fichero', 'Servidor MCP', 'Otra herramienta']);
+    });
+
     it('ofrece los patrones y Proyectos que da la API', async () => {
       const harness = await render();
       const options = (id: string) => [...el(harness).querySelectorAll(`[data-testid="${id}"] option`)].map((o) => text(o));

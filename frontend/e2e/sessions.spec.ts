@@ -100,7 +100,7 @@ test.describe('AC-16: board de Sesiones', () => {
     (await api.socket()).send(liveMessage(eventDto('live-1')));
 
     await expect(page.getByTestId('session-card').first()).toContainText('Trabajando…');
-    await expect(page.getByRole('status')).toHaveText('En vivo');
+    await expect(page.locator('.connection')).toHaveText('En vivo');
   });
 
   test('los Proyectos y las tarjetas no cambian de sitio cuando llega actividad', async ({ page }) => {

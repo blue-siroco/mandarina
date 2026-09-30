@@ -103,6 +103,11 @@
     text-align: right;
   }
 
+  // Sobrecoste de caché: rojo, y el importe lleva además su signo (AC-123).
+  td[data-tone='danger'] {
+    color: var(--error-text);
+  }
+
   .total th,
   .total td {
     font-weight: 700;

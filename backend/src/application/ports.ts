@@ -12,6 +12,7 @@ export interface EventQuery {
   /** Solo Eventos recibidos antes del Evento con este id. */
   before?: string;
   sessionId?: string;
+  project?: string;
   eventTypes?: EventType[];
   /** Solo Eventos recibidos desde esta fecha (ISO). */
   since?: string;
@@ -103,6 +104,12 @@ export interface TranscriptData {
 export interface TranscriptReader {
   /** `undefined` si el Transcript no existe o no se puede leer. */
   read(transcriptPath: string): Promise<TranscriptData | undefined>;
+  /**
+   * Respuestas del agente principal y de sus Subagentes, sin deduplicar entre
+   * ficheros, para el coste acumulado (ADR-0010). Lee solo lo añadido desde la
+   * última llamada; `undefined` si el Transcript no existe.
+   */
+  readUsage(transcriptPath: string): Promise<UsageEntry[] | undefined>;
 }
 
 export interface Clock {

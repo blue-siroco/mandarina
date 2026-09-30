@@ -33,6 +33,14 @@
   color: var(--text-muted);
 }
 
+// Por encima del enlace que cubre la tarjeta para poder pulsarlo aparte (AC-114).
+.waiting__link {
+  position: relative;
+  z-index: 1;
+  color: inherit;
+  text-decoration: underline;
+}
+
 code {
   font-family: var(--font-mono);
   font-size: 12px;

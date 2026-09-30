@@ -159,6 +159,16 @@ test.describe('AC-48: perfil de un Tipo de Subagente', () => {
     await expect(page.getByTestId('subagent-detail')).toBeVisible();
   });
 
+  test('AC-121: las fichas muestran los tokens y las Sesiones del Tipo', async ({ page }) => {
+    await mockApi(page, {
+      agentProfile: () => ({ ...profile, summary: summary('Explore', 3, { tokens: { input: 12_000, output: 3_000, cache_read: 0, cache_creation: 0 }, sessions: 5 }) }),
+    });
+    await page.goto('/agentes/Explore');
+    await expect(page.getByTestId('profile-tokens')).toContainText('entrada');
+    await expect(page.getByTestId('profile-tokens')).toContainText('salida');
+    await expect(page.getByTestId('profile-sessions')).toContainText('5');
+  });
+
   test('un Tipo sin Lanzamientos lo dice y ofrece volver', async ({ page }) => {
     await mockApi(page, { agentProfile: () => ({ ...profile, summary: summary('Plan', 0, { last_at: '' }), launches: [] }) });
     await page.goto('/agentes/Plan');

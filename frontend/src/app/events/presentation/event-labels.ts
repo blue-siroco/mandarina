@@ -1,5 +1,5 @@
 import { formatDuration } from '../../shared/format';
-import { isMcpTool, oneLine, summarizeToolInput, toolLabel } from '../../shared/tool-summary';
+import { isMcpTool, oneLine, summarizeToolInput, summarizeToolOutput, toolLabel } from '../../shared/tool-summary';
 import { EventType, ObservedEvent } from '../models/observed-event';
 
 export const EVENT_TYPE_LABELS: Record<EventType, string> = {
@@ -59,6 +59,11 @@ function summarizeTool(event: ObservedEvent): string | null {
   if (!event.toolName) return input;
   const name = toolLabel(event.toolName);
   return input ? `${name} · ${input}` : name;
+}
+
+/** Salida de la herramienta en una línea; solo en `tool.post` (AC-113). */
+export function summarizeEventOutput(event: ObservedEvent): string | null {
+  return event.eventType === 'tool.post' ? summarizeToolOutput(event.toolName, event.payload) : null;
 }
 
 /** `e2e-builder · generar tests del AC-28 · 3 min` (AC-36); sin datos del servidor, el tipo del payload. */

@@ -63,6 +63,21 @@ describe('HttpWsEventFeed', () => {
     });
   });
 
+  describe('AC-110: search por Proyecto', () => {
+    it('envía project junto a session_id y since, y nada si no se filtra', () => {
+      const since = new Date('2026-09-30T09:00:00.000Z');
+      feed.search({ limit: 200, project: 'mandarina', sessionId: 's-1', since }).subscribe();
+      const filtered = http.expectOne((r) => r.url === '/api/v1/events');
+      expect(filtered.request.params.get('project')).toBe('mandarina');
+      expect(filtered.request.params.get('session_id')).toBe('s-1');
+      expect(filtered.request.params.get('since')).toBe('2026-09-30T09:00:00.000Z');
+      filtered.flush({ items: [] });
+
+      feed.search({ limit: 200 }).subscribe();
+      http.expectOne('/api/v1/events?limit=200').flush({ items: [] });
+    });
+  });
+
   describe('AC-17: search con filtros', () => {
     it('envía session_id, event_type repetido y since en ISO', () => {
       const since = new Date('2026-09-20T00:00:00.000Z');

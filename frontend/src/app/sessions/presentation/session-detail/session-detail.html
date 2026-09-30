@@ -45,7 +45,7 @@
         label="Evaluación de la Sesión"
       />
       @if (d.activity === 'waiting' && d.waiting) {
-        <app-waiting-badge class="detail__waiting" [waiting]="d.waiting" [now]="now()" />
+        <app-waiting-badge class="detail__waiting" [waiting]="d.waiting" [sessionId]="d.sessionId" [now]="now()" />
       } @else if (d.activity === 'working') {
         <p class="detail__working" data-testid="working">
           Trabajando…

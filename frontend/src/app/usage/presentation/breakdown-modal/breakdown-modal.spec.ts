@@ -84,6 +84,23 @@ describe('AC-39, AC-40: BreakdownModal', () => {
     expect(text(el(fixture).querySelector('[data-testid="breakdown-warning"]'))).toBe('Sin Tarifa, no suman importes: mystery-model');
   });
 
+  it('AC-123: el ahorro neto negativo va en rojo con su signo y una explicación; el positivo no', async () => {
+    const negative = usageMetrics({ breakdown: breakdown(), cache: cache({ savings_net_usd: -0.3 }) });
+    state$.next({ metrics: negative, loaded: true, failed: false });
+    const fixture = await render('cache', { label: 'Caché' });
+    const total = el(fixture).querySelector('[data-testid="breakdown-total"] td')!;
+    expect(total.getAttribute('data-tone')).toBe('danger');
+    expect(total.getAttribute('title')).toContain('Sobrecoste');
+    expect(text(total)).toContain('-0,30');
+    // Solo la columna de ahorro neto: la tasa de acierto no se tiñe.
+    expect(el(fixture).querySelectorAll('[data-testid="breakdown-total"] td[data-tone="danger"]')).toHaveLength(1);
+  });
+
+  it('AC-123: un ahorro neto positivo no se marca', async () => {
+    const fixture = await render('cache', { label: 'Caché' });
+    expect(el(fixture).querySelector('[data-tone="danger"]')).toBeNull();
+  });
+
   it('reordena al pulsar una cabecera, primero descendente y luego ascendente', async () => {
     const fixture = await render('tools');
     const prompts = el(fixture).querySelector('[data-column="prompts"]') as HTMLButtonElement;

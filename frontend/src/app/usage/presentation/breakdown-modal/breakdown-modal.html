@@ -70,7 +70,7 @@
                 <tr class="total" data-testid="breakdown-total">
                   <th scope="row">Total</th>
                   @for (column of columns(); track column.key) {
-                    <td class="mono num" [class.num-col]="column.numeric">{{ cell(column, t) }}</td>
+                    <td class="mono num" [class.num-col]="column.numeric" [attr.data-tone]="tone(column, t)" [attr.title]="toneTitle(column, t)">{{ cell(column, t) }}</td>
                   }
                 </tr>
                 @for (row of rows(); track row.directory ?? row.model ?? 'desconocido') {
@@ -88,7 +88,7 @@
                       }
                     </th>
                     @for (column of columns(); track column.key) {
-                      <td class="mono num" [class.num-col]="column.numeric">{{ cell(column, row) }}</td>
+                      <td class="mono num" [class.num-col]="column.numeric" [attr.data-tone]="tone(column, row)" [attr.title]="toneTitle(column, row)">{{ cell(column, row) }}</td>
                     }
                   </tr>
                 } @empty {

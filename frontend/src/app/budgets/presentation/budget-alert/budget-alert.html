@@ -7,11 +7,44 @@
       @if (w.more > 0) {
         <span class="budget-alert__more" data-testid="budget-alert-more">y {{ w.more }} más</span>
       }
+      @if (raising() !== null) {
+        <span class="budget-alert__raise">
+          <label>
+            <span class="budget-alert__raise-label">Nuevo límite (USD)</span>
+            <input
+              class="budget-alert__input"
+              type="text"
+              inputmode="decimal"
+              data-testid="budget-alert-raise-input"
+              [value]="raising()"
+              (input)="raising.set($any($event.target).value)"
+            />
+          </label>
+          <button type="button" class="budget-alert__btn" data-testid="budget-alert-raise-apply" [disabled]="raiseError() !== null || busy()" (click)="applyRaise()">
+            Aplicar
+          </button>
+          <button type="button" class="budget-alert__btn" (click)="cancelRaise()">Cancelar</button>
+          @if (raiseError(); as error) {
+            <span class="budget-alert__error" role="alert">{{ error }}</span>
+          }
+        </span>
+      } @else {
+        <button type="button" class="budget-alert__btn" data-testid="budget-alert-raise" [disabled]="busy()" (click)="startRaise()">Ampliar límite</button>
+      }
+      @if (allowTarget()) {
+        <button type="button" class="budget-alert__btn" data-testid="budget-alert-allow" [disabled]="busy()" (click)="allow()">{{ allowLabel() }}</button>
+      }
       <a class="budget-alert__link" routerLink="/presupuestos">Ver Presupuestos</a>
       <label class="budget-alert__mute">
         <input type="checkbox" role="switch" data-testid="budget-alert-mute" [checked]="muted()" (change)="onMute($event)" />
         Silenciar avisos sonoros
       </label>
+    </div>
+  }
+  @if (notice(); as n) {
+    <div class="budget-alert__notice" data-testid="budget-alert-notice" [attr.data-kind]="n.kind" [attr.role]="n.kind === 'error' ? 'alert' : 'status'">
+      <span>{{ n.text }}</span>
+      <button type="button" class="budget-alert__btn" (click)="dismissNotice()">Cerrar<span class="visually-hidden"> el mensaje</span></button>
     </div>
   }
 </div>

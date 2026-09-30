@@ -74,7 +74,7 @@
   }
 
   @if (s.activity === 'waiting' && s.waiting) {
-    <app-waiting-badge [waiting]="s.waiting" />
+    <app-waiting-badge [waiting]="s.waiting" [sessionId]="s.sessionId" />
   } @else if (working()) {
     <p class="card-session__working" data-testid="working">
       Trabajando…

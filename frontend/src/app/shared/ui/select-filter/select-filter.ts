@@ -13,7 +13,7 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
       <select class="field__select" (change)="onChange($event)">
         <option value="" [selected]="value() === null">{{ allLabel() }}</option>
         @for (option of optionList(); track option) {
-          <option [value]="option" [selected]="option === value()">{{ option }}</option>
+          <option [value]="option" [selected]="option === value()">{{ labelFor()(option) }}</option>
         }
       </select>
     </label>
@@ -54,6 +54,8 @@ export class SelectFilter {
   readonly allLabel = input.required<string>();
   readonly options = input.required<readonly string[]>();
   readonly value = input<string | null>(null);
+  /** Texto de cada opción cuando el valor no es legible (p. ej. un id de Sesión abreviado). */
+  readonly labelFor = input<(option: string) => string>((option) => option);
   readonly changed = output<string | null>();
 
   /** Un valor elegido que ya no está entre las opciones sigue visible para poder quitarlo. */

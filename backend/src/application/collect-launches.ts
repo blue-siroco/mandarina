@@ -74,7 +74,7 @@ export async function collectLaunches(
           let status: LaunchStatus = 'finished';
           if (life.stopped_at === null) status = live ? 'running' : 'no_response';
           const end = life.stopped_at ?? (live ? now.toISOString() : core.last_event_at);
-          const own = ownActivity(id === null ? [] : rows.filter((r) => r.subagent_id === id));
+          const own = ownActivity(id === null ? [] : rows.filter((r) => r.subagent_id === id), file?.skills);
           return {
             type: life.agent_type ?? file?.meta?.agentType ?? null,
             launcher: launch?.subagent_id ? (typeOf.get(launch.subagent_id) ?? null) : sessionAgent,

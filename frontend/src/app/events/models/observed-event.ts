@@ -62,6 +62,7 @@ export interface ObservedEvent {
 /** Consulta de Eventos (`GET /api/v1/events`, AC-17). */
 export interface EventQuery {
   limit: number;
+  project?: string;
   sessionId?: string;
   eventTypes?: EventType[];
   since?: Date;

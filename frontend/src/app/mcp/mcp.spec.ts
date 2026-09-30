@@ -13,7 +13,7 @@ import { McpInvocationList, McpQuery } from './models/mcp';
 import { McpFilter, McpSource } from './ports/mcp-source';
 import { formatBytes, formatLatency } from './presentation/mcp-labels';
 import { McpPage } from './presentation/mcp-page/mcp-page';
-import { SESSION_ID, mcpInvocation, mcpInvocationDto, mcpServerUsage, mcpServerUsageDto } from './testing/mcp-fixtures';
+import { SESSION_ID, mcpInvocation, mcpInvocationDto, mcpServerUsage, mcpServerUsageDto, mcpToolUsage } from './testing/mcp-fixtures';
 
 const text = (el: Element | null | undefined) => el?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
 const plain = (value: string) => value.replace(/\s/g, ' ');
@@ -200,6 +200,31 @@ describe('AC-44: McpPage', () => {
     expect(plain(text(playwright))).toContain('2 KB / 117,2 KB');
     expect(text(playwright)).toContain('imagen');
     expect(text(docs)).not.toContain('imagen');
+  });
+
+  it('AC-120: pinta los Proyectos de cada servidor y "sin respuesta" con conteo y porcentaje', async () => {
+    state$.next({
+      ...state$.value,
+      servers: [
+        mcpServerUsage({ projects: ['demo', 'otro'], calls: 4, noResponse: 1 }),
+        mcpServerUsage({ server: 'docs', projects: [], calls: 0, noResponse: 0, tools: [] }),
+      ],
+    });
+    const harness = await render();
+    const [first, second] = servers(harness);
+
+    expect([...first!.querySelectorAll('[data-testid="mcp-projects"] .badge')].map((b) => text(b))).toStrictEqual(['demo', 'otro']);
+    expect(text(first!.querySelector('[data-testid="mcp-no-response"]'))).toBe('1 (25 %)');
+    expect(text(second!.querySelector('[data-testid="mcp-projects"]'))).toBe('—');
+    expect(text(second!.querySelector('[data-testid="mcp-no-response"]'))).toBe('0 (—)');
+  });
+
+  it('AC-120: la fila de herramienta también muestra el porcentaje sin respuesta', async () => {
+    state$.next({ ...state$.value, servers: [mcpServerUsage({ tools: [mcpToolUsage({ calls: 2, noResponse: 1 })] })] });
+    const harness = await render();
+    (servers(harness)[0]!.querySelector('button') as HTMLButtonElement).click();
+    await harness.fixture.whenStable();
+    expect(plain(text(el(harness).querySelector('[data-testid="mcp-tool"]')))).toContain('1 (50 %)');
   });
 
   it('por defecto pide 7 días y los filtros salen de la URL', async () => {

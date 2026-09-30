@@ -54,6 +54,22 @@ describe('AC-45: lo que hace un Subagente', () => {
   });
 });
 
+describe('AC-103: skills del Transcript en la actividad propia', () => {
+  const use = (tool_use_id: string, skill: string) => ({ tool_use_id, skill, args: null, timestamp: at(9), error: null, failed: false });
+
+  it('une las del hook y las del Transcript por tool_use_id, sin duplicar', () => {
+    const activity = ownActivity(
+      [row('tool.pre', { tool_name: 'Skill', skill_name: 'tdd', tool_use_id: 'k1' })],
+      [use('k1', 'tdd'), use('k2', 'commit'), use('k2', 'commit')],
+    );
+    expect(activity.skills).toStrictEqual(['tdd', 'commit']);
+  });
+
+  it('un Subagente sin Eventos propios aporta las de su Transcript', () => {
+    expect(ownActivity([], [use('k9', 'review')]).skills).toStrictEqual(['review']);
+  });
+});
+
 const launch = (overrides: Partial<LaunchRecord> = {}): LaunchRecord => ({
   type: 'Explore',
   launcher: null,

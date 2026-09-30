@@ -29,3 +29,6 @@ export function formatLatency(ms: number | null): string {
 }
 
 export const formatRate = (rate: number | null) => (rate === null ? '—' : formatPercent(rate));
+
+/** Fracción de llamadas sin respuesta; `null` si no hubo llamadas. Se dice con texto además del conteo. */
+export const noResponseRate = (noResponse: number, calls: number): number | null => (calls === 0 ? null : noResponse / calls);

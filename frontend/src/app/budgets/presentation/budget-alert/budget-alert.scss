@@ -69,3 +69,60 @@
     padding: var(--space-2) var(--space-4);
   }
 }
+
+// Acciones sobre el aviso (AC-124): botones discretos para no competir con el mensaje.
+.budget-alert__btn {
+  padding: 1px var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.budget-alert__raise {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.budget-alert__raise-label {
+  margin-right: var(--space-2);
+  color: var(--text-muted);
+}
+
+.budget-alert__input {
+  width: 6ch;
+  padding: 1px var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+.budget-alert__error {
+  color: var(--error-text);
+}
+
+// La confirmación sigue visible aunque el aviso ya haya desaparecido.
+.budget-alert__notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-6);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 13px;
+
+  &[data-kind='error'] {
+    color: var(--error-text);
+  }
+}

@@ -10,7 +10,7 @@ import { ManageBudgets } from '../application/manage-budgets';
 import { BudgetsState, INITIAL_BUDGETS, WatchBudgets } from '../application/watch-budgets';
 import { Budget } from '../models/budget';
 import { SESSION_ID, allowance, budget, budgetAllowanceDto, budgetSubjectDto, sessionBudget } from '../testing/budget-fixtures';
-import { BudgetAlert } from './budget-alert/budget-alert';
+import { BudgetAlert, CONFIRMATION_MS } from './budget-alert/budget-alert';
 import { EMPTY_DRAFT, draftOf, parseAmount, toBudgetInput, validateDraft } from './budget-form';
 import { BudgetsPage } from './budgets-page/budgets-page';
 
@@ -80,6 +80,7 @@ describe('AC-83: BudgetAlert', () => {
   let state$: BehaviorSubject<BudgetsState>;
   let changes$: Subject<BudgetStateChange>;
   let sound: { muted: ReturnType<typeof signal<boolean>>; setMuted: ReturnType<typeof vi.fn>; play: ReturnType<typeof vi.fn> };
+  let manage: { raiseLimit: ReturnType<typeof vi.fn>; allow: ReturnType<typeof vi.fn> };
 
   async function render() {
     await TestBed.configureTestingModule({
@@ -87,6 +88,7 @@ describe('AC-83: BudgetAlert', () => {
       providers: [
         provideRouter([]),
         { provide: WatchBudgets, useValue: { state$ } },
+        { provide: ManageBudgets, useValue: manage },
         { provide: LiveEvents, useValue: { budgetChanges$: changes$ } },
         { provide: AlertSound, useValue: sound },
       ],
@@ -101,6 +103,7 @@ describe('AC-83: BudgetAlert', () => {
     state$ = new BehaviorSubject<BudgetsState>(INITIAL_BUDGETS);
     changes$ = new Subject<BudgetStateChange>();
     sound = { muted: signal(false), setMuted: vi.fn((muted: boolean) => sound.muted.set(muted)), play: vi.fn() };
+    manage = { raiseLimit: vi.fn(() => of({ ok: true })), allow: vi.fn(() => of({ ok: true })) };
   });
 
   it('la región viva existe siempre, pero sin Presupuestos Cerca o Superados no dice nada', async () => {
@@ -164,6 +167,104 @@ describe('AC-83: BudgetAlert', () => {
     state$.next(loaded([overGlobal()]));
     await render();
     expect(sound.play).not.toHaveBeenCalled();
+  });
+
+  describe('AC-124: acciones del aviso', () => {
+    const overSession = () => sessionBudget({ subjects: [budgetSubjectDto({ session_id: SESSION_ID, project: 'demo', spent_usd: 9.5, ratio: 1.9, state: 'exceeded' })] });
+    const overProject = () =>
+      budget({ id: 'b3', scope: 'project_day', project: 'demo', state: 'exceeded', spent_usd: 60, subjects: [budgetSubjectDto({ project: 'demo', spent_usd: 60, ratio: 1.2, state: 'exceeded' })] });
+    const q = (f: { nativeElement: unknown }, id: string) => el(f).querySelector<HTMLElement>(`[data-testid="${id}"]`);
+
+    it('Permitir por Sesión crea la excepción de la Sesión concreta y lo confirma', async () => {
+      state$.next(loaded([overSession()]));
+      const fixture = await render();
+      expect(text(q(fixture, 'budget-alert-allow'))).toBe('Permitir esta Sesión');
+      q(fixture, 'budget-alert-allow')!.click();
+      await fixture.whenStable();
+      expect(manage.allow).toHaveBeenCalledWith(expect.objectContaining({ id: 'b2' }), { sessionId: SESSION_ID });
+      expect(text(q(fixture, 'budget-alert-notice'))).toContain('Excepción creada');
+    });
+
+    it('Permitir en Proyecto y día deja seguir al Proyecto hasta el fin del día', async () => {
+      state$.next(loaded([overProject()]));
+      const fixture = await render();
+      expect(text(q(fixture, 'budget-alert-allow'))).toBe('Permitir este Proyecto hoy');
+      q(fixture, 'budget-alert-allow')!.click();
+      expect(manage.allow).toHaveBeenCalledWith(expect.objectContaining({ id: 'b3' }), { project: 'demo' });
+    });
+
+    it('no ofrece Permitir en el global del día, en Cerca, con la acción avisar ni con excepción', async () => {
+      for (const items of [[overGlobal()], [nearGlobal()], [{ ...overSession(), action: 'warn' as const }]]) {
+        TestBed.resetTestingModule();
+        state$.next(loaded(items));
+        const fixture = await render();
+        expect(q(fixture, 'budget-alert')).not.toBeNull();
+        expect(q(fixture, 'budget-alert-allow')).toBeNull();
+        expect(q(fixture, 'budget-alert-raise')).not.toBeNull();
+      }
+    });
+
+    it('Ampliar límite propone un valor editable y aplica el que se escriba', async () => {
+      state$.next(loaded([overGlobal()]));
+      const fixture = await render();
+      q(fixture, 'budget-alert-raise')!.click();
+      await fixture.whenStable();
+      const input = q(fixture, 'budget-alert-raise-input') as HTMLInputElement;
+      expect(input.value).toBe('65');
+      input.value = '80,5';
+      input.dispatchEvent(new Event('input'));
+      await fixture.whenStable();
+      q(fixture, 'budget-alert-raise-apply')!.click();
+      await fixture.whenStable();
+      expect(manage.raiseLimit).toHaveBeenCalledWith(expect.objectContaining({ id: 'b9' }), 80.5);
+      expect(text(q(fixture, 'budget-alert-notice'))).toMatch(/^Límite ampliado a ~.*80,50/);
+      expect(q(fixture, 'budget-alert-raise-input')).toBeNull();
+    });
+
+    it('un límite no válido impide aplicar', async () => {
+      state$.next(loaded([overGlobal()]));
+      const fixture = await render();
+      q(fixture, 'budget-alert-raise')!.click();
+      await fixture.whenStable();
+      const input = q(fixture, 'budget-alert-raise-input') as HTMLInputElement;
+      input.value = 'abc';
+      input.dispatchEvent(new Event('input'));
+      await fixture.whenStable();
+      expect((q(fixture, 'budget-alert-raise-apply') as HTMLButtonElement).disabled).toBe(true);
+      expect(text(el(fixture))).toContain('mayor que 0');
+    });
+
+    it('la confirmación sobrevive a la desaparición del aviso y se retira sola', async () => {
+      state$.next(loaded([overSession()]));
+      const fixture = await render();
+      vi.useFakeTimers();
+      try {
+        q(fixture, 'budget-alert-allow')!.click();
+        state$.next(loaded([budget()]));
+        fixture.detectChanges();
+        expect(q(fixture, 'budget-alert')).toBeNull();
+        expect(q(fixture, 'budget-alert-notice')).not.toBeNull();
+        vi.advanceTimersByTime(CONFIRMATION_MS);
+        fixture.detectChanges();
+        expect(q(fixture, 'budget-alert-notice')).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('si el servidor rechaza la acción, muestra el motivo y lo mantiene hasta cerrarlo', async () => {
+      manage.allow.mockReturnValue(of({ ok: false, message: 'Sin conexión con Mandarina' }));
+      state$.next(loaded([overSession()]));
+      const fixture = await render();
+      q(fixture, 'budget-alert-allow')!.click();
+      await fixture.whenStable();
+      const notice = q(fixture, 'budget-alert-notice')!;
+      expect(notice.getAttribute('role')).toBe('alert');
+      expect(text(notice)).toContain('Sin conexión con Mandarina');
+      (notice.querySelector('button') as HTMLButtonElement).click();
+      await fixture.whenStable();
+      expect(q(fixture, 'budget-alert-notice')).toBeNull();
+    });
   });
 
   it('el interruptor Silenciar avisos lo guarda en el servicio', async () => {

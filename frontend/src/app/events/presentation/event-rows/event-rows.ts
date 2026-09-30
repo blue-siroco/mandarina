@@ -3,7 +3,14 @@ import { ChangeDetectionStrategy, Component, input, signal } from '@angular/core
 import { RouterLink } from '@angular/router';
 import { shortId } from '../../../shared/format';
 import { ObservedEvent } from '../../models/observed-event';
-import { EVENT_TYPE_LABELS, Segment, hasActiveWarnings, maskedSegments, summarizeEvent } from '../event-labels';
+import {
+  EVENT_TYPE_LABELS,
+  Segment,
+  hasActiveWarnings,
+  maskedSegments,
+  summarizeEvent,
+  summarizeEventOutput,
+} from '../event-labels';
 import { EventWarningBadge } from '../event-warning-badge/event-warning-badge';
 import { EventWarningList } from '../event-warning-list/event-warning-list';
 
@@ -23,6 +30,7 @@ export class EventRows {
   protected readonly eventTypeLabels = EVENT_TYPE_LABELS;
   protected readonly shortId = shortId;
   protected readonly summary = summarizeEvent;
+  protected readonly output = summarizeEventOutput;
   protected readonly hasWarnings = hasActiveWarnings;
   private readonly expanded = signal<ReadonlySet<string>>(new Set());
 

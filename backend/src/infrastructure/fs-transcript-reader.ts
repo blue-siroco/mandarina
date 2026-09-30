@@ -1,5 +1,5 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
-import { basename, dirname, join } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative } from 'node:path';
 import type { SubagentTranscript, TranscriptData, TranscriptReader } from '../application/ports.js';
 import { normalizeAgentId } from '../domain/agent-id.js';
 import {
@@ -11,6 +11,7 @@ import {
 import { maskSecrets } from '../domain/mask-secrets.js';
 import { parseSkillUses, type TranscriptSkillUse } from '../domain/skill-invocations.js';
 import { parseUsageEntries, type UsageEntry } from '../domain/token-usage.js';
+import { IncrementalUsage } from './incremental-usage.js';
 
 /**
  * Traduce la ruta del host (`C:/Users/x/.claude/projects/...`, con cualquier
@@ -22,7 +23,10 @@ export function toMountedPath(hostPath: string, mount: string | undefined): stri
   const normalized = hostPath.replaceAll('\\', '/');
   const marker = normalized.lastIndexOf('/.claude/');
   if (marker === -1) return hostPath;
-  return join(mount, normalized.slice(marker + '/.claude/'.length));
+  const mounted = join(mount, normalized.slice(marker + '/.claude/'.length));
+  // Un `..` en la ruta que envía el hook no puede sacar la lectura del volumen montado.
+  const inside = relative(mount, mounted);
+  return inside.startsWith('..') || isAbsolute(inside) ? join(mount, '__fuera-del-montaje__') : mounted;
 }
 
 interface CachedFile<T> {
@@ -46,6 +50,7 @@ interface SubagentFile extends MainFile {
  */
 export class FsTranscriptReader implements TranscriptReader {
   private readonly cache = new Map<string, CachedFile<unknown>>();
+  private readonly usage = new IncrementalUsage();
 
   constructor(private readonly mount: string | undefined) {}
 
@@ -79,6 +84,17 @@ export class FsTranscriptReader implements TranscriptReader {
       });
     }
     return { mtimeMs: own.mtimeMs, entries: own.value.entries, skills: own.value.skills, subagents };
+  }
+
+  /** Coste acumulado (ADR-0010): solo lee lo añadido a cada Transcript desde la última vez. */
+  async readUsage(transcriptPath: string): Promise<UsageEntry[] | undefined> {
+    const main = toMountedPath(transcriptPath, this.mount);
+    const own = await this.usage.read(main);
+    if (own === undefined) return undefined;
+    const subagentsDir = join(dirname(main), basename(main, '.jsonl'), 'subagents');
+    const files = await readdir(subagentsDir).catch(() => [] as string[]);
+    const subagents = await Promise.all(files.filter((f) => f.endsWith('.jsonl')).map((f) => this.usage.read(join(subagentsDir, f))));
+    return [...own, ...subagents.flatMap((entries) => entries ?? [])];
   }
 
   private async cached<T>(path: string, parse: (content: string) => T): Promise<CachedFile<T> | undefined> {

@@ -168,3 +168,20 @@ describe('AC-08: consulta paginada', () => {
     expect(response.statusCode).toBe(400);
   });
 });
+
+describe('AC-100: la lista de Eventos se filtra por Proyecto', () => {
+  it('devuelve solo los Eventos del Proyecto y aplica el limit después de filtrar', async () => {
+    await ingest({ ...validEvent, project: 'alfa', session_id: 'a1' });
+    await ingest({ ...validEvent, project: 'beta', session_id: 'b1' });
+    await ingest({ ...validEvent, project: 'beta', session_id: 'b1' });
+    const { items } = await list('?project=alfa&limit=1');
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ project: 'alfa' });
+    expect((await list('?project=beta')).items).toHaveLength(2);
+    expect((await list('?project=nadie')).items).toEqual([]);
+  });
+
+  it('rechaza un project vacío con 400', async () => {
+    expect((await app.inject({ method: 'GET', url: '/api/v1/events?project=' })).statusCode).toBe(400);
+  });
+});

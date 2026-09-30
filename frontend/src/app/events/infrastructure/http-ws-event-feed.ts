@@ -58,8 +58,9 @@ export class HttpWsEventFeed extends EventFeed {
   private readonly createSocket = inject(WEBSOCKET_FACTORY);
   private readonly liveUrl = inject(LIVE_URL);
 
-  search({ limit, sessionId, eventTypes, since }: EventQuery): Observable<ObservedEvent[]> {
+  search({ limit, project, sessionId, eventTypes, since }: EventQuery): Observable<ObservedEvent[]> {
     let params = new HttpParams().set('limit', limit);
+    if (project !== undefined) params = params.set('project', project);
     if (sessionId !== undefined) params = params.set('session_id', sessionId);
     for (const type of eventTypes ?? []) params = params.append('event_type', type);
     if (since !== undefined) params = params.set('since', since.toISOString());

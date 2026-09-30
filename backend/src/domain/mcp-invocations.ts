@@ -69,6 +69,12 @@ export function serverOf(toolName: string): { server: string; tool: string } | n
   return { server: rest.slice(0, cut), tool: rest.slice(cut + 2) };
 }
 
+/** La respuesta trae bloques `image` en el primer nivel o dentro de `{content:[…]}` (los dos formatos que emite Claude Code). */
+function hasImage(response: unknown): boolean {
+  const blocks = Array.isArray(response) ? response : record(response)?.content;
+  return Array.isArray(blocks) && blocks.some((block) => record(block)?.type === 'image');
+}
+
 /** Lo mismo que el repositorio calcula en SQL, a partir del payload completo de un `tool.post`. */
 export function digestOf(payload: Record<string, unknown>): McpPostDigest {
   const response = payload.tool_response;
@@ -79,7 +85,7 @@ export function digestOf(payload: Record<string, unknown>): McpPostDigest {
     is_interrupt: payload.is_interrupt === true,
     error: firstLine(payload.error),
     response_bytes: serialized === null ? null : Buffer.byteLength(serialized),
-    has_image: Array.isArray(response) && response.some((block) => record(block)?.type === 'image'),
+    has_image: hasImage(response),
   };
 }
 

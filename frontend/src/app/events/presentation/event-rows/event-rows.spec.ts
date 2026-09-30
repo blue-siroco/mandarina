@@ -119,3 +119,39 @@ describe('AC-68: avisos de inyección en las filas', () => {
     expect(el.querySelector('[data-testid="event-warning-list"]')).toBeNull();
   });
 });
+
+describe('AC-113: salida de la herramienta en la fila', () => {
+  const post = (payload: Record<string, unknown>, extra: Partial<ObservedEvent> = {}) =>
+    observedEvent({ id: 'p', eventType: 'tool.post', toolName: 'Bash', payload, ...extra });
+  const output = (fixture: { nativeElement: HTMLElement }) => fixture.nativeElement.querySelector('[data-testid="event-output"]');
+
+  it('un tool.post muestra la entrada y, debajo, la primera línea de la salida', async () => {
+    const fixture = await render([
+      post({ tool_input: { command: 'npm test' }, tool_response: { stdout: 'Tests 12 passed\nmás', stderr: '' } }),
+    ]);
+    const row = fixture.nativeElement.querySelector('[data-testid="event-row"]') as HTMLElement;
+    expect(text(row)).toContain('Bash · npm test');
+    expect(text(output(fixture))).toBe('→ Tests 12 passed');
+  });
+
+  it('un fallo muestra el error recortado', async () => {
+    const fixture = await render([post({ tool_input: { command: 'npm run x' }, error: 'Exit code 1\nmissing script' })]);
+    expect(text(output(fixture))).toBe('→ Exit code 1 · missing script');
+  });
+
+  it('Read muestra el número de líneas', async () => {
+    const fixture = await render([post({ tool_response: { file: { numLines: 42 } } }, { toolName: 'Read' })]);
+    expect(text(output(fixture))).toBe('→ 42 líneas');
+  });
+
+  it('un tool.pre no muestra salida aunque el payload la traiga', async () => {
+    const fixture = await render([post({ tool_response: { stdout: 'x' } }, { eventType: 'tool.pre' })]);
+    expect(output(fixture)).toBeNull();
+  });
+
+  it('el texto de la salida se pinta como texto, nunca como HTML', async () => {
+    const fixture = await render([post({ tool_response: { stdout: '<img src=x onerror=alert(1)>' } })]);
+    expect(fixture.nativeElement.querySelector('img')).toBeNull();
+    expect(text(output(fixture))).toContain('<img src=x onerror=alert(1)>');
+  });
+});

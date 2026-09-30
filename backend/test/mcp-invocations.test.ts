@@ -223,3 +223,16 @@ describe('AC-42: uso por servidor y herramienta', () => {
     expect(server).toMatchObject({ failure_rate: null, latency_p50_ms: null, response_avg_bytes: null });
   });
 });
+
+describe('AC-101: has_image reconoce los dos formatos de tool_response', () => {
+  const block = { type: 'image', source: { data: 'x' } };
+  it.each([
+    ['array de primer nivel', [block], true],
+    ['objeto con content', { content: [{ type: 'text', text: 'a' }, block] }, true],
+    ['objeto con content sin imagen', { content: [{ type: 'text', text: 'a' }] }, false],
+    ['content que no es array', { content: 'texto' }, false],
+    ['texto plano', 'hola', false],
+  ])('%s', (_name, response, expected) => {
+    expect(digestOf({ tool_use_id: 't', tool_response: response }).has_image).toBe(expected);
+  });
+});

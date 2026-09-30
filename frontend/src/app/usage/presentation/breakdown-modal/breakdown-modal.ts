@@ -139,6 +139,17 @@ export class BreakdownModal {
     return value === null ? '—' : column.format(value);
   }
 
+  /** Un ahorro neto de caché negativo es un sobrecoste: rojo, además del signo del importe (AC-123). */
+  protected tone(column: BreakdownColumn, row: BreakdownRow): 'danger' | null {
+    if (column.key !== 'net') return null;
+    const value = column.value(row, this.total()!);
+    return typeof value === 'number' && value < 0 ? 'danger' : null;
+  }
+
+  protected toneTitle(column: BreakdownColumn, row: BreakdownRow): string | null {
+    return this.tone(column, row) ? 'Sobrecoste: la caché costó más de lo que ahorró' : null;
+  }
+
   protected ariaSort(column: BreakdownColumn): 'ascending' | 'descending' | 'none' {
     if (column !== this.activeColumn()) return 'none';
     return this.sort().key === null || this.sort().direction === 'desc' ? 'descending' : 'ascending';

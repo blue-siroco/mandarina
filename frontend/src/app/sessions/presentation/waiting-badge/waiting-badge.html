@@ -4,7 +4,7 @@
   }
   <!-- El motivo va en una sola línea: el espacio en blanco entre trozos se vería como espacio en el texto. -->
   <!-- prettier-ignore -->
-  <span class="waiting__reason" data-testid="waiting-reason">@for (part of parts(); track $index) {@if (part.code) {<code>{{ part.text }}</code>} @else {{{ part.text }}}}</span>
+  <span class="waiting__reason" data-testid="waiting-reason">@for (part of parts(); track $index) {@if (part.subagentId && sessionId()) {<a class="waiting__link" data-testid="waiting-subagent-link" [routerLink]="['/sesiones', sessionId()]" [queryParams]="{ pestana: 'subagentes', subagente: part.subagentId }"><code>{{ part.text }}</code></a>} @else if (part.code) {<code>{{ part.text }}</code>} @else {{{ part.text }}}}</span>
   @if (since(); as s) {
     <span class="waiting__since" data-testid="waiting-since">{{ s }}</span>
   }

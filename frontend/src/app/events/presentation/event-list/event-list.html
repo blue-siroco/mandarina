@@ -23,6 +23,31 @@
       [optionWidth]="112"
       (selected)="onCategoryChange($event)"
     />
+    <app-select-filter
+      data-testid="project-filter"
+      label="Proyecto"
+      allLabel="Todos los Proyectos"
+      [options]="projects()"
+      [value]="project()"
+      (changed)="selectProject($event)"
+    />
+    <app-select-filter
+      data-testid="session-filter"
+      label="Sesión"
+      allLabel="Todas las Sesiones"
+      [options]="sessionOptions()"
+      [labelFor]="shortId"
+      [value]="sessionId()"
+      (changed)="selectSession($event)"
+    />
+    <app-toggle-group
+      data-testid="period-filter"
+      label="Periodo"
+      [labels]="periodLabels"
+      [selectedIndex]="periodIndex()"
+      [optionWidth]="64"
+      (selected)="onPeriodChange($event)"
+    />
     @if (toolOptions().length > 0) {
       <div class="tools" role="group" aria-label="Herramienta">
         @for (tool of toolOptions(); track tool) {
@@ -62,7 +87,7 @@
         <div class="skeleton__row" aria-hidden="true"></div>
       }
     </div>
-  } @else if (s.events.length === 0) {
+  } @else if (s.events.length === 0 && !serverFiltering()) {
     <div class="card empty" data-testid="empty-state">
       <svg class="empty__icon" viewBox="0 0 24 24" width="40" height="40" aria-hidden="true">
         <path d="M22 12h-4l-3 9L9 3l-3 9H2" />

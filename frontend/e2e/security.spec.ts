@@ -89,6 +89,25 @@ test.describe('AC-66: Avisos de inyección', () => {
     expect(api.securityCalls.at(-1)?.url.searchParams.get('project')).toBe('lucia');
   });
 
+  test('AC-122: el filtro de fuente se refleja en la URL y filtra la lista', async ({ page }) => {
+    await mockApi(page, { security: { warnings: () => list } });
+    await page.goto('/seguridad');
+    await expect(page.getByTestId('warning-row')).toHaveCount(3);
+
+    await page.getByTestId('source-filter').locator('select').selectOption('Servidor MCP');
+    await expect(page).toHaveURL(/fuente=mcp/);
+    await expect(page.getByTestId('warning-row')).toHaveCount(1);
+    await expect(page.getByTestId('warning-row')).toContainText('playwright · browser_navigate');
+
+    await page.getByTestId('source-filter').locator('select').selectOption('Fichero');
+    await expect(page.getByTestId('warning-row')).toHaveCount(1);
+    await expect(page.getByTestId('warning-row')).toContainText('/code/README.md');
+
+    await page.goto('/seguridad?fuente=url');
+    await expect(page.getByTestId('warning-row')).toHaveCount(1);
+    await expect(page.getByTestId('warning-row')).toContainText('https://blog.example.net/tips');
+  });
+
   test('llega desde el badge del board con ?sesion= y ?severidad=alta', async ({ page }) => {
     const api = await mockApi(page, { security: { warnings: () => list } });
     await page.goto(`/seguridad?sesion=${SESSION_ID}&severidad=alta`);

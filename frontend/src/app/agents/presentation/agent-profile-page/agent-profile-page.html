@@ -53,6 +53,18 @@
             {{ p.summary.costPerLaunchUsd === null ? 'Sin Transcripts' : formatCost(p.summary.costPerLaunchUsd) + ' por Lanzamiento' }}
           </p>
         </article>
+        <article class="kpi" data-testid="profile-tokens">
+          <h3 class="overline">Tokens</h3>
+          <p class="kpi__value">{{ formatCompact(p.summary.tokens.input + p.summary.tokens.output) }}</p>
+          <p class="kpi__detail">
+            {{ formatCompact(p.summary.tokens.input) }} entrada · {{ formatCompact(p.summary.tokens.output) }} salida
+          </p>
+        </article>
+        <article class="kpi" data-testid="profile-sessions">
+          <h3 class="overline">Sesiones</h3>
+          <p class="kpi__value">{{ formatInteger(p.summary.sessions) }}</p>
+          <p class="kpi__detail">Con al menos un Lanzamiento</p>
+        </article>
         <article class="kpi">
           <h3 class="overline">Plano</h3>
           <p class="kpi__value">{{ p.summary.foreground }} / {{ p.summary.background }}</p>

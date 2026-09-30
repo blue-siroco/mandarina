@@ -43,11 +43,20 @@ export function reduceBoard(state: BoardState, result: Result): BoardState {
   return result.ok ? { list: result.list, loaded: true, failed: false } : { ...state, loaded: true, failed: true };
 }
 
+/** Sesiones de un Directorio dentro de un Proyecto (AC-112). */
+export interface DirectoryGroup {
+  directory: string;
+  open: SessionSummary[];
+  closed: SessionSummary[];
+}
+
 export interface ProjectGroup {
   project: string;
   /** Sesiones no Cerradas, por inicio (la más nueva primero). */
   open: SessionSummary[];
   closed: SessionSummary[];
+  /** Las mismas Sesiones agrupadas por Directorio, en orden alfabético (AC-112). */
+  directories: DirectoryGroup[];
   activeCount: number;
   lastActivityAt: Date;
 }
@@ -56,7 +65,7 @@ const byStartDesc = (a: SessionSummary, b: SessionSummary) =>
   b.startedAt.getTime() - a.startedAt.getTime() || a.sessionId.localeCompare(b.sessionId);
 
 /**
- * Agrupa por Proyecto en orden alfabético y, dentro, por inicio (la más nueva
+ * Agrupa por Proyecto en orden alfabético y, dentro, por Directorio y por inicio (la más nueva
  * primero). Nada depende de la actividad, así que ni los grupos ni las
  * tarjetas cambian de sitio al llegar Eventos (design §6.1, AC-16).
  */
@@ -65,7 +74,14 @@ export function groupByProject(items: SessionSummary[]): ProjectGroup[] {
   for (const session of items) {
     let group = groups.get(session.project);
     if (!group) {
-      group = { project: session.project, open: [], closed: [], activeCount: 0, lastActivityAt: session.lastActivityAt };
+      group = {
+        project: session.project,
+        open: [],
+        closed: [],
+        directories: [],
+        activeCount: 0,
+        lastActivityAt: session.lastActivityAt,
+      };
       groups.set(session.project, group);
     }
     (session.state === 'closed' ? group.closed : group.open).push(session);
@@ -75,8 +91,24 @@ export function groupByProject(items: SessionSummary[]): ProjectGroup[] {
   for (const group of groups.values()) {
     group.open.sort(byStartDesc);
     group.closed.sort(byStartDesc);
+    group.directories = groupByDirectory(group);
   }
   return [...groups.values()].sort((a, b) => a.project.localeCompare(b.project, 'es', { sensitivity: 'base' }));
+}
+
+/** Reparte las Sesiones (ya ordenadas por inicio) de un Proyecto por Directorio, en orden alfabético. */
+function groupByDirectory({ open, closed }: Pick<ProjectGroup, 'open' | 'closed'>): DirectoryGroup[] {
+  const byDirectory = new Map<string, DirectoryGroup>();
+  const entry = (directory: string) => {
+    const existing = byDirectory.get(directory);
+    if (existing) return existing;
+    const created: DirectoryGroup = { directory, open: [], closed: [] };
+    byDirectory.set(directory, created);
+    return created;
+  };
+  for (const session of open) entry(session.directory).open.push(session);
+  for (const session of closed) entry(session.directory).closed.push(session);
+  return [...byDirectory.values()].sort((a, b) => a.directory.localeCompare(b.directory, 'es', { sensitivity: 'base' }));
 }
 
 export function countStates(items: SessionSummary[]): Record<SessionState, number> {

@@ -4,6 +4,7 @@
 import { serverOf } from './mcp-invocations.js';
 import type { Score } from './evaluation.js';
 import type { SessionEventRow } from './session-summary.js';
+import type { TranscriptSkillUse } from './skill-invocations.js';
 
 export type LaunchStatus = 'running' | 'finished' | 'no_response';
 
@@ -103,8 +104,12 @@ export interface AgentProfile {
 
 export const LAUNCHES_LIMIT = 500;
 
-/** Lo que hizo un Subagente según sus propios Eventos; `rows` son solo los suyos. */
-export function ownActivity(rows: SessionEventRow[]): Pick<LaunchRecord, 'tool_count' | 'tool_errors' | 'blocks' | 'tools' | 'skills' | 'mcp'> {
+/**
+ * Lo que hizo un Subagente según sus propios Eventos; `rows` son solo los suyos.
+ * Las skills se completan con las del Transcript del Subagente (AC-103), unidas por
+ * `tool_use_id` para no contar dos veces la que ya consta en un `tool.pre`.
+ */
+export function ownActivity(rows: SessionEventRow[], transcriptSkills: TranscriptSkillUse[] = []): Pick<LaunchRecord, 'tool_count' | 'tool_errors' | 'blocks' | 'tools' | 'skills' | 'mcp'> {
   const tools = new Map<string, ToolTally>();
   const mcp = new Map<string, McpTally>();
   const skills: string[] = [];
@@ -127,6 +132,12 @@ export function ownActivity(rows: SessionEventRow[]): Pick<LaunchRecord, 'tool_c
     } else if (r.event_type === 'tool.blocked') {
       tally(r.tool_name).blocks += 1;
     }
+  }
+  const seen = new Set(rows.filter((r) => r.event_type === 'tool.pre' && r.skill_name && r.tool_use_id).map((r) => r.tool_use_id));
+  for (const use of transcriptSkills) {
+    if (seen.has(use.tool_use_id)) continue;
+    seen.add(use.tool_use_id);
+    skills.push(use.skill);
   }
   const list = [...tools.values()];
   return {

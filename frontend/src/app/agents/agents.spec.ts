@@ -359,6 +359,20 @@ describe('AC-48: AgentProfilePage', () => {
     expect(card.querySelector('.kpi__detail')!.getAttribute('data-tone')).toBe('danger');
   });
 
+  it('AC-121: el perfil muestra los tokens y el nº de Sesiones del Tipo', async () => {
+    state$.next({
+      profile: agentProfile({ summary: agentSummary({ tokens: { input: 12_000, output: 3_000, cacheRead: 0, cacheCreation: 0 }, sessions: 5 }) }),
+      loaded: true,
+      failed: false,
+    });
+    const harness = await render();
+    const tokens = text(el(harness).querySelector('[data-testid="profile-tokens"]'));
+    expect(tokens).toContain('15');
+    expect(tokens).toContain('entrada');
+    expect(tokens).toContain('salida');
+    expect(text(el(harness).querySelector('[data-testid="profile-sessions"]'))).toContain('5');
+  });
+
   it('AC-59: sin Evaluaciones lo dice en lugar de mostrar ceros', async () => {
     const harness = await render();
     expect(text(el(harness).querySelector('[data-testid="profile-rating"]'))).toContain('Sin puntuar');

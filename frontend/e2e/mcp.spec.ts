@@ -31,6 +31,16 @@ test.describe('AC-44: pantalla MCP', () => {
     expect(days).toBeCloseTo(7, 2);
   });
 
+  test('AC-120: muestra los Proyectos del servidor y "sin respuesta" con conteo y porcentaje', async ({ page }) => {
+    const server = mcpServerDto('playwright', { calls: 4, no_response: 1, projects: ['demo', 'lucia'] });
+    await mockApi(page, { mcpInvocations: () => ({ ...list, servers: [server] }) });
+    await page.goto('/mcp');
+
+    await expect(page.getByTestId('mcp-projects')).toContainText('demo');
+    await expect(page.getByTestId('mcp-projects')).toContainText('lucia');
+    await expect(page.getByTestId('mcp-no-response')).toHaveText('1 (25 %)');
+  });
+
   test('despliega las herramientas, que llevan a sus Eventos', async ({ page }) => {
     await mockApi(page, { mcpInvocations: () => list });
     await page.goto('/mcp');

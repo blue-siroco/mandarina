@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, catchError, map, merge, of, scan, startWith } from 'rxjs';
-import { ObservedEvent } from '../models/observed-event';
+import { Observable, catchError, filter, map, merge, of, scan, startWith } from 'rxjs';
+import { EventQuery, ObservedEvent } from '../models/observed-event';
 import { EventFeed } from '../ports/event-feed';
 import { LiveEvents } from './live-events';
 
@@ -18,6 +18,18 @@ export const INITIAL_STATE: RecentEventsState = {
   loaded: false,
   historyFailed: false,
 };
+
+/** Filtros de la lista de Eventos; la ventana es una duración para calcular `since` al pedir el historial (AC-110). */
+export interface EventFilter {
+  project?: string;
+  sessionId?: string;
+  windowMs?: number;
+}
+
+/** Un Evento en vivo entra en la lista solo si cumple el Proyecto y la Sesión activos (AC-111). */
+export function matchesFilter(event: ObservedEvent, { project, sessionId }: EventFilter): boolean {
+  return (project === undefined || event.project === project) && (sessionId === undefined || event.sessionId === sessionId);
+}
 
 type Change = { kind: 'history'; events: ObservedEvent[] | null } | { kind: 'live'; events: ObservedEvent[] };
 
@@ -50,12 +62,20 @@ export class WatchRecentEvents {
   private readonly feed = inject(EventFeed);
   private readonly live = inject(LiveEvents);
 
-  execute(): Observable<RecentEventsState> {
-    const history$ = this.feed.search({ limit: RECENT_EVENTS_LIMIT }).pipe(
+  execute(filters: EventFilter = {}): Observable<RecentEventsState> {
+    const query: EventQuery = { limit: RECENT_EVENTS_LIMIT };
+    if (filters.project !== undefined) query.project = filters.project;
+    if (filters.sessionId !== undefined) query.sessionId = filters.sessionId;
+    if (filters.windowMs !== undefined) query.since = new Date(Date.now() - filters.windowMs);
+    const history$ = this.feed.search(query).pipe(
       map((events): Change => ({ kind: 'history', events })),
       catchError(() => of<Change>({ kind: 'history', events: null })),
     );
-    const live$ = this.live.events$.pipe(map((events): Change => ({ kind: 'live', events })));
+    const live$ = this.live.events$.pipe(
+      map((events) => events.filter((event) => matchesFilter(event, filters))),
+      filter((events) => events.length > 0),
+      map((events): Change => ({ kind: 'live', events })),
+    );
     return merge(history$, live$).pipe(
       scan((state: RecentEventsState, change: Change) => reduce(state, change), INITIAL_STATE),
       startWith(INITIAL_STATE),

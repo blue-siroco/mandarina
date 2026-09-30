@@ -108,12 +108,14 @@ export function createMockApi({ intervalMs = 1500, historySize = 40, seed = 1, w
       if (end === -1) return sendJson(res, 400, { message: `No existe el Evento ${before}` });
     }
     const sessionId = url.searchParams.get('session_id');
+    const project = url.searchParams.get('project');
+    if (project === '') return sendJson(res, 400, { message: 'project no puede estar vacío' });
     const types = url.searchParams.getAll('event_type');
     if (types.some((t) => !EVENT_TYPES.has(t))) return sendJson(res, 400, { message: 'event_type desconocido' });
     const since = url.searchParams.get('since');
     const matching = events
       .slice(0, end)
-      .filter((e) => (sessionId === null || e.session_id === sessionId) && (types.length === 0 || types.includes(e.event_type)))
+      .filter((e) => (sessionId === null || e.session_id === sessionId) && (project === null || e.project === project) && (types.length === 0 || types.includes(e.event_type)))
       .filter((e) => since === null || e.received_at >= new Date(since).toISOString());
     sendJson(res, 200, { items: describeEvents(matching.slice(-limit).reverse(), events, injections.ofEvent) });
   }

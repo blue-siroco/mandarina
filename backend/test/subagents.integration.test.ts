@@ -329,6 +329,23 @@ describe('AC-46: GET /api/v1/agents', () => {
     });
   });
 
+  it('AC-103: las skills del perfil suman las del Transcript del Subagente sin duplicar las del hook', async () => {
+    await seedAgents();
+    const skill = (id: string, name: string) => ({
+      type: 'assistant',
+      timestamp: '2026-09-25T11:43:30.000Z',
+      message: { id: `m-${id}`, model: 'claude-haiku-4-5', content: [{ type: 'tool_use', id, name: 'Skill', input: { skill: name } }], usage: { input_tokens: 1, output_tokens: 1 } },
+    });
+    // k1 ya consta como tool.pre del hook; k2 solo está en el Transcript.
+    writeTranscript('s1/subagents/agent-a3.jsonl', [skill('k1', 'tdd'), skill('k2', 'commit')]);
+
+    const { body } = await get<Record<string, unknown>>(`/api/v1/agents/Explore?since=${DAY_AGO}`);
+    expect(body.skills).toStrictEqual([
+      { skill: 'tdd', invocations: 1 },
+      { skill: 'commit', invocations: 1 },
+    ]);
+  });
+
   it('sin-tipo agrupa los Lanzamientos sin Tipo y un Tipo sin Lanzamientos devuelve ceros', async () => {
     await seed();
     await ingest('tool.pre', minutesAgo(2), { tool: 'Agent', payload: { tool_use_id: 't9', tool_input: { description: 'Sin tipo' } } });

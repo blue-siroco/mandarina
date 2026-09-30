@@ -36,6 +36,65 @@ export function summarizeToolInput(toolName: string | null, payload: Record<stri
   return fallback ? oneLine(fallback) : null;
 }
 
+const nonEmptyLines = (text: string): string[] =>
+  text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l !== '');
+
+const asText = (value: unknown): string | null => (typeof value === 'string' && value.trim() !== '' ? value : null);
+
+const count = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`;
+
+const firstLine = (text: string): string => oneLine(nonEmptyLines(text)[0] ?? text);
+
+function summarizeError(error: string): string {
+  const [first, second] = nonEmptyLines(error);
+  // "Exit code 1" solo no dice qué pasó: se le añade la primera línea de la salida.
+  const joined = first && second && /^exit code \d+$/i.test(first) ? `${first} · ${second}` : (first ?? error);
+  return oneLine(joined);
+}
+
+function summarizeBash(fields: Record<string, unknown>): string {
+  const line = nonEmptyLines(asText(fields['stdout']) ?? asText(fields['stderr']) ?? '')[0];
+  if (line) return oneLine(line);
+  if (fields['interrupted'] === true) return 'interrumpido';
+  const code = fields['exit_code'] ?? fields['exitCode'] ?? fields['returnCode'];
+  return `exit ${typeof code === 'number' ? code : 0}`;
+}
+
+function summarizeRead(file: unknown): string | null {
+  if (file === null || typeof file !== 'object') return null;
+  const { numLines, content } = file as Record<string, unknown>;
+  if (typeof numLines === 'number') return count(numLines, 'línea', 'líneas');
+  return typeof content === 'string' ? count(content.split('\n').length, 'línea', 'líneas') : null;
+}
+
+/** Respuesta que no es un objeto: texto directo o bloques de texto de un Servidor MCP. */
+function summarizeTextResponse(response: unknown): string | null {
+  const direct = asText(response);
+  if (direct) return firstLine(direct);
+  if (!Array.isArray(response)) return null;
+  const block = response.find((b): b is { text: string } => typeof b?.text === 'string' && b.text.trim() !== '');
+  return block ? firstLine(block.text) : null;
+}
+
+/**
+ * Resumen de una línea de la SALIDA de una herramienta (AC-113): el `tool.post`
+ * trae `tool_response` (o `error` si falló), ya enmascarado por el servidor.
+ * Es texto plano: la plantilla lo interpola, nunca lo trata como HTML.
+ */
+export function summarizeToolOutput(toolName: string | null, payload: Record<string, unknown>): string | null {
+  const error = asText(payload['error']);
+  if (error) return summarizeError(error);
+  const response = payload['tool_response'];
+  if (response === null || typeof response !== 'object' || Array.isArray(response)) return summarizeTextResponse(response);
+  const fields = response as Record<string, unknown>;
+  if (toolName === 'Bash') return summarizeBash(fields);
+  if (toolName === 'Read') return summarizeRead(fields['file']);
+  return typeof fields['numFiles'] === 'number' ? count(fields['numFiles'], 'archivo', 'archivos') : null;
+}
+
 const MCP_PREFIX = 'mcp__';
 const MCP_RESOURCE_TOOLS: ReadonlySet<string> = new Set(['ListMcpResourcesTool', 'ReadMcpResourceTool']);
 

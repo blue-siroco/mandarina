@@ -27,6 +27,9 @@
         </td>
         <td data-label="Resumen" class="summary">
           <span class="mono">{{ summary(event) ?? event.toolName ?? '—' }}</span>
+          @if (output(event); as result) {
+            <span class="mono" style="color: var(--text-muted)" data-testid="event-output" [title]="result"><span aria-hidden="true">→</span> {{ result }}</span>
+          }
           @if (hasWarnings(event)) {
             <app-event-warning-badge [warnings]="event.warnings" />
           }

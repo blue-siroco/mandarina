@@ -148,16 +148,17 @@ export async function buildApp({
   });
 
   app.get<{
-    Querystring: { limit: number; before?: string; session_id?: string; event_type?: EventType[]; since?: string };
+    Querystring: { limit: number; before?: string; session_id?: string; project?: string; event_type?: EventType[]; since?: string };
   }>(
     '/api/v1/events',
     { schema: { querystring: listEventsQuerySchema } },
     async (request, reply) => {
-      const { limit, before, session_id, event_type, since } = request.query;
+      const { limit, before, session_id, project, event_type, since } = request.query;
       const items = repository.list({
         limit,
         before,
         sessionId: session_id,
+        project,
         eventTypes: event_type,
         since: since === undefined ? undefined : new Date(since).toISOString(),
       });

@@ -46,21 +46,27 @@ function toUsage(raw: Record<string, unknown>): TokenUsage {
 export function parseUsageEntries(jsonl: string): UsageEntry[] {
   const byId = new Map<string, UsageEntry>();
   for (const line of jsonl.split('\n')) {
-    if (!line.includes('"usage"')) continue;
-    let record: Record<string, unknown>;
-    try {
-      record = JSON.parse(line) as Record<string, unknown>;
-    } catch {
-      continue;
-    }
-    const message = record.message as Record<string, unknown> | undefined;
-    const usage = message?.usage as Record<string, unknown> | undefined;
-    if (record.type !== 'assistant' || !message || !usage) continue;
-    if (typeof message.id !== 'string' || typeof message.model !== 'string' || message.model === SYNTHETIC_MODEL) continue;
-    if (typeof record.timestamp !== 'string') continue;
-    byId.set(message.id, { messageId: message.id, model: message.model, timestamp: record.timestamp, usage: toUsage(usage) });
+    const entry = parseUsageLine(line);
+    if (entry) byId.set(entry.messageId, entry);
   }
   return [...byId.values()];
+}
+
+/** Una línea del Transcript como respuesta del modelo; `undefined` si no lo es o está a medias. */
+export function parseUsageLine(line: string): UsageEntry | undefined {
+  if (!line.includes('"usage"')) return undefined;
+  let record: Record<string, unknown>;
+  try {
+    record = JSON.parse(line) as Record<string, unknown>;
+  } catch {
+    return undefined;
+  }
+  const message = record.message as Record<string, unknown> | undefined;
+  const usage = message?.usage as Record<string, unknown> | undefined;
+  if (record.type !== 'assistant' || !message || !usage) return undefined;
+  if (typeof message.id !== 'string' || typeof message.model !== 'string' || message.model === SYNTHETIC_MODEL) return undefined;
+  if (typeof record.timestamp !== 'string') return undefined;
+  return { messageId: message.id, model: message.model, timestamp: record.timestamp, usage: toUsage(usage) };
 }
 
 export function addUsage(a: TokenUsage, b: TokenUsage): TokenUsage {

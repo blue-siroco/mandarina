@@ -6,7 +6,7 @@ import { catchError, map, of } from 'rxjs';
 import { SessionSource } from '../../../sessions/ports/session-source';
 import { formatCost, formatPercent, plural, shortId } from '../../../shared/format';
 import { AlertSound } from '../../application/alert-sound';
-import { budgetLabel } from '../../application/budget-alerts';
+import { budgetLabel, raiseProposal } from '../../application/budget-alerts';
 import { BudgetOutcome, ManageBudgets } from '../../application/manage-budgets';
 import { INITIAL_BUDGETS, WatchBudgets } from '../../application/watch-budgets';
 import {
@@ -24,9 +24,6 @@ import { BudgetDraft, EMPTY_DRAFT, draftOf, parseAmount, toBudgetInput, validate
 
 export const SCOPES: BudgetScope[] = ['global_day', 'project_day', 'session'];
 export const ACTIONS: BudgetAction[] = ['stop', 'warn'];
-
-/** Cuánto se propone subir un límite superado: un 25 % por encima de lo gastado, redondeado. */
-export const RAISE_MARGIN = 1.25;
 
 /** Pantalla Presupuestos: configurar los límites de Coste estimado y dejar seguir a lo que se supera (AC-82). */
 @Component({
@@ -229,8 +226,7 @@ export class BudgetsPage {
   }
 
   protected startRaise(budget: Budget, subject: BudgetSubject): void {
-    const proposal = Math.ceil(subject.spentUsd * RAISE_MARGIN);
-    this.raising.set({ key: this.subjectKey(budget, subject), value: String(Math.max(proposal, Math.ceil(budget.limitUsd) + 1)) });
+    this.raising.set({ key: this.subjectKey(budget, subject), value: String(raiseProposal(budget, subject)) });
   }
 
   protected setRaiseValue(value: string): void {

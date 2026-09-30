@@ -11,8 +11,7 @@ import {
 import { estimateCost } from '../domain/pricing.js';
 import type { SessionEventRow } from '../domain/session-summary.js';
 import type { UsageEntry } from '../domain/token-usage.js';
-import { allEntries, roundCost } from './get-usage-metrics.js';
-import { readTranscript } from './list-sessions.js';
+import { roundCost } from './get-usage-metrics.js';
 import type { AllowanceRecord, Broadcaster, BudgetRecord, BudgetStore, Clock, EventRepository, IdGenerator, TranscriptReader } from './ports.js';
 
 const SUBJECTS_LIMIT = 20;
@@ -362,7 +361,7 @@ export class ManageBudgets {
 
   private async spendOf(rows: SessionEventRow[], dayStart: Date): Promise<SessionSpend> {
     const pathRow = [...rows].reverse().find((r) => r.transcript_path !== null);
-    const entries = allEntries(await readTranscript(this.transcripts, pathRow?.transcript_path ?? null));
+    const entries = pathRow?.transcript_path ? ((await this.transcripts.readUsage(pathRow.transcript_path)) ?? []) : [];
     return {
       session_id: rows[0]!.session_id,
       project: rows.at(-1)!.project,

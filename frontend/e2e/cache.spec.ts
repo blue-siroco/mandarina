@@ -85,6 +85,19 @@ test.describe('AC-74: ficha Caché del board', () => {
     await expect(modal.locator('[data-column="rewrites"]')).toBeVisible();
   });
 
+  test('AC-123: un ahorro neto negativo en el desglose va en rojo y con signo', async ({ page }) => {
+    await mockApi(page, { metrics: metrics(cacheDto({ savings_net_usd: -0.3 })) });
+    await page.goto('/sesiones');
+    await card(page).click();
+
+    const total = page.getByTestId('breakdown-total').locator('td').first();
+    await expect(total).toHaveAttribute('data-tone', 'danger');
+    await expect(total).toContainText('-0,30');
+    await expect(total).toHaveAttribute('title', /Sobrecoste/);
+    // Las filas positivas no se marcan.
+    await expect(page.getByTestId('breakdown-row').first().locator('td[data-tone="danger"]')).toHaveCount(0);
+  });
+
   test('se activa con el teclado', async ({ page }) => {
     await mockApi(page, { metrics: metrics(cacheDto()) });
     await page.goto('/sesiones');

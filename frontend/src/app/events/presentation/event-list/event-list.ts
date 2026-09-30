@@ -1,10 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
-import { formatInteger } from '../../../shared/format';
+import { switchMap } from 'rxjs';
+import { formatInteger, shortId } from '../../../shared/format';
+import { RANGES } from '../../../shared/periods';
 import { CheckFilter } from '../../../shared/ui/check-filter/check-filter';
+import { SelectFilter } from '../../../shared/ui/select-filter/select-filter';
 import { ToggleGroup } from '../../../shared/ui/toggle-group/toggle-group';
-import { INITIAL_STATE, WatchRecentEvents } from '../../application/watch-recent-events';
+import { LoadEventFilterOptions, NO_FILTER_OPTIONS } from '../../application/load-event-filter-options';
+import { EventFilter, INITIAL_STATE, WatchRecentEvents } from '../../application/watch-recent-events';
 import { ObservedEvent } from '../../models/observed-event';
 import { EVENT_CATEGORIES, EventCategory, inCategory } from '../event-labels';
 import { EventRows } from '../event-rows/event-rows';
@@ -28,6 +32,9 @@ export function topTools(events: ObservedEvent[], limit = TOP_TOOLS): string[] {
     .map(([name]) => name);
 }
 
+/** Sin `periodo` se pide todo el histórico (AC-110). */
+export const DEFAULT_PERIOD = 'todo';
+
 function parseCategory(value: string | null): EventCategory {
   return EVENT_CATEGORIES.find((c) => c.key === value)?.key ?? 'all';
 }
@@ -35,7 +42,7 @@ function parseCategory(value: string | null): EventCategory {
 /** Página de Eventos con filtros en la URL (AC-09, AC-17). */
 @Component({
   selector: 'app-event-list',
-  imports: [CheckFilter, EventRows, ToggleGroup],
+  imports: [CheckFilter, EventRows, SelectFilter, ToggleGroup],
   templateUrl: './event-list.html',
   styleUrl: './event-list.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -45,7 +52,34 @@ export class EventList {
   private readonly route = inject(ActivatedRoute);
   private readonly params = toSignal(this.route.queryParamMap, { initialValue: convertToParamMap({}) });
 
-  protected readonly state = toSignal(inject(WatchRecentEvents).execute(), { initialValue: INITIAL_STATE });
+  private readonly watch = inject(WatchRecentEvents);
+  private readonly options = toSignal(inject(LoadEventFilterOptions).execute(), { initialValue: NO_FILTER_OPTIONS });
+
+  protected readonly project = computed(() => this.params().get('proyecto'));
+  protected readonly sessionId = computed(() => this.params().get('sesion'));
+  protected readonly period = computed(
+    () => RANGES.find((r) => r.key === this.params().get('periodo')) ?? RANGES.find((r) => r.key === DEFAULT_PERIOD)!,
+  );
+  /** Filtros que viajan a la API: cambian el historial pedido, no solo lo que se ve. */
+  private readonly query = computed<EventFilter>(() => ({
+    project: this.project() ?? undefined,
+    sessionId: this.sessionId() ?? undefined,
+    windowMs: this.period().ms,
+  }));
+
+  protected readonly state = toSignal(toObservable(this.query).pipe(switchMap((query) => this.watch.execute(query))), {
+    initialValue: INITIAL_STATE,
+  });
+  protected readonly projects = computed(() => this.options().projects);
+  protected readonly sessionOptions = computed(() => {
+    const project = this.project();
+    return this.options()
+      .sessions.filter((s) => project === null || s.project === project)
+      .map((s) => s.id);
+  });
+  protected readonly shortId = shortId;
+  protected readonly periodLabels = RANGES.map((r) => r.label);
+  protected readonly periodIndex = computed(() => RANGES.findIndex((r) => r.key === this.period().key));
   protected readonly hookSetupExample = HOOK_SETUP_EXAMPLE;
   protected readonly skeletonRows = [1, 2, 3, 4, 5, 6];
   protected readonly formatInteger = formatInteger;
@@ -71,7 +105,13 @@ export class EventList {
         (tools.length === 0 || (e.toolName !== null && tools.includes(e.toolName))),
     );
   });
-  protected readonly filtering = computed(() => this.category() !== 'all' || this.selectedTools().length > 0);
+  /** Hay filtros que ya se aplicaron en el servidor: un historial vacío no significa "sin Eventos". */
+  protected readonly serverFiltering = computed(
+    () => this.project() !== null || this.sessionId() !== null || this.period().key !== DEFAULT_PERIOD,
+  );
+  protected readonly filtering = computed(
+    () => this.category() !== 'all' || this.selectedTools().length > 0 || this.serverFiltering(),
+  );
 
   protected onCategoryChange(index: number): void {
     const key = EVENT_CATEGORIES[index]?.key ?? 'all';
@@ -84,12 +124,26 @@ export class EventList {
     this.navigate({ herramienta: next.length > 0 ? next : null });
   }
 
+  protected selectProject(project: string | null): void {
+    // Una Sesión de otro Proyecto no daría resultados: se suelta al cambiar de Proyecto.
+    this.navigate({ proyecto: project, sesion: null });
+  }
+
+  protected selectSession(sessionId: string | null): void {
+    this.navigate({ sesion: sessionId });
+  }
+
+  protected onPeriodChange(index: number): void {
+    const key = RANGES[index]?.key ?? DEFAULT_PERIOD;
+    this.navigate({ periodo: key === DEFAULT_PERIOD ? null : key });
+  }
+
   protected setShowInternal(show: boolean): void {
     this.navigate({ internos: show ? '1' : null });
   }
 
   protected clearFilters(): void {
-    this.navigate({ categoria: null, herramienta: null });
+    this.navigate({ categoria: null, herramienta: null, proyecto: null, sesion: null, periodo: null });
   }
 
   private navigate(queryParams: Record<string, string | string[] | null>): void {

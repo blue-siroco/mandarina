@@ -9,11 +9,12 @@ import { SelectFilter } from '../../../shared/ui/select-filter/select-filter';
 import { DismissInjectionWarning } from '../../application/dismiss-injection-warning';
 import { INITIAL_WARNINGS, WarningsQuery, WatchInjectionWarnings } from '../../application/watch-injection-warnings';
 import { DismissedFilter, InjectionWarning } from '../../models/security';
-import { CATEGORY_LABELS, DISMISSED_OPTIONS, SEVERITY_LABELS, SEVERITY_OPTIONS, SEVERITY_PARAMS } from '../security-labels';
+import { CATEGORY_LABELS, DISMISSED_OPTIONS, SEVERITY_LABELS, SEVERITY_OPTIONS, SEVERITY_PARAMS, SOURCE_OPTIONS, sourceKind } from '../security-labels';
 
 export const ALL_SEVERITIES = 'Toda severidad';
 export const ALL_PATTERNS = 'Todos los patrones';
 export const ALL_PROJECTS = 'Todos los Proyectos';
+export const ALL_SOURCES = 'Todas las fuentes';
 export const CURRENT_LABEL = 'Vigentes';
 
 /** Enlace al Evento del aviso en el detalle de Sesión, con su Subagente desplegado si lo hay (AC-66). */
@@ -44,6 +45,7 @@ export class InjectionWarningsTab {
   protected readonly severity = computed(() => SEVERITY_PARAMS[this.params().get('severidad') ?? ''] ?? null);
   protected readonly pattern = computed(() => this.params().get('patron'));
   protected readonly project = computed(() => this.params().get('proyecto'));
+  protected readonly sourceOption = computed(() => SOURCE_OPTIONS.find((o) => o.param === this.params().get('fuente')) ?? null);
   protected readonly sessionId = computed(() => this.params().get('sesion'));
   protected readonly dismissedOption = computed(() => DISMISSED_OPTIONS.find((o) => o.param === this.params().get('descartados')) ?? null);
   protected readonly dismissedFilter = computed<DismissedFilter>(() => this.dismissedOption()?.filter ?? 'false');
@@ -70,9 +72,12 @@ export class InjectionWarningsTab {
   protected readonly rows = computed(() => {
     const overrides = this.optimistic();
     const wanted = this.dismissedFilter();
+    // La fuente se filtra aquí: la API no la recibe y `source` es texto libre.
+    const source = this.sourceOption()?.kind;
     return this.state()
       .items.map((w) => ({ ...w, dismissed: overrides.get(w.id) ?? w.dismissed }))
-      .filter((w) => wanted === 'all' || w.dismissed === (wanted === 'true'));
+      .filter((w) => wanted === 'all' || w.dismissed === (wanted === 'true'))
+      .filter((w) => !source || sourceKind(w.toolName) === source);
   });
 
   protected readonly severityLabel = computed(() => (this.severity() ? SEVERITY_LABELS[this.severity()!] : null));
@@ -83,6 +88,8 @@ export class InjectionWarningsTab {
   protected readonly allSeverities = ALL_SEVERITIES;
   protected readonly allPatterns = ALL_PATTERNS;
   protected readonly allProjects = ALL_PROJECTS;
+  protected readonly allSources = ALL_SOURCES;
+  protected readonly sourceLabels = SOURCE_OPTIONS.map((o) => o.label);
   protected readonly currentLabel = CURRENT_LABEL;
   protected readonly shortId = shortId;
   protected readonly toolLabel = toolLabel;
@@ -106,6 +113,10 @@ export class InjectionWarningsTab {
 
   protected selectProject(project: string | null): void {
     this.navigate({ proyecto: project });
+  }
+
+  protected selectSource(label: string | null): void {
+    this.navigate({ fuente: SOURCE_OPTIONS.find((o) => o.label === label)?.param ?? null });
   }
 
   protected selectDismissed(label: string | null): void {

@@ -137,3 +137,35 @@ describe('AC-16: WatchSessionBoard', () => {
     expect(states.at(-1)).toStrictEqual({ list: list(), loaded: true, failed: true });
   });
 });
+
+describe('AC-112: groupByProject por Directorio', () => {
+  const session = (sessionId: string, directory: string, state: SessionSummary['state'], started: string) =>
+    sessionSummary({ sessionId, project: 'demo', directory, state, startedAt: at(started) });
+
+  it('agrupa las Sesiones de cada Proyecto por Directorio en orden alfabético', () => {
+    const [group] = groupByProject([
+      session('a', 'C:\\Codev\\web', 'active', '2026-09-25T09:00:00Z'),
+      session('b', 'C:\\Codev\\api', 'idle', '2026-09-25T08:00:00Z'),
+      session('c', 'C:\\Codev\\web', 'idle', '2026-09-25T10:00:00Z'),
+    ]);
+    expect(group!.directories.map((d) => d.directory)).toStrictEqual(['C:\\Codev\\api', 'C:\\Codev\\web']);
+    expect(group!.directories[1]!.open.map((s) => s.sessionId)).toStrictEqual(['c', 'a']);
+  });
+
+  it('las Cerradas van aparte dentro de su Directorio', () => {
+    const [group] = groupByProject([
+      session('a', '/w/x', 'active', '2026-09-25T09:00:00Z'),
+      session('b', '/w/x', 'closed', '2026-09-25T08:00:00Z'),
+      session('c', '/w/y', 'closed', '2026-09-25T07:00:00Z'),
+    ]);
+    const [x, y] = group!.directories;
+    expect([x!.open.map((s) => s.sessionId), x!.closed.map((s) => s.sessionId)]).toStrictEqual([['a'], ['b']]);
+    expect([y!.open, y!.closed.map((s) => s.sessionId)]).toStrictEqual([[], ['c']]);
+  });
+
+  it('un Evento nuevo no cambia el orden de los Directorios', () => {
+    const before = [session('a', '/w/b', 'active', '2026-09-25T09:00:00Z'), session('b', '/w/a', 'active', '2026-09-25T08:00:00Z')];
+    const after = [{ ...before[0]!, lastActivityAt: at('2026-09-25T23:00:00Z') }, before[1]!];
+    expect(groupByProject(after)[0]!.directories.map((d) => d.directory)).toStrictEqual(['/w/a', '/w/b']);
+  });
+});

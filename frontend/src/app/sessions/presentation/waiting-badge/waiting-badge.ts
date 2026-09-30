@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { relativeTime, shortId } from '../../../shared/format';
 import { SessionWaiting } from '../../models/session';
 
@@ -6,6 +7,8 @@ import { SessionWaiting } from '../../models/session';
 export interface ReasonPart {
   text: string;
   code?: boolean;
+  /** Enlaza a la fila del Subagente que espera (AC-114). */
+  subagentId?: string;
 }
 
 /** Motivo de la espera en una línea, sin HTML: todo se pinta como texto (AC-94). */
@@ -17,7 +20,7 @@ export function waitingReasonParts(waiting: SessionWaiting): ReasonPart[] {
   if (subagent) {
     parts.push(
       { text: 'Subagente ' },
-      { text: subagent.type ?? shortId(subagent.id), code: true },
+      { text: subagent.type ?? shortId(subagent.id), code: true, subagentId: subagent.id },
       { text: ` ${verb}` },
     );
   } else {
@@ -38,6 +41,7 @@ export function waitingReasonParts(waiting: SessionWaiting): ReasonPart[] {
  */
 @Component({
   selector: 'app-waiting-badge',
+  imports: [RouterLink],
   templateUrl: './waiting-badge.html',
   styleUrl: './waiting-badge.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,6 +52,8 @@ export class WaitingBadge {
   readonly now = input<Date | null>(null);
   /** Sin la etiqueta *Esperando*: el aviso de la cabecera ya tiene la suya. */
   readonly reasonOnly = input(false);
+  /** Con la Sesión, el nombre del Subagente enlaza a su fila en el detalle (AC-114). */
+  readonly sessionId = input<string | null>(null);
 
   protected readonly parts = computed(() => waitingReasonParts(this.waiting()));
   protected readonly since = computed(() => {

@@ -70,7 +70,7 @@ function sessionInvocations(events, now) {
         ended_at: post?.occurred_at ?? null,
         duration_ms: typeof post?.payload?.duration_ms === 'number' ? post.payload.duration_ms : post ? Math.max(0, Date.parse(post.occurred_at) - Date.parse(e.occurred_at)) : null,
         response_bytes: serialized === null ? null : Buffer.byteLength(serialized),
-        has_image: Array.isArray(response) && response.some((b) => b?.type === 'image'),
+        has_image: [Array.isArray(response) ? response : response?.content].some((b) => Array.isArray(b) && b.some((x) => x?.type === 'image')),
         error: firstLine(post?.payload?.error),
       };
     })

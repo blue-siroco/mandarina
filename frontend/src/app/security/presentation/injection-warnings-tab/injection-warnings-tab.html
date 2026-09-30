@@ -32,6 +32,14 @@
       (changed)="selectProject($event)"
     />
     <app-select-filter
+      data-testid="source-filter"
+      label="Fuente"
+      [allLabel]="allSources"
+      [options]="sourceLabels"
+      [value]="sourceOption()?.label ?? null"
+      (changed)="selectSource($event)"
+    />
+    <app-select-filter
       data-testid="dismissed-filter"
       label="Ver descartados"
       [allLabel]="currentLabel"

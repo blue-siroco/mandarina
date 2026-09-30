@@ -107,6 +107,30 @@ describe('AC-16: SessionBoard', () => {
     expect(cards(harness)).toHaveLength(4);
   });
 
+  it('AC-112: agrupa por Directorio con la ruta truncada por la izquierda y completa en el tooltip', async () => {
+    state$.next(
+      loaded([
+        sessionSummary({ sessionId: 'a', project: 'demo', directory: 'C:/Codev/uno/web', state: 'active' }),
+        sessionSummary({ sessionId: 'b', project: 'demo', directory: 'C:/Codev/dos/api', state: 'idle' }),
+        sessionSummary({ sessionId: 'c', project: 'demo', directory: 'C:/Codev/dos/api', state: 'closed' }),
+        sessionSummary({ sessionId: 'd', project: 'demo', directory: 'C:/Codev/tres/cerrada', state: 'closed' }),
+      ]),
+    );
+    const harness = await render();
+    const names = () => [...el(harness).querySelectorAll('[data-testid="directory-name"]')] as HTMLElement[];
+
+    // Un Directorio con solo Sesiones Cerradas no aparece mientras estas siguen plegadas.
+    expect(names().map((n) => text(n))).toStrictEqual(['…/dos/api', '…/uno/web']);
+    expect(names().map((n) => n.title)).toStrictEqual(['C:/Codev/dos/api', 'C:/Codev/uno/web']);
+    expect(cards(harness)).toHaveLength(2);
+
+    const showClosed = [...el(harness).querySelectorAll('button')].find((b) => text(b) === 'Mostrar 2 cerradas')!;
+    showClosed.click();
+    await harness.fixture.whenStable();
+    expect(names()).toHaveLength(3);
+    expect(cards(harness)).toHaveLength(4);
+  });
+
   it('plegar un Proyecto oculta sus tarjetas', async () => {
     state$.next(loaded(sessions));
     const harness = await render();

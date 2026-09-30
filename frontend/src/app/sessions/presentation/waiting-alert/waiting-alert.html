@@ -7,7 +7,7 @@
         s.project
       }}</span>
       @if (s.waiting; as w) {
-        <app-waiting-badge class="waiting-alert__reason" [waiting]="w" [reasonOnly]="true" />
+        <app-waiting-badge class="waiting-alert__reason" [waiting]="w" [sessionId]="s.sessionId" [reasonOnly]="true" />
       }
       <a class="waiting-alert__link" [routerLink]="['/sesiones', s.sessionId]">Ver Sesión</a>
       <label class="waiting-alert__mute">

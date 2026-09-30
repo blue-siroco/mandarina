@@ -59,6 +59,7 @@
           <tr>
             <th scope="col"><span class="visually-hidden">Desplegar</span></th>
             <th scope="col">Servidor</th>
+            <th scope="col">Proyectos</th>
             <th scope="col" class="num-col">Herramientas</th>
             <th scope="col" class="num-col">Llamadas</th>
             <th scope="col" class="num-col">Fallos</th>
@@ -90,10 +91,19 @@
                   <span class="badge">{{ scope }}</span>
                 }
               </td>
+              <td data-testid="mcp-projects">
+                @for (project of usage.projects; track project) {
+                  <span class="badge">{{ project }}</span>
+                } @empty {
+                  —
+                }
+              </td>
               <td class="mono num num-col">{{ usage.tools.length }}</td>
               <td class="mono num num-col">{{ formatInteger(usage.calls) }}</td>
               <td class="mono num num-col">{{ formatRate(usage.failureRate) }}</td>
-              <td class="mono num num-col">{{ formatInteger(usage.noResponse) }}</td>
+              <td class="mono num num-col" data-testid="mcp-no-response">
+                {{ formatInteger(usage.noResponse) }} ({{ formatRate(noResponseRate(usage.noResponse, usage.calls)) }})
+              </td>
               <td class="mono num num-col">{{ formatLatency(usage.latencyP50Ms) }} / {{ formatLatency(usage.latencyP95Ms) }}</td>
               <td class="mono num num-col">
                 {{ formatBytes(usage.responseAvgBytes) }} / {{ formatBytes(usage.responseMaxBytes) }}
@@ -112,9 +122,12 @@
                     <a class="mono" [routerLink]="['/eventos']" [queryParams]="{ herramienta: tool.toolName }">{{ tool.tool }}</a>
                   </td>
                   <td></td>
+                  <td></td>
                   <td class="mono num num-col">{{ formatInteger(tool.calls) }}</td>
                   <td class="mono num num-col">{{ formatRate(tool.failureRate) }}</td>
-                  <td class="mono num num-col">{{ formatInteger(tool.noResponse) }}</td>
+                  <td class="mono num num-col">
+                    {{ formatInteger(tool.noResponse) }} ({{ formatRate(noResponseRate(tool.noResponse, tool.calls)) }})
+                  </td>
                   <td class="mono num num-col">{{ formatLatency(tool.latencyP50Ms) }} / {{ formatLatency(tool.latencyP95Ms) }}</td>
                   <td class="mono num num-col">
                     {{ formatBytes(tool.responseAvgBytes) }} / {{ formatBytes(tool.responseMaxBytes) }}

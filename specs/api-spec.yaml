@@ -93,6 +93,10 @@ paths:
           in: query
           description: Solo Eventos recibidos desde esta fecha.
           schema: { type: string, format: date-time }
+        - name: project
+          in: query
+          description: Solo Eventos de este Proyecto (AC-100).
+          schema: { type: string, minLength: 1 }
       responses:
         '200':
           description: Página de Eventos.

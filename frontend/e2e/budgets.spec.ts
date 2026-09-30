@@ -168,6 +168,31 @@ test.describe('AC-83: aviso de cabecera', () => {
   });
 });
 
+test.describe('AC-124: acciones del aviso de cabecera', () => {
+  test('Permitir esta Sesión crea la excepción, lo confirma', async ({ page }) => {
+    const api = await mockApi(page, { budgets: [sessionBudget()] });
+    await page.goto('/sesiones');
+    await expect(page.getByTestId('budget-alert-state')).toHaveText(/superado/i);
+
+    await page.getByTestId('budget-alert-allow').click();
+    expect(api.budgetCalls.find((c) => c.method === 'POST')?.body).toMatchObject({ session_id: SESSION_ID });
+    await expect(page.getByTestId('budget-alert-notice')).toContainText('Excepción creada');
+  });
+
+  test('Ampliar límite propone un valor, lo aplica y confirma', async ({ page }) => {
+    const api = await mockApi(page, { budgets: [sessionBudget()] });
+    await page.goto('/sesiones');
+
+    await page.getByTestId('budget-alert-raise').click();
+    await expect(page.getByTestId('budget-alert-raise-input')).toHaveValue('12');
+    await page.getByTestId('budget-alert-raise-input').fill('20');
+    await page.getByTestId('budget-alert-raise-apply').click();
+
+    await expect.poll(() => api.budgetCalls.find((c) => c.method === 'PUT')?.body).toMatchObject({ limit_usd: 20 });
+    await expect(page.getByTestId('budget-alert-notice')).toContainText('Límite ampliado');
+  });
+});
+
 test.describe('AC-84: Presupuestos en el board', () => {
   test('la ficha de coste muestra el progreso del Presupuesto global del día', async ({ page }) => {
     await mockApi(page, { sessions: board([sessionDto(SESSION_ID)]), budgets: [globalBudget()] });

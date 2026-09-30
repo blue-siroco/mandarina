@@ -110,3 +110,60 @@ describe('AC-09: WatchRecentEvents', () => {
     expect(ids(last().events)).toStrictEqual(['a']);
   });
 });
+
+describe('AC-110, AC-111: WatchRecentEvents con filtros', () => {
+  let feed: FakeFeed;
+  let live: Subject<ObservedEvent[]>;
+  let states: RecentEventsState[];
+
+  function start(filters: Parameters<WatchRecentEvents['execute']>[0]) {
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: EventFeed, useValue: feed },
+        { provide: LiveEvents, useValue: { events$: live } },
+      ],
+    });
+    states = [];
+    TestBed.inject(WatchRecentEvents)
+      .execute(filters)
+      .subscribe((s) => states.push(s));
+  }
+
+  const from = (id: string, project: string, sessionId: string) => observedEvent({ id, project, sessionId, receivedAt: new Date(Number(id)) });
+
+  beforeEach(() => {
+    feed = new FakeFeed();
+    live = new Subject<ObservedEvent[]>();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-30T10:00:00.000Z'));
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it('AC-110: pide el historial con project, session_id y since = ahora − periodo', () => {
+    start({ project: 'mandarina', sessionId: 's-1', windowMs: 3_600_000 });
+    expect(feed.queries).toStrictEqual([
+      { limit: RECENT_EVENTS_LIMIT, project: 'mandarina', sessionId: 's-1', since: new Date('2026-09-30T09:00:00.000Z') },
+    ]);
+  });
+
+  it('AC-110: sin filtros no envía ninguno', () => {
+    start({});
+    expect(feed.queries).toStrictEqual([{ limit: RECENT_EVENTS_LIMIT }]);
+  });
+
+  it('AC-111: los Eventos en vivo de otro Proyecto o Sesión se descartan', () => {
+    start({ project: 'mandarina', sessionId: 's-1' });
+    feed.history.next([]);
+    live.next([from('1', 'mandarina', 's-1')]);
+    live.next([from('2', 'otro', 's-1')]);
+    live.next([from('3', 'mandarina', 's-2')]);
+    live.next([from('4', 'mandarina', 's-1'), from('5', 'otro', 's-9')]);
+    expect(ids(states.at(-1)!.events)).toStrictEqual(['4', '1']);
+  });
+
+  it('AC-111: con solo Proyecto acepta cualquier Sesión de ese Proyecto', () => {
+    start({ project: 'mandarina' });
+    live.next([from('1', 'mandarina', 's-1'), from('2', 'mandarina', 's-2'), from('3', 'lucia', 's-3')]);
+    expect(ids(states.at(-1)!.events)).toStrictEqual(['2', '1']);
+  });
+});

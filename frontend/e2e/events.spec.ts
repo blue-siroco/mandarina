@@ -39,7 +39,7 @@ test('muestra el historial y añade arriba los Eventos que llegan en vivo', asyn
 
   await expect(rows).toHaveCount(1);
   await expect(rows.first()).toContainText('Read');
-  await expect(page.getByRole('status')).toHaveText('En vivo');
+  await expect(page.locator('.connection')).toHaveText('En vivo');
 
   const live = event('b', { event_type: 'prompt.submitted', tool_name: null, received_at: '2026-09-25T10:00:05.000Z' });
   (await socket()).send(JSON.stringify({ type: 'event.ingested', event: live }));

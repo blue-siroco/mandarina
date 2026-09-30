@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink, convertToParamMap } from '@angular/router';
 import { map, switchMap, timer } from 'rxjs';
-import { formatCost, formatDuration, formatInteger, formatPercent, relativeTime } from '../../../shared/format';
+import { formatCompact, formatCost, formatDuration, formatInteger, formatPercent, relativeTime } from '../../../shared/format';
 import { RANGES } from '../../../shared/periods';
 import { SelectFilter } from '../../../shared/ui/select-filter/select-filter';
 import { ToggleGroup } from '../../../shared/ui/toggle-group/toggle-group';
@@ -31,6 +31,8 @@ export const COLUMNS: Column[] = [
   { key: 'running', label: 'En marcha', value: (t) => t.running, format: (t) => formatInteger(t.running) },
   { key: 'no-response', label: 'Sin respuesta', value: (t) => t.noResponse, format: (t) => formatInteger(t.noResponse) },
   { key: 'duration', label: 'Duración mediana', value: (t) => t.durationP50Ms, format: (t) => dash(t.durationP50Ms, formatDuration) },
+  { key: 'tokens', label: 'Tokens', value: (t) => t.tokens.input + t.tokens.output, format: (t) => formatCompact(t.tokens.input + t.tokens.output) },
+  { key: 'sessions', label: 'Sesiones', value: (t) => t.sessions, format: (t) => formatInteger(t.sessions) },
   { key: 'cost', label: 'Coste por Lanzamiento', value: (t) => t.costPerLaunchUsd, format: (t) => dash(t.costPerLaunchUsd, formatCost) },
   { key: 'errors', label: 'Herramientas con error / Lanzamiento', value: (t) => t.toolErrorsPerLaunch, format: (t) => formatPerLaunch(t.toolErrorsPerLaunch) },
   { key: 'blocks', label: 'Bloqueos / Lanzamiento', value: (t) => t.blocksPerLaunch, format: (t) => formatPerLaunch(t.blocksPerLaunch) },

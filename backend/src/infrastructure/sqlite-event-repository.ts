@@ -117,8 +117,11 @@ const MCP_CANDIDATES = `
       'error', json_extract(payload, '$.error'),
       'response_bytes', CASE WHEN coalesce(json_type(payload, '$.tool_response'), 'null') = 'null' THEN NULL
         ELSE length(CAST(${RESPONSE} AS BLOB)) END,
-      'has_image', CASE WHEN json_type(payload, '$.tool_response') = 'array'
-        THEN EXISTS (SELECT 1 FROM json_each(${RESPONSE}) WHERE json_extract(value, '$.type') = 'image') ELSE 0 END
+      'has_image', CASE json_type(payload, '$.tool_response')
+        WHEN 'array' THEN EXISTS (SELECT 1 FROM json_each(${RESPONSE}) WHERE json_extract(value, '$.type') = 'image')
+        WHEN 'object' THEN CASE WHEN json_type(payload, '$.tool_response.content') = 'array'
+          THEN EXISTS (SELECT 1 FROM json_each(${RESPONSE}, '$.content') WHERE json_extract(value, '$.type') = 'image') ELSE 0 END
+        ELSE 0 END
     ) END AS digest
   FROM events
   WHERE received_at >= ? AND event_type IN ('tool.pre', 'tool.post', 'tool.blocked') AND ${MCP_TOOLS}
@@ -225,7 +228,7 @@ export class SqliteEventRepository implements EventRepository {
     });
   }
 
-  list({ limit, before, sessionId, eventTypes, since }: EventQuery): StoredEvent[] | undefined {
+  list({ limit, before, sessionId, project, eventTypes, since }: EventQuery): StoredEvent[] | undefined {
     const where: string[] = [];
     const params: unknown[] = [];
     if (before !== undefined) {
@@ -237,6 +240,10 @@ export class SqliteEventRepository implements EventRepository {
     if (sessionId !== undefined) {
       where.push('session_id = ?');
       params.push(sessionId);
+    }
+    if (project !== undefined) {
+      where.push('project = ?');
+      params.push(project);
     }
     if (eventTypes !== undefined && eventTypes.length > 0) {
       where.push(`event_type IN (${eventTypes.map(() => '?').join(', ')})`);

@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, of } from 'rxjs';
+import { LoadEventFilterOptions } from '../../application/load-event-filter-options';
 import { INITIAL_STATE, RecentEventsState, WatchRecentEvents } from '../../application/watch-recent-events';
 import { observedEvent } from '../../testing/event-fixtures';
 import { EventList, topTools } from './event-list';
@@ -16,6 +17,7 @@ describe('AC-09, AC-17: EventList', () => {
       providers: [
         provideRouter([{ path: 'eventos', component: EventList }]),
         { provide: WatchRecentEvents, useValue: { execute: () => state$ } },
+        { provide: LoadEventFilterOptions, useValue: { execute: () => of({ projects: [], sessions: [] }) } },
       ],
     });
     const harness = await RouterTestingHarness.create();
@@ -164,6 +166,7 @@ describe('AC-36: EventList sin Subagentes internos', () => {
       providers: [
         provideRouter([{ path: 'eventos', component: EventList }]),
         { provide: WatchRecentEvents, useValue: { execute: () => new BehaviorSubject<RecentEventsState>({ ...INITIAL_STATE, loaded: true, events }) } },
+        { provide: LoadEventFilterOptions, useValue: { execute: () => of({ projects: [], sessions: [] }) } },
       ],
     });
     const harness = await RouterTestingHarness.create();
@@ -191,5 +194,104 @@ describe('AC-36: EventList sin Subagentes internos', () => {
 
     await harness.navigateByUrl('/eventos');
     expect(rows(harness)).toHaveLength(2);
+  });
+});
+
+describe('AC-110: filtros de Proyecto, Sesión y periodo', () => {
+  const S1 = '11111111-aaaa';
+  const S2 = '22222222-bbbb';
+  let filters: unknown[];
+
+  async function render(url = '/eventos', events = [observedEvent({ id: 'a' })]) {
+    filters = [];
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([{ path: 'eventos', component: EventList }]),
+        {
+          provide: WatchRecentEvents,
+          useValue: {
+            execute: (f: unknown) => {
+              filters.push(f);
+              return new BehaviorSubject<RecentEventsState>({ ...INITIAL_STATE, loaded: true, events });
+            },
+          },
+        },
+        {
+          provide: LoadEventFilterOptions,
+          useValue: {
+            execute: () =>
+              of({
+                projects: ['lucia', 'mandarina'],
+                sessions: [
+                  { id: S1, project: 'mandarina' },
+                  { id: S2, project: 'lucia' },
+                ],
+              }),
+          },
+        },
+      ],
+    });
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl(url);
+    return harness;
+  }
+
+  const select = (harness: RouterTestingHarness, testid: string) =>
+    harness.routeNativeElement!.querySelector(`[data-testid="${testid}"] select`) as HTMLSelectElement;
+  const optionValues = (el: HTMLSelectElement) => [...el.options].map((o) => o.value);
+
+  it('sin parámetros no filtra en el servidor y el periodo es Todo', async () => {
+    await render();
+    expect(filters.at(-1)).toStrictEqual({ project: undefined, sessionId: undefined, windowMs: undefined });
+  });
+
+  it('la URL con proyecto, sesion y periodo se aplica al pedir los Eventos', async () => {
+    const harness = await render(`/eventos?proyecto=mandarina&sesion=${S1}&periodo=24h`);
+    expect(filters.at(-1)).toStrictEqual({ project: 'mandarina', sessionId: S1, windowMs: 24 * 3_600_000 });
+    expect(select(harness, 'project-filter').value).toBe('mandarina');
+    expect(select(harness, 'session-filter').value).toBe(S1);
+  });
+
+  it('elegir un Proyecto lo deja en la URL, repite la consulta y suelta la Sesión', async () => {
+    const harness = await render(`/eventos?sesion=${S1}`);
+    const project = select(harness, 'project-filter');
+    project.value = 'lucia';
+    project.dispatchEvent(new Event('change'));
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/eventos?proyecto=lucia');
+    expect(filters.at(-1)).toStrictEqual({ project: 'lucia', sessionId: undefined, windowMs: undefined });
+  });
+
+  it('las Sesiones ofrecidas son las del Proyecto elegido, con su id abreviado', async () => {
+    const harness = await render('/eventos?proyecto=mandarina');
+    const session = select(harness, 'session-filter');
+    expect(optionValues(session)).toStrictEqual(['', S1]);
+    expect(session.options[1]!.textContent?.trim()).toBe('11111111');
+  });
+
+  it('elegir una Sesión y un periodo los refleja en la URL', async () => {
+    const harness = await render();
+    const session = select(harness, 'session-filter');
+    session.value = S2;
+    session.dispatchEvent(new Event('change'));
+    await harness.fixture.whenStable();
+    expect(TestBed.inject(Router).url).toBe(`/eventos?sesion=${S2}`);
+
+    (harness.routeNativeElement!.querySelector('[data-testid="period-filter"] lucia--togglebuttons') as HTMLElement).dispatchEvent(
+      new CustomEvent('callback', { detail: { value: 2 } }),
+    );
+    await harness.fixture.whenStable();
+    expect(TestBed.inject(Router).url).toContain('periodo=7d');
+    expect(filters.at(-1)).toMatchObject({ sessionId: S2, windowMs: 7 * 24 * 3_600_000 });
+  });
+
+  it('con filtro de servidor y sin resultados no dice que no hay Eventos: ofrece limpiar', async () => {
+    const harness = await render('/eventos?proyecto=lucia', []);
+    expect(harness.routeNativeElement!.querySelector('[data-testid="empty-state"]')).toBeNull();
+    const noMatches = harness.routeNativeElement!.querySelector('[data-testid="no-matches"]')!;
+    (noMatches.querySelector('button') as HTMLButtonElement).click();
+    await harness.fixture.whenStable();
+    expect(TestBed.inject(Router).url).toBe('/eventos');
   });
 });

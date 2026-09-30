@@ -8,7 +8,7 @@ import { SelectFilter } from '../../../shared/ui/select-filter/select-filter';
 import { ToggleGroup } from '../../../shared/ui/toggle-group/toggle-group';
 import { INITIAL_MCP, WatchMcpInvocations } from '../../application/watch-mcp-invocations';
 import { McpQuery, McpServerUsage } from '../../models/mcp';
-import { formatBytes, formatLatency, formatRate } from '../mcp-labels';
+import { formatBytes, formatLatency, formatRate, noResponseRate } from '../mcp-labels';
 
 export const ALL_PROJECTS = 'Todos los Proyectos';
 export const ALL_SERVERS = 'Todos los servidores';
@@ -53,6 +53,7 @@ export class McpPage {
   protected readonly formatBytes = formatBytes;
   protected readonly formatLatency = formatLatency;
   protected readonly formatRate = formatRate;
+  protected readonly noResponseRate = noResponseRate;
   protected readonly formatInteger = formatInteger;
   protected readonly relativeTime = relativeTime;
 

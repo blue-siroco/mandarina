@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink, convertToParamMap } from '@angular/router';
 import { map, switchMap, timer } from 'rxjs';
-import { plural } from '../../../shared/format';
+import { plural, tailPath } from '../../../shared/format';
 import { RANGES } from '../../../shared/periods';
 import { SelectFilter } from '../../../shared/ui/select-filter/select-filter';
 import { ToggleGroup } from '../../../shared/ui/toggle-group/toggle-group';
@@ -93,6 +93,7 @@ export class SessionBoard {
   private readonly showClosed = signal<ReadonlySet<string>>(new Set());
   protected readonly skeletonCards = [1, 2, 3];
   protected readonly plural = plural;
+  protected readonly tailPath = tailPath;
 
   protected isCollapsed(project: string): boolean {
     return this.collapsed().has(project);

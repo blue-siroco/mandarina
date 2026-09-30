@@ -54,6 +54,7 @@ export const listEventsQuerySchema = {
     limit: { type: 'integer', minimum: 1, maximum: 500, default: 100 },
     before: nonEmpty,
     session_id: nonEmpty,
+    project: nonEmpty,
     event_type: { type: 'array', items: { type: 'string', enum: EVENT_TYPES } },
     since: { type: 'string', format: 'date-time' },
   },

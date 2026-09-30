@@ -33,3 +33,21 @@ export const MARKER_LABELS: Record<MarkerType, string> = {
   CARD: 'Tarjeta',
   ID: 'Identificador',
 };
+
+export type SourceKind = 'url' | 'file' | 'mcp' | 'tool';
+
+/** Fuentes filtrables de un aviso (AC-122): de dónde salió el contenido leído. `param` es el valor de `?fuente=`. */
+export const SOURCE_OPTIONS: ReadonlyArray<{ param: string; kind: SourceKind; label: string }> = [
+  { param: 'url', kind: 'url', label: 'Web (URL)' },
+  { param: 'fichero', kind: 'file', label: 'Fichero' },
+  { param: 'mcp', kind: 'mcp', label: 'Servidor MCP' },
+  { param: 'herramienta', kind: 'tool', label: 'Otra herramienta' },
+];
+
+/** Se deduce de la herramienta, no del texto de `source`, que es libre (URL, búsqueda, ruta, comando…). */
+export function sourceKind(toolName: string): SourceKind {
+  if (toolName === 'WebFetch' || toolName === 'WebSearch') return 'url';
+  if (toolName === 'Read') return 'file';
+  if (toolName.startsWith('mcp__')) return 'mcp';
+  return 'tool';
+}

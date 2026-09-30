@@ -458,3 +458,13 @@ test('una Sesión Cerrada que se retoma con el mismo session_id vuelve a estar v
   assert.equal(await state(), 'closed');
   await api.close();
 });
+
+test('GET /api/v1/events filtra por Proyecto (AC-100)', async () => {
+  const { api, base } = await start();
+  const all = (await (await fetch(`${base}/api/v1/events?limit=500`)).json()).items;
+  const project = all[0].project;
+  const own = (await (await fetch(`${base}/api/v1/events?limit=500&project=${encodeURIComponent(project)}`)).json()).items;
+  assert.ok(own.length > 0 && own.every((e) => e.project === project));
+  assert.equal((await fetch(`${base}/api/v1/events?project=`)).status, 400);
+  await api.close();
+});

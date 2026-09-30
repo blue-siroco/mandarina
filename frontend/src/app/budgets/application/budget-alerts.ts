@@ -1,5 +1,5 @@
 import { formatCost, shortId } from '../../shared/format';
-import { Budget, BudgetState, BudgetSubject } from '../models/budget';
+import { AllowanceTarget, Budget, BudgetState, BudgetSubject } from '../models/budget';
 
 export interface BudgetAlertItem {
   budget: Budget;
@@ -31,6 +31,26 @@ export function worstAlert(budgets: Budget[]): WorstAlert | null {
     undefined,
   );
   return worst ? { ...worst, more: all.length - 1 } : null;
+}
+
+/** Cuánto se propone subir un límite superado: un 25 % por encima de lo gastado, redondeado. */
+export const RAISE_MARGIN = 1.25;
+
+/** Límite que se propone al ampliar: cubre lo gastado con margen y siempre supera al actual. */
+export function raiseProposal(budget: Pick<Budget, 'limitUsd'>, subject: Pick<BudgetSubject, 'spentUsd'>): number {
+  return Math.max(Math.ceil(subject.spentUsd * RAISE_MARGIN), Math.ceil(budget.limitUsd) + 1);
+}
+
+/**
+ * A quién dejaría seguir "Permitir" desde el aviso: la Sesión (Presupuesto por Sesión) o el Proyecto
+ * hasta el fin del día (Proyecto y día). Solo lo que se detiene (Superado con la acción *detener*);
+ * en el global del día el Proyecto se elige en la pantalla Presupuestos, así que aquí es `null` (AC-124).
+ */
+export function allowTargetOf({ budget, subject }: BudgetAlertItem): AllowanceTarget | null {
+  if (!budget.enabled || budget.action !== 'stop' || subject.state !== 'exceeded' || subject.allowed) return null;
+  if (budget.scope === 'session') return subject.sessionId ? { sessionId: subject.sessionId } : null;
+  if (budget.scope === 'project_day') return budget.project ? { project: budget.project } : null;
+  return null;
 }
 
 /** Nombre corto de lo que vigila un Presupuesto. */

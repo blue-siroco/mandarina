@@ -167,3 +167,17 @@ describe('AC-42: GET /api/v1/mcp-invocations', () => {
     expect((await list(query)).status).toBe(400);
   });
 });
+
+describe('AC-101: imagen en una respuesta {content:[…]}', () => {
+  it('la consulta SQL marca has_image también con content', async () => {
+    await pre(minutesAgo(10), SCREENSHOT, 'c1');
+    await post(minutesAgo(10, 1), SCREENSHOT, 'c1', { content: IMAGE });
+    await pre(minutesAgo(9), NAVIGATE, 'c2');
+    await post(minutesAgo(9, 1), NAVIGATE, 'c2', { content: [{ type: 'text', text: 'ok' }] });
+    const { body } = await list();
+    expect(body.items.map((i) => [i.tool, i.has_image])).toStrictEqual([
+      ['browser_navigate', false],
+      ['browser_take_screenshot', true],
+    ]);
+  });
+});

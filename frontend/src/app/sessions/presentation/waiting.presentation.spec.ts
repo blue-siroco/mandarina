@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { AlertSound } from '../../budgets/application/alert-sound';
@@ -216,5 +216,73 @@ describe('AC-95 / AC-96: WaitingAlert', () => {
     toggle.checked = true;
     toggle.dispatchEvent(new Event('change'));
     expect(setMuted).toHaveBeenCalledWith(true);
+  });
+});
+
+describe('AC-114: la espera de un Subagente enlaza a su fila', () => {
+  const HREF = '/sesiones/aaaaaaaa-1?pestana=subagentes&subagente=sub-9';
+  const subagentWait = wait({ subagent: { id: 'sub-9', type: 'e2e-builder' } });
+
+  async function render<T>(
+    component: new () => T,
+    setup: (f: ComponentFixture<T>) => void,
+    providers: object[] = [],
+  ) {
+    await TestBed.configureTestingModule({
+      imports: [component],
+      providers: [provideRouter([]), ...providers],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(component);
+    setup(fixture);
+    await fixture.whenStable();
+    return fixture.nativeElement as HTMLElement;
+  }
+  const link = (el: HTMLElement) => el.querySelector('[data-testid="waiting-subagent-link"]');
+
+  it('el badge enlaza el nombre del Subagente a la pestaña Subagentes', async () => {
+    const el = await render(WaitingBadge, (f) => {
+      f.componentRef.setInput('waiting', subagentWait);
+      f.componentRef.setInput('sessionId', 'aaaaaaaa-1');
+    });
+    expect(link(el)?.getAttribute('href')).toBe(HREF);
+    expect(text(link(el))).toBe('e2e-builder');
+    expect(text(el.querySelector('[data-testid="waiting-reason"]'))).toBe(
+      'Subagente e2e-builder pide permiso para Bash: npm run build',
+    );
+  });
+
+  it('sin Sesión no hay enlace', async () => {
+    const el = await render(WaitingBadge, (f) => f.componentRef.setInput('waiting', subagentWait));
+    expect(link(el)).toBeNull();
+  });
+
+  it('si espera el agente principal no hay enlace', async () => {
+    const el = await render(WaitingBadge, (f) => {
+      f.componentRef.setInput('waiting', wait());
+      f.componentRef.setInput('sessionId', 'aaaaaaaa-1');
+    });
+    expect(link(el)).toBeNull();
+  });
+
+  it('la tarjeta del board enlaza al Subagente que espera', async () => {
+    const el = await render(SessionCard, (f) => {
+      f.componentRef.setInput('session', waitingSession({ subagent: { id: 'sub-9', type: 'e2e-builder' } }));
+      f.componentRef.setInput('now', NOW);
+    });
+    expect(link(el)?.getAttribute('href')).toBe(HREF);
+  });
+
+  it('el aviso de la cabecera enlaza al Subagente que espera', async () => {
+    const state: WaitingState = {
+      count: 1,
+      oldest: waitingSession({ subagent: { id: 'sub-9', type: 'e2e-builder' } }),
+      loaded: true,
+      failed: false,
+    };
+    const el = await render(WaitingAlert, () => undefined, [
+      { provide: WatchWaitingSessions, useValue: { state$: new BehaviorSubject(state) } },
+      { provide: AlertSound, useValue: { muted: () => false, setMuted: () => undefined } },
+    ]);
+    expect(link(el)?.getAttribute('href')).toBe(HREF);
   });
 });
