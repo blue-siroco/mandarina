@@ -91,6 +91,11 @@ export interface SessionCore {
   open_tools: Record<string, string>;
   /** Subagentes de la Sesión sin los internos, por inicio (AC-33). */
   subagents: SubagentLife[];
+  /**
+   * El Turno sigue abierto (Trabajando o Esperando). Regla única (AC-125, AC-126): un Subagente sin fin
+   * solo está en marcha con la Sesión viva y el Turno abierto.
+   */
+  turn_open: boolean;
   /** Subagentes en marcha, incluidos los lanzamientos pendientes, en orden de inicio. */
   running_subagents_list: SubagentLife[];
   started_at: string;
@@ -265,6 +270,7 @@ export function summarizeSession(
     open_tool_event_id: latestOf(tools.values()),
     open_tools: Object.fromEntries([...tools].map(([lane, row]) => [lane, row.id])),
     subagents,
+    turn_open: turnOpen,
     running_subagents_list: running,
     started_at: first.occurred_at,
     last_event_at: last.occurred_at,

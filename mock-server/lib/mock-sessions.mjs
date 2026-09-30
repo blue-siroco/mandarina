@@ -153,6 +153,8 @@ function summarize(events, now) {
     clock_duration_ms: Math.max(0, ms(last.occurred_at) - ms(first.occurred_at)),
     sparkline,
     _turns: turns,
+    // Sesión viva con el Turno abierto: solo entonces un Subagente sin fin está en marcha (AC-126).
+    _running: live && turnOpen,
   };
 }
 
@@ -166,7 +168,7 @@ function bySession(events) {
   return groups;
 }
 
-const publicSummary = ({ _turns, ...summary }) => summary;
+const publicSummary = ({ _turns, _running, ...summary }) => summary;
 
 /**
  * @param {Array<object>} events Más antiguo primero.
@@ -305,6 +307,7 @@ export function sessionDetail(events, sessionId, now = Date.now(), sessionScores
         task: hasTask ? { description: life.description ?? task.description, prompt: life.prompt ?? task.prompt } : null,
         tools: toolCalls(life.own),
         result: life.stop ? (life.internal ? text(life.stop.payload?.last_assistant_message) : task.result) : null,
+        status: life.stopped_at !== null ? 'finished' : summary._running ? 'running' : 'no_response',
       };
     }),
     blocks: own

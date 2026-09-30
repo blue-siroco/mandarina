@@ -3,6 +3,7 @@ import {
   SessionActivity,
   SessionDetail,
   SessionList,
+  SessionSubagentStatus,
   SessionState,
   SessionSummary,
   TokenUsage,
@@ -107,6 +108,8 @@ export interface SessionDetailDto extends SessionSummaryDto {
     internal?: boolean;
     agent_type: string | null;
     started_at: string;
+    /** Opcional para aceptar backends anteriores al AC-126: se deduce de `stopped_at`. */
+    status?: SessionSubagentStatus;
     stopped_at: string | null;
     duration_ms: number;
     tool_count: number;
@@ -235,6 +238,7 @@ export function toSessionDetail(dto: SessionDetailDto): SessionDetail {
       agentType: s.agent_type,
       internal: s.internal ?? false,
       startedAt: date(s.started_at),
+      status: s.status ?? (s.stopped_at ? 'finished' : 'running'),
       stoppedAt: optionalDate(s.stopped_at),
       durationMs: s.duration_ms,
       toolCount: s.tool_count,

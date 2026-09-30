@@ -8,3 +8,5 @@
 - Un `prompt.submitted` nuevo reabre el Turno y vuelve a contar los Subagentes sin `subagent.stopped`.
 
 **Verificación:** tests de dominio (Vitest) en `session-summary.test.ts`.
+
+La misma regla rige el estado del Subagente en `/subagentes`, `/agentes` y el detalle de la Sesión: ver AC-126.

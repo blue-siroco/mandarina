@@ -33,7 +33,7 @@
           </td>
           <td class="task-cell" [title]="sub.task?.description ?? ''">{{ sub.task?.description ?? (sub.subagentId ? short(sub.subagentId) : '—') }}</td>
           <td class="mono">{{ sub.startedAt | date: 'HH:mm:ss' }}</td>
-          <td class="right num">{{ sub.stoppedAt ? formatDuration(sub.durationMs) : 'En marcha' }}</td>
+          <td class="right num" data-testid="subagent-status">{{ sub.status === 'finished' ? formatDuration(sub.durationMs) : sub.status === 'running' ? 'En marcha' : 'Sin respuesta' }}</td>
           <td class="right num">{{ sub.toolCount }}</td>
           <td>
             @if (sub.model) {
@@ -115,8 +115,10 @@
                 <h4 class="overline">Respuesta</h4>
                 @if (sub.result) {
                   <pre class="text" data-testid="subagent-result">{{ sub.result }}</pre>
-                } @else if (!sub.stoppedAt) {
+                } @else if (sub.status === 'running') {
                   <p class="muted" data-testid="subagent-running">Sigue en marcha: la respuesta aparecerá al terminar.</p>
+                } @else if (sub.status === 'no_response') {
+                  <p class="muted" data-testid="subagent-no-response">El Turno terminó sin que el Subagente avisara de su fin.</p>
                 } @else {
                   <p class="muted">Respuesta no disponible en el Transcript.</p>
                 }

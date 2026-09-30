@@ -129,7 +129,7 @@ export function computeMetrics(events, since, now, { directory, breakdown = fals
     sessions[condition] += 1;
     // `MetricsSlice.sessions` no tiene Esperando: en los desgloses no suma a Trabajando ni a En pausa.
     if (condition !== 'closed') contributions.push({ ...base, model, ...(condition === 'waiting' ? {} : { [condition]: 1 }) });
-    if (condition === 'working' || condition === 'paused' || condition === 'waiting') {
+    if (condition === 'working' || condition === 'waiting') {
       // Con los lanzamientos pendientes y sin los internos (AC-34).
       for (const life of subagentLives(own).filter((l) => !l.internal && l.stopped_at === null)) {
         contributions.push({ ...base, model: life.subagent_id ? SUBAGENT_MODEL : null, subagents_running: 1 });

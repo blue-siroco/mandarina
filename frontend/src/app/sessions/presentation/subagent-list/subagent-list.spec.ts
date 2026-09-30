@@ -47,9 +47,24 @@ describe('AC-24: SubagentList', () => {
   });
 
   it('mientras sigue en marcha avisa en lugar de la respuesta', async () => {
-    const el = await expand([{ ...base, stoppedAt: null, result: null }]);
+    const el = await expand([{ ...base, stoppedAt: null, status: 'running', result: null }]);
     expect(el.querySelector('[data-testid="subagent-running"]')).not.toBeNull();
     expect(el.querySelector('[data-testid="subagent-result"]')).toBeNull();
+  });
+
+  it('AC-126: sin fin y con el Turno terminado se ve "Sin respuesta" y lo explica, sin "En marcha"', async () => {
+    const stale: SessionSubagent = { ...base, stoppedAt: null, status: 'no_response', result: null };
+    const el = await expand([stale]);
+    const row = el.querySelector('[data-testid="subagent-row"]');
+    expect(text(row)).toContain('Sin respuesta');
+    expect(text(row)).not.toContain('En marcha');
+    expect(text(el.querySelector('[data-testid="subagent-no-response"]'))).toBe('El Turno terminó sin que el Subagente avisara de su fin.');
+    expect(el.querySelector('[data-testid="subagent-running"]')).toBeNull();
+  });
+
+  it('AC-126: terminado muestra su duración', async () => {
+    const fixture = await render([base]);
+    expect(text((fixture.nativeElement as HTMLElement).querySelector('[data-testid="subagent-status"]'))).toBe('3 min');
   });
 
   it('sin Transcript lo dice y conserva las herramientas de los Eventos', async () => {
@@ -80,6 +95,7 @@ describe('AC-36: SubagentList sin ruido', () => {
     toolUseId: 't2',
     agentType: 'e2e-builder',
     stoppedAt: null,
+    status: 'running',
     task: { description: 'generar tests del AC-28', prompt: 'Genera los tests' },
     tools: [],
     result: null,

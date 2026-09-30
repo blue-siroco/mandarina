@@ -238,6 +238,7 @@ describe('AC-18: GET /api/v1/sessions/:id', () => {
           task: { description: 'Buscar plugins', prompt: 'Busca los plugins de observabilidad' },
           tools: [{ name: 'Grep', summary: 'observe', started_at: minutesAgo(15).toISOString(), status: 'ok' }],
           result: 'Hay 3 plugins.',
+          status: 'finished', // AC-126
         },
       ],
       blocks: [

@@ -372,3 +372,56 @@ describe('AC-46: GET /api/v1/agents', () => {
     expect((await get(`/api/v1/agents/Explore${query}`)).status).toBe(400);
   });
 });
+
+describe('AC-126: estado del Subagente coherente tras el fin de Turno', () => {
+  it('con el Turno abierto, /subagents y el detalle lo dan en marcha', async () => {
+    await seed();
+    const list = await get<{ items: Item[] }>(`/api/v1/subagents?since=${DAY_AGO}`);
+    expect(list.body.items.find((s) => s.tool_use_id === 't2')).toMatchObject({ status: 'running', duration_ms: 5 * 60_000 });
+
+    const detail = await get<{ subagents: Item[] }>('/api/v1/sessions/s1');
+    expect(detail.body.subagents.map((s) => [s.tool_use_id, s.status])).toStrictEqual([
+      ['t1', 'finished'],
+      ['t2', 'running'],
+      [null, 'finished'],
+    ]);
+  });
+
+  it('tras turn.ended, el Subagente sin subagent.stopped pasa a sin respuesta en /subagents, /agents, el detalle y las métricas', async () => {
+    await seed();
+    await ingest('turn.ended', minutesAgo(2));
+
+    const list = await get<{ items: Item[] }>(`/api/v1/subagents?since=${DAY_AGO}`);
+    expect(list.body.items.find((s) => s.tool_use_id === 't2')).toMatchObject({
+      status: 'no_response',
+      stopped_at: null,
+      // Hasta el último Evento de la Sesión, no hasta ahora.
+      duration_ms: 3 * 60_000,
+    });
+
+    const agents = await get<{ items: Array<{ type: string; running: number; no_response: number }> }>(`/api/v1/agents?since=${DAY_AGO}`);
+    expect(agents.body.items.find((a) => a.type === 'e2e-builder')).toMatchObject({ running: 0, no_response: 1 });
+
+    const detail = await get<{ subagents: Item[] }>('/api/v1/sessions/s1');
+    expect(detail.body.subagents.find((s) => s.tool_use_id === 't2')).toMatchObject({ status: 'no_response', stopped_at: null });
+    expect(detail.body.subagents.find((s) => s.tool_use_id === 't1')).toMatchObject({ status: 'finished' });
+
+    const metrics = await get<{ subagents_running: number }>(`/api/v1/metrics?since=${DAY_AGO}`);
+    expect(metrics.body.subagents_running).toBe(0);
+  });
+
+  it('un Subagente sin fin fuera del periodo deja de reaparecer como en marcha tras turn.ended', async () => {
+    await seed();
+    await ingest('turn.ended', minutesAgo(2));
+    const { body } = await get<{ items: Item[] }>(`/api/v1/subagents?since=${minutesAgo(3).toISOString()}`);
+    expect(body.items.map((s) => s.tool_use_id)).toStrictEqual([]);
+  });
+
+  it('un prompt nuevo reabre el Turno y vuelve a estar en marcha', async () => {
+    await seed();
+    await ingest('turn.ended', minutesAgo(2));
+    await ingest('prompt.submitted', minutesAgo(1));
+    const { body } = await get<{ subagents: Item[] }>('/api/v1/sessions/s1');
+    expect(body.subagents.find((s) => s.tool_use_id === 't2')).toMatchObject({ status: 'running' });
+  });
+});

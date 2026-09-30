@@ -468,3 +468,38 @@ test('GET /api/v1/events filtra por Proyecto (AC-100)', async () => {
   assert.equal((await fetch(`${base}/api/v1/events?project=`)).status, 400);
   await api.close();
 });
+
+test('AC-126: tras turn.ended, el Subagente sin fin pasa a sin respuesta en el detalle, /subagents y /agents', async () => {
+  const { api, base } = await start({ historySize: 0 });
+  const post = (event_type, extra = {}) =>
+    fetch(`${base}/api/v1/events`, {
+      method: 'POST',
+      body: JSON.stringify({
+        schema_version: 1,
+        harness: 'claude-code',
+        project: 'demo',
+        directory: '/d',
+        session_id: 's126',
+        event_type,
+        native_event_type: 'X',
+        occurred_at: new Date().toISOString(),
+        payload: {},
+        ...extra,
+      }),
+    });
+  await post('prompt.submitted');
+  await post('tool.pre', { tool_name: 'Agent', payload: { tool_use_id: 't1', tool_input: { subagent_type: 'Explore', description: 'Buscar' } } });
+  const statuses = async () => ({
+    detail: (await (await fetch(`${base}/api/v1/sessions/s126`)).json()).subagents.map((s) => s.status),
+    list: (await (await fetch(`${base}/api/v1/subagents?since=${new Date(Date.now() - 3600_000).toISOString()}`)).json()).items.map((s) => s.status),
+  });
+  assert.deepEqual(await statuses(), { detail: ['running'], list: ['running'] });
+
+  await post('turn.ended');
+  assert.deepEqual(await statuses(), { detail: ['no_response'], list: ['no_response'] });
+  const { items } = await (await fetch(`${base}/api/v1/agents?since=${new Date(Date.now() - 3600_000).toISOString()}`)).json();
+  const explore = items.find((a) => a.type === 'Explore');
+  assert.equal(explore.running, 0);
+  assert.equal(explore.no_response, 1);
+  await api.close();
+});

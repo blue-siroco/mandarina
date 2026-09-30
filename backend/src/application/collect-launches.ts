@@ -56,7 +56,8 @@ export async function collectLaunches(
       const transcript = await readTranscript(transcripts, pathRow?.transcript_path ?? null);
       const metaLinks = metaLinksOf(transcript);
       const core = summarizeSession(rows, now, transcript?.mtimeMs, metaLinks);
-      const live = core.state === 'active' || core.state === 'idle';
+      // Sin fin solo está en marcha con la Sesión viva y el Turno abierto (AC-126).
+      const live = (core.state === 'active' || core.state === 'idle') && core.turn_open;
       const lives = subagentLives(rows, metaLinks);
       const byId = new Map(rows.map((r) => [r.id, r]));
       const typeOf = new Map(lives.filter((l) => l.subagent_id).map((l) => [l.subagent_id!, l.agent_type]));

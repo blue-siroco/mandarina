@@ -55,6 +55,8 @@ export interface SessionDetail extends SessionSummary {
     task: { description: string | null; prompt: string | null } | null;
     tools: ToolCall[];
     result: string | null;
+    /** Sin fin, `running` solo con la Sesión viva y el Turno abierto; si no, `no_response` (AC-126). */
+    status: 'running' | 'finished' | 'no_response';
   }>;
   blocks: Array<{
     event_id: string;
@@ -126,7 +128,7 @@ export class GetSessionDetail {
         prompt: text(byId.get(turn.prompt_event_id)?.payload.prompt),
         tool_count: turn.tool_count,
       })),
-      subagents: subagents(rows, byId, transcript, metaLinks),
+      subagents: subagents(rows, byId, transcript, metaLinks, (core.state === 'active' || core.state === 'idle') && core.turn_open),
       blocks: events
         .filter((e) => e.event_type === 'tool.blocked' && e.block)
         .map((e) => ({
@@ -176,6 +178,7 @@ function subagents(
   byId: Map<string, StoredEvent>,
   transcript: TranscriptData | undefined,
   metaLinks: ReadonlyMap<string, string>,
+  running: boolean,
 ): SessionDetail['subagents'] {
   return subagentLives(rows, metaLinks).map((life) => {
     const id = life.subagent_id;
@@ -206,6 +209,7 @@ function subagents(
       tools: fromEvents.length > 0 ? fromEvents : (file?.activity.tools ?? []),
       // Mientras sigue en marcha, el último texto es un borrador, no la respuesta.
       result: stop ? (file?.activity.result ?? text(stop.payload.last_assistant_message)) : null,
+      status: life.stopped_at !== null ? 'finished' : running ? 'running' : 'no_response',
     };
   });
 }

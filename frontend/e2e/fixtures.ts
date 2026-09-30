@@ -101,6 +101,7 @@ export function detailDto(id: string, overrides: Record<string, unknown> = {}) {
       {
         subagent_id: 'agent-9a8b7c',
         tool_use_id: 'toolu_01',
+        status: 'finished',
         internal: false,
         agent_type: 'Explore',
         started_at: minutesAgo(55),

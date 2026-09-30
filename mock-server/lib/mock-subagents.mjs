@@ -4,8 +4,10 @@
 
 import { isClosed } from './mock-closed.mjs';
 import { cacheView } from './mock-cache.mjs';
+import { currentWait, lastProgress } from './mock-waiting.mjs';
 const LAUNCH_TOOLS = new Set(['Agent', 'Task']);
 const ORPHAN_AFTER_MS = 30 * 60 * 1000;
+const IDLE_AFTER = new Set(['session.started', 'turn.ended']);
 const LIMIT = 500;
 
 const text = (v) => (typeof v === 'string' && v.trim() !== '' ? v : null);
@@ -197,10 +199,13 @@ function collectLaunches(events, since, now, syntheticTokens) {
     const last = own.at(-1);
     const ended = isClosed(own);
     const live = !ended && now - Math.max(...own.map((e) => Date.parse(e.received_at))) <= ORPHAN_AFTER_MS;
+    // Sin fin solo está en marcha con el Turno abierto (AC-126): tras `turn.ended` pasa a sin respuesta.
+    const turnOpen = currentWait(own) !== null || !IDLE_AFTER.has(lastProgress(own)?.event_type);
+    const running = live && turnOpen;
     for (const life of subagentLives(own)) {
-      if (!(life.started_at >= sinceIso || (live && life.stopped_at === null))) continue;
-      const status = life.stopped_at !== null ? 'finished' : live ? 'running' : 'no_response';
-      const end = life.stopped_at ?? (live ? new Date(now).toISOString() : last.occurred_at);
+      if (!(life.started_at >= sinceIso || (running && life.stopped_at === null))) continue;
+      const status = life.stopped_at !== null ? 'finished' : running ? 'running' : 'no_response';
+      const end = life.stopped_at ?? (running ? new Date(now).toISOString() : last.occurred_at);
       const tokens = life.own.length > 0 ? syntheticTokens(life.own) : null;
       all.push({
         type: life.agent_type,

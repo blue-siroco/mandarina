@@ -191,10 +191,12 @@ describe('AC-125: fin de turno y Subagentes en marcha', () => {
     expect(summary.running_subagents_list).toStrictEqual([]);
     expect(summary.open_tools).toStrictEqual({});
     expect(summary.subagent_count).toBe(2);
+    expect(summary.turn_open).toBe(false); // AC-126
   });
 
   it('con el Turno en curso siguen contando', () => {
     const summary = summarizeSession(launched, NOW);
+    expect(summary.turn_open).toBe(true); // AC-126
     expect(summary.running_subagents).toBe(2);
   });
 

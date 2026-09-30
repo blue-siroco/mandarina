@@ -129,6 +129,22 @@ describe('AC-18: toSessionDetail', () => {
     expect(toSessionDetail(sessionDetailDto())).toStrictEqual(sessionDetail());
   });
 
+  it('AC-126: traduce el estado del Subagente y lo deduce de stopped_at con backends anteriores', () => {
+    const dto = sessionDetailDto();
+    const base = dto.subagents[0]!;
+    const withoutStatus = { ...base };
+    delete withoutStatus.status;
+    const detail = toSessionDetail({
+      ...dto,
+      subagents: [
+        { ...base, stopped_at: null, status: 'no_response' },
+        withoutStatus,
+        { ...withoutStatus, stopped_at: null },
+      ],
+    });
+    expect(detail.subagents.map((s) => s.status)).toStrictEqual(['no_response', 'finished', 'running']);
+  });
+
   it('conserva los null de una Sesión sin Transcript', () => {
     const detail = toSessionDetail(
       sessionDetailDto({

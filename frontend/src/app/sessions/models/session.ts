@@ -112,6 +112,9 @@ export interface SubagentToolCall {
   status: ToolCallStatus;
 }
 
+/** Estado del Subagente: sin fin, en marcha solo con el Turno abierto (AC-126). */
+export type SessionSubagentStatus = 'running' | 'finished' | 'no_response';
+
 export interface SessionSubagent {
   /** `subagentId`, o `launch:<toolUseId>` para un lanzamiento pendiente: identifica la fila (`?subagente=`). */
   key: string;
@@ -123,6 +126,7 @@ export interface SessionSubagent {
   /** Subagente interno del Harness (ver `CONTEXT.md`). */
   internal: boolean;
   startedAt: Date;
+  status: SessionSubagentStatus;
   stoppedAt: Date | null;
   durationMs: number;
   toolCount: number;

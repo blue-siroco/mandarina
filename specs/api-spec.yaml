@@ -1216,8 +1216,11 @@ components:
               type: array
               items:
                 type: object
-                required: [subagent_id, tool_use_id, agent_type, internal, started_at, stopped_at, duration_ms, tool_count, model, tokens, task, tools, result]
+                required: [subagent_id, tool_use_id, agent_type, internal, status, started_at, stopped_at, duration_ms, tool_count, model, tokens, task, tools, result]
                 properties:
+                  status:
+                    $ref: '#/components/schemas/LaunchStatus'
+                    description: Sin `stopped_at`, `running` solo con la Sesión viva y el Turno abierto; si no, `no_response` (AC-126).
                   subagent_id:
                     type: [string, 'null']
                     description: '`null` en un lanzamiento que aún no se ha enlazado con su Subagente (AC-33).'

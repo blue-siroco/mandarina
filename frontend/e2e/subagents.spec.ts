@@ -49,6 +49,16 @@ test.describe('AC-36: Eventos de Subagente legibles y sin internos', () => {
     await expect(page.getByTestId('subagent-detail')).toBeVisible();
     await expect(page.getByTestId('subagent-result')).toContainText('Hay 3 plugins');
   });
+
+  test('AC-126: un Subagente sin fin con el Turno terminado se ve Sin respuesta, no En marcha', async ({ page }) => {
+    const base = detailDto(SESSION_ID);
+    const stale = { ...base.subagents[0]!, status: 'no_response', stopped_at: null, result: null };
+    await mockApi(page, { detail: () => ({ ...base, subagents: [stale] }) });
+    await page.goto(`/sesiones/${SESSION_ID}?pestana=subagentes&subagente=agent-9a8b7c`);
+    await expect(page.getByTestId('subagent-row')).toContainText('Sin respuesta');
+    await expect(page.getByTestId('subagent-row')).not.toContainText('En marcha');
+    await expect(page.getByTestId('subagent-no-response')).toContainText('El Turno terminó sin que el Subagente avisara de su fin');
+  });
 });
 
 test.describe('AC-37: pantalla de Subagentes', () => {
