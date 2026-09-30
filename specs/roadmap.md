@@ -333,6 +333,20 @@ El board enseña el Coste estimado (1.8), calculado con las Tarifas públicas de
 
 **Stack típico usado por estos proyectos:** servidor en Bun/TypeScript o Python (uv), SQLite, cliente Vue 3 o React, comunicación por WebSocket.
 
+### 1.18 Descarga de Sesiones y Eventos desde la UI
+
+El 1.11 lleva las trazas a un colector externo, pero es opt-in por variables de entorno, solo envía los Turnos que terminan después de activarlo y no deja nada visible en el dashboard mientras está apagado. Quien quiere llevarse a un fichero una Sesión, o los Eventos que está viendo, no tiene ninguna opción en la interfaz. Decisiones en ADR-0013; el ADR-0008 no cambia.
+
+- **Botón «Exportar» en dos sitios**: en el detalle de una Sesión (descarga la Sesión) y en la pantalla Eventos (descarga los Eventos que pasan los filtros vigentes, con Proyecto, Sesión, rango y Tipo). No hay botón global de «exportar todo».
+- **Formatos**: la Sesión en **JSON** (metadatos, Turnos, Subagentes, Eventos, tokens, caché y Coste estimado); los Eventos en **JSONL**, una línea por Evento, como el Dataset de evaluación (1.12).
+- **Estructura por defecto, contenido con casilla**: sin marcar nada, el fichero lleva estructura, tiempos, Tipos de evento, nombres de herramienta, tokens, caché y coste. Los prompts, las respuestas y las entradas y salidas de herramientas solo van si se marca «Incluir contenido» en el diálogo, que dice qué contendrá el fichero. La casilla no se recuerda: hay que marcarla en cada descarga. El contenido sale siempre enmascarado (ADR-0009).
+- **Diálogo de exportación**: antes de descargar enseña cuántos Eventos incluirá y qué campos, con el aviso de que el fichero sale de Mandarina y ya no tiene control posterior.
+- **Lo sirve el backend**: `GET /api/v1/sessions/{id}/export` y `GET /api/v1/events/export`, con `Content-Disposition: attachment`; el JSONL va en streaming. Con un tope de Eventos por descarga: si se supera, el fichero se trunca y lo dice (en el diálogo y en el propio fichero), con cuántos quedan fuera.
+- **No cambia nada al descargar**: no marca Turnos como exportados ni guarda estado; es independiente de la Exportación OTLP.
+- **Datos**: reutiliza los repositorios de lectura de Sesiones y Eventos; el contrato (`specs/api-spec.yaml`) y el mock (`mock-server/lib/mock-api.mjs`) se cambian a la vez.
+- **Tope**: 50 000 Eventos por descarga; si se supera, salen los más recientes y el fichero y el diálogo dicen cuántos quedan fuera. **Vista previa**: recuento y lista de campos, sin línea de ejemplo. Criterios: AC-142 a AC-149.
+- Fuera de alcance: exportar un Proyecto o toda la base de datos, importar el historial (con 1A.8), CSV, OTLP descargable, descargas programadas y ajustes de retención (1A.9).
+
 ## 1A. Fase 1A — Observabilidad accionable (después del MVP)
 
 El MVP responde a *qué están haciendo los agentes*. Esta fase responde a *qué tengo que hacer yo ahora* y a *qué salió de cada Sesión*. Casi todo se deriva de Eventos que ya llegan o de los Transcripts, así que reutiliza el pipeline sin cambiar la arquitectura.
@@ -397,7 +411,7 @@ El Adaptador es best-effort (ADR-0004): si el servidor no responde, el Evento se
 ### 1A.9 Retención y gestión de los datos
 
 - Política de retención configurable (por antigüedad o tamaño de la base de datos); el MVP la tiene indefinida.
-- Purga de un Proyecto o de una Sesión, y exportación/importación de Sesiones en JSON.
+- Purga de un Proyecto o de una Sesión, exportación de un Proyecto entero e importación de Sesiones en JSON (la descarga de una Sesión o de los Eventos filtrados ya se entrega en 1.18).
 - Tamaño de la base de datos visible en una pantalla de ajustes y copia de seguridad del volumen documentada.
 - Límite de tamaño por payload (salidas de `Bash` enormes) con truncado explícito, para que la base de datos no crezca sin control.
 

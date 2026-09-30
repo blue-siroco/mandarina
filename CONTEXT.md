@@ -203,3 +203,11 @@ _Avoid_: Evals, corpus, golden set
 **Exportación OTLP**:
 Envío opt-in de cada Turno terminado, como una traza OpenTelemetry con la convención OpenInference, a un colector externo (ADR-0008). Cada Turno queda **Pendiente**, **Exportado** o **Fallido**.
 _Avoid_: Telemetría, sincronización, integración
+
+**Descarga de Sesión**:
+Fichero JSON con una Sesión (Turnos, Subagentes, Eventos, tokens, caché y Coste estimado) que la persona usuaria pide desde su detalle. Sin contenido salvo que marque «Incluir contenido»; siempre enmascarada (ADR-0013).
+_Avoid_: Exportación (reservado a la Exportación OTLP), backup, volcado
+
+**Descarga de Eventos**:
+Fichero JSONL con los Eventos que pasan los filtros de la pantalla Eventos, uno por línea, con las mismas reglas de contenido que la Descarga de Sesión (ADR-0013).
+_Avoid_: Exportación, log, dump

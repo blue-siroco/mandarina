@@ -219,6 +219,161 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/sessions/{id}/export:
+    get:
+      tags: [sessions]
+      operationId: downloadSession
+      summary: Descarga de Sesión en JSON (ADR-0013; AC-142, AC-143, AC-145).
+      description: |
+        Fichero con la Sesión, sus Turnos, Subagentes y Eventos. Por defecto solo lleva estructura;
+        `content=true` añade prompts, respuestas y entradas y salidas de herramientas, siempre enmascarados.
+        Con más de 50 000 Eventos salen los más recientes y `export.truncated` lo dice. Solo lectura.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/ExportContent'
+      responses:
+        '200':
+          description: El fichero de la Sesión.
+          headers:
+            Content-Disposition:
+              description: '`attachment; filename="mandarina-sesion-<id corto>.json"`.'
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionDownload' }
+        '400':
+          description: Parámetros inválidos.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: La Sesión no existe.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/sessions/{id}/export/preview:
+    get:
+      tags: [sessions]
+      operationId: previewSessionDownload
+      summary: Qué contendría la Descarga de Sesión, sin descargarla (AC-145).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/ExportContent'
+      responses:
+        '200':
+          description: Recuento y campos del fichero.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DownloadPreview' }
+        '400':
+          description: Parámetros inválidos.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: La Sesión no existe.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/events/export:
+    get:
+      tags: [events]
+      operationId: downloadEvents
+      summary: Descarga de Eventos en JSONL (ADR-0013; AC-144, AC-143, AC-145).
+      description: |
+        Una línea por Evento, en orden cronológico ascendente, tras una primera línea `{ "export": … }`
+        (`DownloadHeader`). Va en streaming. Por defecto los Eventos no llevan `payload`; `content=true`
+        lo añade, enmascarado. Con más de 50 000 Eventos salen los más recientes. Solo lectura.
+      parameters:
+        - name: project
+          in: query
+          schema: { type: string, minLength: 1 }
+        - name: session_id
+          in: query
+          schema: { type: string, minLength: 1 }
+        - name: event_type
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/EventType' }
+        - name: tool
+          in: query
+          description: Solo Eventos de estas herramientas; se repite para varias.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { type: string, minLength: 1 }
+        - name: since
+          in: query
+          schema: { type: string, format: date-time }
+        - $ref: '#/components/parameters/ExportContent'
+      responses:
+        '200':
+          description: El fichero de Eventos.
+          headers:
+            Content-Disposition:
+              description: '`attachment; filename="mandarina-eventos-<fecha>.jsonl"`.'
+              schema: { type: string }
+          content:
+            application/x-ndjson:
+              schema:
+                type: string
+                description: Líneas JSON; la primera es `{ "export": DownloadHeader }` y las demás, `DownloadedEvent`.
+        '400':
+          description: Parámetros inválidos.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/events/export/preview:
+    get:
+      tags: [events]
+      operationId: previewEventsDownload
+      summary: Qué contendría la Descarga de Eventos, sin descargarla (AC-145).
+      parameters:
+        - name: project
+          in: query
+          schema: { type: string, minLength: 1 }
+        - name: session_id
+          in: query
+          schema: { type: string, minLength: 1 }
+        - name: event_type
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/EventType' }
+        - name: tool
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { type: string, minLength: 1 }
+        - name: since
+          in: query
+          schema: { type: string, format: date-time }
+        - $ref: '#/components/parameters/ExportContent'
+      responses:
+        '200':
+          description: Recuento y campos del fichero.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DownloadPreview' }
+        '400':
+          description: Parámetros inválidos.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
   /api/v1/test-runs:
     get:
       tags: [tests]
@@ -991,6 +1146,11 @@ components:
       in: query
       description: Las de la Sesión y las de sus Turnos y Subagentes.
       schema: { type: string, minLength: 1 }
+    ExportContent:
+      name: content
+      in: query
+      description: '`true` incluye prompts, respuestas y entradas y salidas de herramientas, siempre enmascarados (AC-143). Por defecto `false`.'
+      schema: { type: boolean, default: false }
   schemas:
     EvaluationObjectType:
       description: Qué se evalúa (AC-54).
@@ -2177,6 +2337,72 @@ components:
           type: array
           maxItems: 50
           items: { $ref: '#/components/schemas/ExportedTurn' }
+    DownloadHeader:
+      type: object
+      description: Cabecera de una descarga (AC-142, AC-144, AC-145).
+      required: [kind, generated_at, include_content, total, exported, truncated, omitted]
+      properties:
+        kind: { type: string, enum: [session, events] }
+        generated_at: { type: string, format: date-time }
+        include_content: { type: boolean }
+        filters:
+          type: object
+          description: Solo en `events`; los filtros aplicados.
+          additionalProperties: true
+        total: { type: integer, minimum: 0, description: Eventos que pasaban los filtros. }
+        exported: { type: integer, minimum: 0, description: Eventos incluidos en el fichero (máximo 50 000). }
+        truncated: { type: boolean }
+        omitted: { type: integer, minimum: 0, description: '`total − exported`; los más antiguos.' }
+    DownloadPreview:
+      type: object
+      required: [total, exported, truncated, omitted, fields]
+      properties:
+        total: { type: integer, minimum: 0 }
+        exported: { type: integer, minimum: 0 }
+        truncated: { type: boolean }
+        omitted: { type: integer, minimum: 0 }
+        fields:
+          type: array
+          description: Campos que llevará cada Evento del fichero; depende de `content`.
+          items: { type: string }
+    DownloadedEvent:
+      type: object
+      description: Evento tal como sale en una descarga. `payload` y `block.reason` solo con `content=true`.
+      required: [id, harness, project, directory, session_id, subagent_id, event_type, native_event_type, tool_name, occurred_at, received_at, block]
+      properties:
+        id: { type: string }
+        harness: { type: string }
+        project: { type: string }
+        directory: { type: string }
+        session_id: { type: string }
+        subagent_id: { type: [string, 'null'] }
+        event_type: { $ref: '#/components/schemas/EventType' }
+        native_event_type: { type: string }
+        tool_name: { type: [string, 'null'] }
+        occurred_at: { type: string, format: date-time }
+        received_at: { type: string, format: date-time }
+        block:
+          oneOf:
+            - type: object
+              required: [rule]
+              properties:
+                rule: { type: string }
+                reason: { type: string, description: Solo con `content=true`. }
+            - { type: 'null' }
+        payload: { type: object, description: Solo con `content=true`; enmascarado. }
+    SessionDownload:
+      type: object
+      required: [export, session, events]
+      properties:
+        export: { $ref: '#/components/schemas/DownloadHeader' }
+        session:
+          description: El detalle de la Sesión (`SessionDetail`) con Turnos, Subagentes, tokens, caché y coste. Sin `content=true` no aparecen los campos de texto libre: `turns[].prompt`, `subagents[].task`, `subagents[].result`, `summary` de `tools[]`, de `blocks[]`, de `current_tool` y de `waiting`, `blocks[].reason` y `description` de `live_subagents[]`.
+          allOf:
+            - $ref: '#/components/schemas/SessionDetail'
+        events:
+          type: array
+          description: Cronológico ascendente.
+          items: { $ref: '#/components/schemas/DownloadedEvent' }
     Error:
       type: object
       required: [message]
