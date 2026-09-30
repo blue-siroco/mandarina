@@ -427,11 +427,59 @@
 
 <div class="bg-surface-container-lowest p-space-xl rounded-xl shadow-sm flex flex-col gap-space-md relative overflow-hidden">
 <div class="flex items-center justify-between">
-<span class="font-headline-sm text-headline-sm text-on-surface font-bold" data-i18n="roadmap.phases_3_4_orchestration_enterprise">Fases 3 y 4 · Orquestación &amp; Enterprise</span>
-<span class="px-space-sm py-space-2xs bg-surface-container text-on-surface-variant font-code-sm text-code-sm rounded-full font-bold">Q4 2025</span>
+<span class="font-headline-sm text-headline-sm text-on-surface font-bold" data-i18n="roadmap.phase_3_git_governance">Fase 3 · Gobernanza en Git &amp; Políticas de Equipo</span>
+<span class="px-space-sm py-space-2xs bg-surface-container text-on-surface-variant font-code-sm text-code-sm rounded-full font-bold" data-i18n="roadmap.planned">PLANIFICADA</span>
 </div>
-<p class="font-body-md text-body-md text-on-surface-variant" data-i18n="roadmap.multi_agent_dispatch_cross_harness">Orquestación multi-agente, delegación cruzada entre harnesses y gobernanza empresarial.</p>
+<p class="font-body-md text-body-md text-on-surface-variant" data-i18n="roadmap.git_governance_desc">El control vive donde el equipo ya colabora, el repositorio: sin SSO en la nube ni paneles multiusuario.</p>
 <ul class="flex flex-col gap-space-sm font-body-sm text-body-sm text-on-surface pt-space-xs">
+<li class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-primary text-[18px]">policy</span>
+<span class="" data-i18n="roadmap.shared_repo_policies">Políticas compartidas en el repo (mandarina.yaml: presupuestos, umbrales de parada y enmascarado de PII)</span>
+</li>
+<li class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-primary text-[18px]">rate_review</span>
+<span class="" data-i18n="roadmap.pr_ai_audit">Auditoría de IA en Pull Requests: comentario automático desde CI con coste, caché y riesgos de seguridad</span>
+</li>
+<li class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-primary text-[18px]">query_stats</span>
+<span class="" data-i18n="roadmap.anonymous_aggregate_metrics">Métricas agregadas anónimas: resumen semanal de ahorro y eficiencia, sin código ni datos sensibles</span>
+</li>
+</ul>
+</div>
+
+<div class="bg-surface-container-lowest p-space-xl rounded-xl shadow-sm flex flex-col gap-space-md relative overflow-hidden">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-headline-sm text-on-surface font-bold" data-i18n="roadmap.phase_4_local_ecosystem">Fase 4 · Federación Local &amp; Plugins</span>
+<span class="px-space-sm py-space-2xs bg-surface-container text-on-surface-variant font-code-sm text-code-sm rounded-full font-bold" data-i18n="roadmap.planned">PLANIFICADA</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant" data-i18n="roadmap.local_ecosystem_desc">Un modelo modular y abierto en lugar de una orquestación rígida entre agentes de terceros.</p>
+<ul class="flex flex-col gap-space-sm font-body-sm text-body-sm text-on-surface pt-space-xs">
+<li class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-primary text-[18px]">storefront</span>
+<span class="" data-i18n="roadmap.local_skills_hooks_marketplace">Marketplace local de skills y hooks: instalar, actualizar y probar CLAUDE.md, skills y filtros de seguridad</span>
+</li>
+<li class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-primary text-[18px]">lan</span>
+<span class="" data-i18n="roadmap.local_agent_mesh">Mesh local P2P en LAN para compartir aprendizajes de prompts y bucles a evitar, sin servidores en la nube</span>
+</li>
+<li class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-primary text-[18px]">api</span>
+<span class="" data-i18n="roadmap.open_cicd_apis">APIs abiertas para CI/CD: herramientas internas consultan el estado de los agentes</span>
+</li>
+</ul>
+</div>
+
+<div class="bg-surface-container-lowest p-space-xl rounded-xl shadow-sm flex flex-col gap-space-md relative overflow-hidden">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-headline-sm text-on-surface font-bold" data-i18n="roadmap.phases_5_7_reporting_orchestration">Fases 5–7 · Reporting, Orquestación &amp; Producción</span>
+<span class="px-space-sm py-space-2xs bg-surface-container text-on-surface-variant font-code-sm text-code-sm rounded-full font-bold" data-i18n="roadmap.planned">PLANIFICADA</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant" data-i18n="roadmap.reporting_orchestration_desc">Informes de auditoría, orquestación multi-agente y el nivel producción para servidores compartidos.</p>
+<ul class="flex flex-col gap-space-sm font-body-sm text-body-sm text-on-surface pt-space-xs">
+<li class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-primary text-[18px]">assessment</span>
+<span class="" data-i18n="roadmap.reporting_session_comparator">Reporting exportable, comparador de sesiones y trazabilidad de criterios de aceptación</span>
+</li>
 <li class="flex items-center gap-space-sm">
 <span class="material-symbols-outlined text-primary text-[18px]">hub</span>
 <span class="" data-i18n="roadmap.multi_agent_orchestration_cross_delegation">Orquestación multi-agente y delegación cruzada (Claude Code &lt;-&gt; Codex)</span>
@@ -444,12 +492,9 @@
 <span class="material-symbols-outlined text-primary text-[18px]">badge</span>
 <span class="" data-i18n="roadmap.enterprise_multi_user_auth_sso">Autenticación multiusuario SSO/OIDC y métricas de resultado por PR/commit</span>
 </li>
-<li class="flex items-center gap-space-sm">
-<span class="material-symbols-outlined text-primary text-[18px]">sync</span>
-<span class="" data-i18n="roadmap.docker_compose_with_persistent_volume">Distribución por Docker Compose con volumen persistente y plugin instalable</span>
-</li>
 </ul>
-</div></div>
+</div>
+</div>
 </div>
 </section>
 
