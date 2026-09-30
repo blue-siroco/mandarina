@@ -145,7 +145,7 @@ Hoy, para comparar una cifra de las fichas (p. ej. el Coste estimado) entre Dire
   - **Tokens de entrada**: entrada total, % leído de caché y tokens escritos en caché.
   - **Tokens de salida**: salida; en la vista por Directorio, además, su modelo principal.
   - **Coste estimado**: coste con su % sobre el total y aviso de modelos sin Tarifa o Transcripts no disponibles; en la vista por modelo, además, la Tarifa aplicada y el desglose del coste (entrada / salida / lectura de caché / escritura de caché).
-  - **Herramientas**: llamadas a herramientas, prompts y Bloqueos.
+  - ~~**Herramientas**: llamadas a herramientas, prompts y Bloqueos.~~ La ficha se retira del board (1.17) y con ella su caso del modal.
 - **Vista por Directorio**: una fila por Directorio con actividad en el periodo (ruta truncada por la izquierda, `…/Codev/mandarina`, con la ruta completa en el tooltip) y su Proyecto.
 - **Vista por modelo**: una fila por modelo usado en el periodo (Opus, Sonnet, Haiku, Fable…, con el mismo badge de modelo que el resto de la UI), incluidos los usados por Subagentes. Reparto:
   - tokens y coste se atribuyen exactamente a cada modelo, respuesta a respuesta, leídos de los Transcripts (una Sesión que cambia de modelo a mitad reparte sus tokens entre ambos);
@@ -311,6 +311,25 @@ Con varias Sesiones abiertas, un agente puede llevar minutos parado esperando un
 - **Alerta sonora**: un sonido corto al pasar una Sesión a *Esperando*, distinto del de los Presupuestos (1.15). Mismo mecanismo que allí: Web Audio generado en el navegador, solo si la persona usuaria ya ha interactuado con la página (política de autoplay) y con un interruptor de silencio que se guarda en el navegador. No se repite en bucle; si la Sesión sigue esperando, vuelve a sonar como mucho cada pocos minutos.
 - **Datos**: el cambio de Actividad llega por el WebSocket; `GET /sessions` y el detalle de Sesión exponen la Actividad *Esperando* y su motivo.
 - Fuera de alcance: notificaciones del sistema operativo (Notification API) y configuración por Proyecto (1A.1), responder o aprobar el permiso desde el dashboard (6.5) y avisar al terminar un Turno.
+
+### 1.17 Uso de la suscripción en el board y retirada de la ficha Herramientas
+
+El board enseña el Coste estimado (1.8), calculado con las Tarifas públicas de la API (ADR-0005). Quien trabaja con una suscripción de Claude (Pro o Max) no paga por token: lo que le limita es la cuota de la ventana de 5 horas y la semanal, y eso hoy no se ve en ningún sitio. Además, la ficha *Herramientas* (llamadas, prompts y Bloqueos) ocupa un sitio del board y no ayuda a decidir nada: esas cifras siguen en `/eventos`, `/bloqueos` y el detalle de Sesión.
+
+- **Retirar la ficha Herramientas del board.** Con ella desaparece su caso en el modal de desglose de 1.8. El bloque del API que solo alimentaba esa ficha se quita del contrato y del mock si ninguna otra pantalla lo usa; los Bloqueos siguen en su pantalla y en los carriles.
+- **Ficha Uso de la suscripción**, solo si la cuenta es de suscripción. Dos medidores, cada uno con lo que queda y no con lo consumido:
+  - **Sesión** (ventana de 5 horas): % de uso **pendiente** (`100 − usado`) y **momento del reinicio**, en hora local y con cuenta atrás ("se reinicia a las 18:40 · en 1 h 12 min");
+  - **Semanal** (7 días): lo mismo.
+  - Estado siempre con texto además del color: **Holgado**, **Cerca** (queda el 20 % o menos) o **Agotado** (queda 0).
+- **Sin suscripción no hay ficha.** Con API key, Bedrock o Vertex Claude Code no envía estos datos, y el board no enseña una ficha vacía ni un 0 %. Hay que decirlo en algún sitio (ayuda de la ficha o pantalla de configuración) para que la ausencia no parezca un fallo. Si el Harness tiene `ANTHROPIC_API_KEY`, esa clave tiene prioridad sobre la suscripción y tampoco habrá datos.
+- **El dato es de la cuenta, no de la Sesión.** Todas las Sesiones de la misma persona comparten las dos ventanas, así que el board muestra la última lectura recibida de cualquier Sesión, con "actualizado hace N min". Una lectura cuyo reinicio ya pasó no se sigue mostrando como vigente: la ficha lo dice ("ventana reiniciada, pendiente de nueva lectura") en lugar de enseñar el 0 % antiguo.
+- **Origen del dato: solo `statusLine`.** Los hooks que captura el Adaptador (§1.1) y los Transcripts (ADR-0003) no traen la cuota. El único canal oficial es el JSON que Claude Code pasa por stdin al comando de `statusLine` (`rate_limits.five_hour` y `rate_limits.seven_day`, cada uno con `used_percentage` y `resets_at` en epoch), y solo después de la primera respuesta de la API de la Sesión. Consecuencias de diseño, para el ADR que hay que escribir antes de implementar:
+  - el Adaptador pasa a poder ejecutarse también como comando de `statusLine`. Como una persona solo tiene una `statusLine`, debe encadenarse con la que ya tuviera (ejecutarla, devolver su salida y enviar la lectura a Mandarina en segundo plano), sin ralentizarla ni romperla (ADR-0004, §9);
+  - la lectura no es un hecho de la Sesión sino de la cuenta, así que no encaja como Evento de Sesión: el ADR decide entre un Tipo de evento propio y un endpoint dedicado con su tabla en SQLite (como las Evaluaciones de 1.12);
+  - **detección de suscripción**: no hay campo de tipo de autenticación; se deduce de que los datos existen. Claude Code los retira del JSON cuando `resets_at` expira, cada campo puede faltar de forma independiente y el Adaptador tiene que tolerarlo.
+- **Datos**: `GET /api/v1/subscription-usage` con las dos ventanas (`used_percent`, `remaining_percent`, `resets_at`, estado) y `updated_at`, o `null` sin suscripción. El cambio llega a la UI por el WebSocket, igual que el resto de fichas en vivo.
+- **Supuesto por verificar**: el esquema de `rate_limits` sale de la documentación de Claude Code, no de un payload real capturado en este repositorio (como A-01 en 1.16). Hay que fijar fixtures con una lectura real antes de dar el criterio por cerrado.
+- Fuera de alcance: historial de consumo de la cuota y previsión de cuándo se agotará (con 2.7), avisos al acercarse al límite (1A.1 y 7.3), Presupuestos por porcentaje de cuota (1.15 sigue siendo en USD), el `spend_limit` de las pasarelas de Claude Code y cambiar el cálculo del Coste estimado de una cuenta de suscripción (sigue siendo el equivalente a las Tarifas de la API).
 
 **Stack típico usado por estos proyectos:** servidor en Bun/TypeScript o Python (uv), SQLite, cliente Vue 3 o React, comunicación por WebSocket.
 
@@ -632,6 +651,7 @@ El coste solo tiene sentido frente a lo que se obtuvo:
 | Eficiencia de la caché de prompts (tasa, ahorro neto, reescrituras) | Medio-Alto | Baja-Media | 1 (MVP) |
 | Presupuestos con aviso y parada del agente | Alto | Media | 1 (MVP) |
 | Alerta visual y sonora cuando una Sesión espera a la persona usuaria | Muy alto | Baja-Media | 1 (MVP) |
+| Ficha de uso de la suscripción (% pendiente y reinicio) y retirada de la ficha Herramientas | Alto (con suscripción) | Media (necesita statusLine) | 1 (MVP) |
 | Atención requerida (bandeja, notificaciones del sistema, fricción) | Alto | Baja-Media | 1A |
 | Importación del historial previo desde los Transcripts | Alto | Media | 1A |
 | Cambios de código por Sesión (ficheros, commits, PRs) | Alto | Media | 1A |
@@ -687,7 +707,7 @@ El coste solo tiene sentido frente a lo que se obtuvo:
 
 Hecho (ver `mvp-fase1.md`): esquema de Evento, ingesta + SQLite + WebSocket, board, detalle de Sesión, Bloqueos, Estado de los tests y uso de skills.
 
-1. Cerrar la Fase 1: rebanada 3b y los puntos 1.11 a 1.16 (exportación OTLP, evaluación humana, enmascarado y Avisos de inyección, caché de prompts, presupuestos y alerta de Sesiones que esperan). 1.16 (Sesiones que esperan) está hecha; `PreCompact` queda para 1A.3.
+1. Cerrar la Fase 1: rebanada 3b y los puntos 1.11 a 1.17 (exportación OTLP, evaluación humana, enmascarado y Avisos de inyección, caché de prompts, presupuestos, alerta de Sesiones que esperan y uso de la suscripción). 1.16 (Sesiones que esperan) está hecha; `PreCompact` queda para 1A.3.
 2. Atención requerida (1A.1): bandeja, notificaciones del sistema y métrica de fricción sobre la Actividad *Esperando* de 1.16.
 3. Importación del historial previo (1A.8) y salud de la ingesta (1A.7), para que los datos estén completos y sean fiables.
 4. Cambios de código por Sesión (1A.2) y detección de fricción (1A.4).
