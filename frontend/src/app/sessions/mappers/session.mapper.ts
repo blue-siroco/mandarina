@@ -7,6 +7,7 @@ import {
   SessionSummary,
   TokenUsage,
   ToolCallStatus,
+  WaitingReason,
 } from '../models/session';
 import { CacheEfficiencyDto, toCache } from '../../usage/mappers/usage-metrics.mapper';
 
@@ -26,6 +27,14 @@ export interface SessionSummaryDto {
   harness: string;
   state: SessionState;
   activity: SessionActivity | null;
+  /** Opcional para aceptar backends anteriores a la rebanada 16. */
+  waiting?: {
+    since: string;
+    reason: WaitingReason;
+    tool: string | null;
+    summary: string | null;
+    subagent: { id: string; type: string | null } | null;
+  } | null;
   current_tool: { name: string; summary: string | null } | null;
   model: string | null;
   started_at: string;
@@ -74,7 +83,12 @@ export interface SessionDetailDto extends SessionSummaryDto {
     cost_usd: number | null;
     gap_ms: number | null;
   }>;
-  usage: { tokens: TokenUsageDto; estimated_cost_usd: number | null; requests: number; models: string[] } | null;
+  usage: {
+    tokens: TokenUsageDto;
+    estimated_cost_usd: number | null;
+    requests: number;
+    models: string[];
+  } | null;
   context: { model: string; used: number; limit: number } | null;
   tools: Array<{ name: string; count: number }>;
   turns: Array<{
@@ -99,7 +113,12 @@ export interface SessionDetailDto extends SessionSummaryDto {
     model: string | null;
     tokens: TokenUsageDto | null;
     task: { description: string | null; prompt: string | null } | null;
-    tools: Array<{ name: string; summary: string | null; started_at: string; status: ToolCallStatus }>;
+    tools: Array<{
+      name: string;
+      summary: string | null;
+      started_at: string;
+      status: ToolCallStatus;
+    }>;
     result: string | null;
   }>;
   blocks: Array<{
@@ -136,6 +155,13 @@ export function toSessionSummary(dto: SessionSummaryDto): SessionSummary {
     harness: dto.harness,
     state: dto.state,
     activity: dto.activity,
+    waiting: dto.waiting
+      ? {
+          ...dto.waiting,
+          since: date(dto.waiting.since),
+          subagent: dto.waiting.subagent && { ...dto.waiting.subagent },
+        }
+      : null,
     currentTool: dto.current_tool,
     model: dto.model,
     startedAt: date(dto.started_at),
@@ -215,7 +241,12 @@ export function toSessionDetail(dto: SessionDetailDto): SessionDetail {
       model: s.model,
       tokens: s.tokens && toTokenUsage(s.tokens),
       task: s.task && { ...s.task },
-      tools: s.tools.map((t) => ({ name: t.name, summary: t.summary, startedAt: date(t.started_at), status: t.status })),
+      tools: s.tools.map((t) => ({
+        name: t.name,
+        summary: t.summary,
+        startedAt: date(t.started_at),
+        status: t.status,
+      })),
       result: s.result,
     })),
     blocks: dto.blocks.map((b) => ({

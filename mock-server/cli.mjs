@@ -26,6 +26,7 @@ if (mode === 'serve') {
     intervalMs: Number(values.interval ?? process.env.MOCK_INTERVAL_MS ?? 1500),
     historySize: Number(values.history),
     seed: Number(values.seed ?? 1),
+    waitingSeeds: true,
   });
   const { port } = await api.listen(Number(values.port));
   out(`Mock de Mandarina en http://0.0.0.0:${port} (API /api/v1, WebSocket /ws)`);

@@ -1,0 +1,39 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.waiting {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  margin: 0;
+  font-size: 13px;
+}
+
+// El estado se dice con texto además del color (AC-94).
+.waiting__badge {
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--warn);
+  color: var(--bg);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.waiting__reason {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.waiting__since {
+  color: var(--text-muted);
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}

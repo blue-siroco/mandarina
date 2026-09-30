@@ -270,6 +270,25 @@ describe('AC-19, AC-31, AC-43: SessionDetailPage', () => {
     expect(header).toContain('Trabajando… Bash · npm test');
   });
 
+  it('AC-94: Esperando muestra el badge, el motivo completo y cuánto lleva esperando', async () => {
+    const since = new Date(Date.now() - 10 * 60_000);
+    state$.next(
+      withData({
+        detail: sessionDetail({
+          activity: 'waiting',
+          waiting: { since, reason: 'permission', tool: 'Bash', summary: 'npm run build', subagent: null },
+        }),
+      }),
+    );
+    const harness = await render();
+    const header = el(harness).querySelector('.detail__header')!;
+
+    expect(text(header.querySelector('[data-testid="waiting-badge"]'))).toBe('Esperando');
+    expect(text(header.querySelector('[data-testid="waiting-reason"]'))).toBe('Pide permiso para Bash: npm run build');
+    expect(text(header.querySelector('[data-testid="waiting-since"]'))).toMatch(/^desde hace \d+ min$/);
+    expect(header.querySelector('[data-testid="working"]')).toBeNull();
+  });
+
   it('el Resumen tiene contexto, herramientas, tokens, carriles y Eventos', async () => {
     state$.next(withData());
     const harness = await render();

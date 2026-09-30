@@ -13,7 +13,7 @@ import { createSimulation } from './scenario.mjs';
  */
 export async function sendSimulatedEvents({ target, count = 0, intervalMs = 1000, seed = Date.now(), log = () => {} }) {
   // Con secretos: así se ve el enmascarado del backend en acción.
-  const simulation = createSimulation({ seed, includeSecrets: true });
+  const simulation = createSimulation({ seed, includeSecrets: true, waits: true });
   const url = `${target.replace(/\/+$/, '')}/api/v1/events`;
   const stats = { sent: 0, accepted: 0, rejected: 0, failed: 0 };
 

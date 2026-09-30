@@ -216,3 +216,68 @@ test('AC-02: con stdin inválido sale con 0 en silencio', async () => {
   assert.equal(result.code, 0);
   assert.equal(result.stdout, '');
 });
+
+// AC-85 / AC-86: hooks de espera (ADR-0011). Nunca escriben en stdout ni deciden el permiso.
+const fixtureText = (name) => readFileSync(new URL(`./fixtures/${name}.json`, import.meta.url), 'utf8');
+const waitFixtures = ['PermissionRequest', 'Notification-permission', 'Notification-idle'];
+
+async function sendRaw(stdin) {
+  let received;
+  const server = await listen((req, res) => {
+    let body = '';
+    req.on('data', (d) => (body += d));
+    req.on('end', () => {
+      received = { raw: body, event: JSON.parse(body) };
+      res.writeHead(202).end('{"id":"1"}');
+    });
+  });
+  const { port } = server.address();
+  const result = await runHook(stdin, { MANDARINA_URL: `http://127.0.0.1:${port}`, MANDARINA_PROJECT: 'demo' });
+  server.close();
+  return { result, received };
+}
+
+for (const name of waitFixtures) {
+  test(`AC-85: ${name} se envía sin escribir en stdout y sale con 0`, async () => {
+    const { result, received } = await sendRaw(fixtureText(name));
+    assert.equal(result.code, 0);
+    assert.equal(result.stdout, '');
+    assert.equal(received.event.event_type, name.startsWith('Permission') ? 'permission.requested' : 'session.notified');
+    assert.equal('block' in received.event, false);
+  });
+
+  test(`AC-85: ${name} con el servidor apagado sale con 0, en silencio y rápido`, async () => {
+    const result = await runHook(fixtureText(name), { MANDARINA_URL: 'http://127.0.0.1:9' });
+    assert.equal(result.code, 0);
+    assert.equal(result.stdout, '');
+    assert.ok(result.elapsed < 3000, `tardó ${result.elapsed} ms`);
+  });
+}
+
+test('AC-85: un PermissionRequest no dispara la consulta de Presupuestos', async () => {
+  let gets = 0;
+  const server = createServer((req, res) => {
+    if (req.method === 'GET') gets += 1;
+    res.writeHead(202).end('{"id":"1"}');
+  });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  await runHook(fixtureText('PermissionRequest'), { MANDARINA_URL: `http://127.0.0.1:${server.address().port}` });
+  server.close();
+  assert.equal(gets, 0);
+});
+
+test('AC-86: el secreto de tool_input.command sale enmascarado y tool_name se conserva', async () => {
+  const { received } = await sendRaw(fixtureText('PermissionRequest-secret'));
+  assert.equal(received.raw.includes('supersecreto'), false);
+  assert.equal(received.event.payload.tool_input.command, 'API_KEY=[REDACTED_PASSWORD] npm run deploy');
+  assert.equal(received.event.tool_name, 'Bash');
+  assert.equal(received.event.payload.tool_input.description, 'Deploy');
+});
+
+test('AC-86: el secreto y el email del message de Notification salen enmascarados', async () => {
+  const { received } = await sendRaw(fixtureText('Notification-secret'));
+  assert.equal(received.raw.includes('supersecreto'), false);
+  assert.equal(received.raw.includes('ana@example.com'), false);
+  assert.equal(received.event.payload.message, 'Permiso para enviar a [REDACTED_EMAIL] con API_KEY=[REDACTED_PASSWORD]');
+  assert.equal(received.event.payload.notification_type, 'permission_prompt');
+});

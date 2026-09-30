@@ -17,6 +17,11 @@ const EVENT_TYPES = {
   SubagentStop: 'subagent.stopped',
   Stop: 'turn.ended',
   SessionEnd: 'session.ended',
+  // Hooks de espera (ADR-0011): solo observan. No se evalúan Reglas ni Presupuestos
+  // (rules.mjs solo mira PreToolUse; BUDGET_HOOKS no los incluye) y el hook no
+  // escribe en stdout, así que no toca el diálogo de permiso de Claude Code.
+  PermissionRequest: 'permission.requested',
+  Notification: 'session.notified',
 };
 
 // El hook corre en el host (Windows, macOS o Linux) pero los tests pueden

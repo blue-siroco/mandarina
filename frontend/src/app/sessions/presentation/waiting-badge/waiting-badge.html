@@ -1,0 +1,11 @@
+<p class="waiting">
+  @if (!reasonOnly()) {
+    <span class="waiting__badge" data-testid="waiting-badge">Esperando</span>
+  }
+  <!-- El motivo va en una sola línea: el espacio en blanco entre trozos se vería como espacio en el texto. -->
+  <!-- prettier-ignore -->
+  <span class="waiting__reason" data-testid="waiting-reason">@for (part of parts(); track $index) {@if (part.code) {<code>{{ part.text }}</code>} @else {{{ part.text }}}}</span>
+  @if (since(); as s) {
+    <span class="waiting__since" data-testid="waiting-since">{{ s }}</span>
+  }
+</p>

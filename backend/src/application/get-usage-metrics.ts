@@ -16,7 +16,7 @@ export interface TokenUsageView {
   cache_creation: number;
 }
 
-export type SessionCondition = 'working' | 'paused' | 'orphaned' | 'closed';
+export type SessionCondition = 'working' | 'paused' | 'waiting' | 'orphaned' | 'closed';
 
 /** `MetricsSlice` de `spec/api-spec.yaml` (AC-38). */
 export interface MetricsSlice {
@@ -112,7 +112,8 @@ function contributionsOf({ rows, core, transcript }: SessionData, since: Date, s
   );
 
   const condition = conditionOf(core);
-  if (condition !== 'closed') contributions.push({ ...base, model: latestModel(main), [condition]: 1 });
+  // `MetricsSlice.sessions` no tiene Esperando (AC-92 lo cuenta solo en el total): en un desglose no suma a nada.
+  if (condition !== 'closed') contributions.push({ ...base, model: latestModel(main), ...(condition === 'waiting' ? {} : { [condition]: 1 }) });
   for (const life of core.running_subagents_list) {
     contributions.push({ ...base, model: latestModel(entriesOf(life.subagent_id)), subagents_running: 1 });
   }
@@ -178,7 +179,7 @@ export class GetUsageMetrics {
     const contributions = selected.flatMap((s) => contributionsOf(s, since, seen));
     const total = aggregate(contributions);
 
-    const sessions = { total: selected.length, working: 0, paused: 0, orphaned: 0, closed: 0 };
+    const sessions = { total: selected.length, working: 0, paused: 0, waiting: 0, orphaned: 0, closed: 0 };
     for (const s of selected) sessions[conditionOf(s.core)] += 1;
     const byModel = [...total.usage_by_model]
       .map(([model, usage]) => {

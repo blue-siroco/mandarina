@@ -12,6 +12,8 @@ export const EVENT_TYPES = [
   'turn.ended',
   'session.ended',
   'tool.blocked',
+  'permission.requested',
+  'session.notified',
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];

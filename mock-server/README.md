@@ -13,6 +13,7 @@ Herramientas para probar Mandarina **sin Claude Code** y, si hace falta, **sin b
 - Avisos de inyección de páginas web con contenido hostil (`/api/v1/injection-warnings`, con descarte, y `warnings` en los Eventos, AC-63 y AC-64) y estadísticas de Enmascarado sintéticas (`/api/v1/masking-stats`, AC-65);
 - eficiencia de la caché de prompts (`cache` en las métricas y su desglose, en el detalle de Sesión con sus Reescrituras y por Lanzamiento y Tipo de Subagente, AC-69 a AC-73), con las mismas fórmulas del backend sobre los tokens sintéticos;
 - Presupuestos en memoria (`/api/v1/budgets`, sus excepciones y `/api/v1/budgets/status` para el hook) con `budget.state` por el WebSocket ante cada transición (AC-76 a AC-81). El gasto es sintético y de céntimos: para ver un aviso crea un Presupuesto de un céntimo;
+- Sesiones **Esperando** (ADR-0011, AC-93): `PermissionRequest`, `Notification` (permiso e inactividad) y preguntas abiertas con `AskUserQuestion`, con `activity = "waiting"` y `waiting` en la lista y el detalle de Sesión y `sessions.waiting` en las métricas, con las mismas reglas que el backend (`lib/mock-waiting.mjs`);
 - ~10 % de Sesiones Huérfanas, que terminan sin `SessionEnd`.
 
 Los payloads se generan en formato **nativo de Claude Code** y pasan por el normalizador real del Adaptador (`adapters/claude-code/lib/normalize.mjs`), así que el mock también ejercita el mapeo hook → Evento.
@@ -35,6 +36,20 @@ docker compose --profile simulate up
 En PowerShell, fija la variable antes: `$env:API_TARGET='http://mock-api:4000'`.
 
 El mock también queda publicado en `http://127.0.0.1:4001` (`MOCK_PORT`) para probarlo con `curl`.
+
+## Sesiones que esperan
+
+- `serve` arranca con tres Sesiones semilla ya esperando (Eventos de los últimos ~2 minutos; después siguen Esperando, pasan a Inactivas a los 5 min y a Huérfanas, sin espera, a los 30):
+
+  | Sesión (`session_id`) | Espera |
+  |---|---|
+  | `seed-espera-permiso-0001` | permiso para `Bash` (`npm install --save-dev vitest`) |
+  | `seed-espera-pregunta-0002` | pregunta abierta de `AskUserQuestion` |
+  | `seed-espera-subagente-0003` | permiso para `Write` pedido por el Subagente `agent-5eed01` (`Plan`) |
+
+- El simulador (`serve` en vivo y `send`) intercala esperas al azar: un `PermissionRequest` tras un `PreToolUse` (a veces con su `Notification` `permission_prompt`), una notificación `idle_prompt` y una pregunta `AskUserQuestion`. La espera termina con el siguiente Evento (`tool.post`, `prompt.submitted`, `turn.ended`…). Las esperas no alteran las Sesiones que genera cada `--seed`: solo añaden Eventos.
+- Para forzar una a mano contra `serve`: `POST /api/v1/events` con `event_type = permission.requested` (o `session.notified`) y, para terminarla, un `tool.post` del mismo carril.
+- La UI las ve por `/ws` como `event.ingested` y por `GET /api/v1/sessions`.
 
 ## Opciones
 

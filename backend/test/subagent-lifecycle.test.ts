@@ -149,6 +149,11 @@ describe('AC-33: pistas del payload', () => {
       tool_error: false,
       skill_name: null,
       session_agent_type: null,
+      // Pistas de las esperas (ADR-0011): nulas fuera de sus Tipos de evento.
+      notification_type: null,
+      wait_message: null,
+      permission_input: null,
+      wait_question: null,
     });
     expect(hintsOf('tool.post', 'Task', { tool_use_id: 't1', tool_response: { status: 'async_launched', agentId: 'a1' } })).toMatchObject({
       launched_agent_id: 'a1',

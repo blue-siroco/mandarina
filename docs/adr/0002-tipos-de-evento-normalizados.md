@@ -5,3 +5,4 @@ Los Eventos se guardan con un Tipo de evento normalizado (`session.started`, `to
 ## Consequences
 
 - El hook `Stop` de Claude Code se mapea a `turn.ended`, no a un "fin de sesión": se dispara al acabar cada Turno. El fin de la Sesión es solo `session.ended`.
+- ADR-0006 añade `tool.blocked`; ADR-0011 añade `permission.requested` (`PermissionRequest`) y `session.notified` (`Notification`), que alimentan la Actividad *Esperando*.

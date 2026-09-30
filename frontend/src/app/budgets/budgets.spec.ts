@@ -24,14 +24,23 @@ import {
   stubBudgetSource,
 } from './testing/budget-fixtures';
 
-const input = { scope: 'global_day', project: null, limitUsd: 50, warnRatio: 0.8, action: 'stop', enabled: true } as const;
+const input = {
+  scope: 'global_day',
+  project: null,
+  limitUsd: 50,
+  warnRatio: 0.8,
+  action: 'stop',
+  enabled: true,
+} as const;
 
 describe('AC-76: HttpBudgetSource', () => {
   let source: HttpBudgetSource;
   let http: HttpTestingController;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), HttpBudgetSource] });
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting(), HttpBudgetSource],
+    });
     source = TestBed.inject(HttpBudgetSource);
     http = TestBed.inject(HttpTestingController);
   });
@@ -49,7 +58,14 @@ describe('AC-76: HttpBudgetSource', () => {
     source.create(input).subscribe();
     const request = http.expectOne('/api/v1/budgets');
     expect(request.request.method).toBe('POST');
-    expect(request.request.body).toStrictEqual({ scope: 'global_day', project: null, limit_usd: 50, warn_ratio: 0.8, action: 'stop', enabled: true });
+    expect(request.request.body).toStrictEqual({
+      scope: 'global_day',
+      project: null,
+      limit_usd: 50,
+      warn_ratio: 0.8,
+      action: 'stop',
+      enabled: true,
+    });
     request.flush(budgetDto());
   });
 
@@ -73,7 +89,13 @@ describe('AC-76: HttpBudgetSource', () => {
     expect(created).toStrictEqual(allowance());
 
     source.addAllowance('b1', { project: 'demo' }).subscribe();
-    http.expectOne('/api/v1/budgets/b1/allowances').flush(budgetAllowanceDto({ session_id: null, project: 'demo', until: '2026-09-26T00:00:00.000Z' }));
+    http.expectOne('/api/v1/budgets/b1/allowances').flush(
+      budgetAllowanceDto({
+        session_id: null,
+        project: 'demo',
+        until: '2026-09-26T00:00:00.000Z',
+      }),
+    );
 
     source.removeAllowance('b1', 'al1').subscribe();
     const del = http.expectOne('/api/v1/budgets/b1/allowances/al1');
@@ -105,7 +127,11 @@ describe('AC-82: WatchBudgets', () => {
     const list = budgetList();
     const loaded = reduceBudgets(INITIAL_BUDGETS, { ok: true, list });
     expect(loaded).toStrictEqual({ items: list.items, loaded: true, failed: false });
-    expect(reduceBudgets(loaded, { ok: false })).toStrictEqual({ items: list.items, loaded: true, failed: true });
+    expect(reduceBudgets(loaded, { ok: false })).toStrictEqual({
+      items: list.items,
+      loaded: true,
+      failed: true,
+    });
   });
 
   it('pide la lista al suscribirse, cada 30 s, al llegar un budget.state y al refrescar', async () => {
@@ -118,7 +144,17 @@ describe('AC-82: WatchBudgets', () => {
 
     await vi.advanceTimersByTimeAsync(BUDGETS_REFRESH_MS);
     expect(lists).toBe(2);
-    changes.next({ budgetId: 'b1', scope: 'global_day', project: null, sessionId: null, action: 'stop', state: 'exceeded', previousState: 'within', spentUsd: 6, limitUsd: 5 });
+    changes.next({
+      budgetId: 'b1',
+      scope: 'global_day',
+      project: null,
+      sessionId: null,
+      action: 'stop',
+      state: 'exceeded',
+      previousState: 'within',
+      spentUsd: 6,
+      limitUsd: 5,
+    });
     expect(lists).toBe(3);
     watch.refresh();
     expect(lists).toBe(4);
@@ -157,7 +193,8 @@ describe('AC-76, AC-78: ManageBudgets', () => {
     });
     return { manage: TestBed.inject(ManageBudgets), calls: stub.calls, refreshed };
   }
-  const run = async <T>(observable: { subscribe: (next: (value: T) => void) => unknown }) => new Promise<T>((resolve) => observable.subscribe(resolve));
+  const run = async <T>(observable: { subscribe: (next: (value: T) => void) => unknown }) =>
+    new Promise<T>((resolve) => observable.subscribe(resolve));
 
   it('crea o edita según haya id, y refresca la lista', async () => {
     const { manage, calls, refreshed } = setup();
@@ -170,12 +207,38 @@ describe('AC-76, AC-78: ManageBudgets', () => {
 
   it('activa o desactiva y amplía el límite sin tocar el resto', async () => {
     const { manage, calls } = setup();
-    const original = budget({ limit_usd: 5, warn_ratio: 0.5, action: 'warn', project: null, scope: 'global_day' });
+    const original = budget({
+      limit_usd: 5,
+      warn_ratio: 0.5,
+      action: 'warn',
+      project: null,
+      scope: 'global_day',
+    });
     await run(manage.setEnabled(original, false));
     await run(manage.raiseLimit(original, 9));
     expect(calls.update).toStrictEqual([
-      ['b1', { scope: 'global_day', project: null, limitUsd: 5, warnRatio: 0.5, action: 'warn', enabled: false }],
-      ['b1', { scope: 'global_day', project: null, limitUsd: 9, warnRatio: 0.5, action: 'warn', enabled: true }],
+      [
+        'b1',
+        {
+          scope: 'global_day',
+          project: null,
+          limitUsd: 5,
+          warnRatio: 0.5,
+          action: 'warn',
+          enabled: false,
+        },
+      ],
+      [
+        'b1',
+        {
+          scope: 'global_day',
+          project: null,
+          limitUsd: 9,
+          warnRatio: 0.5,
+          action: 'warn',
+          enabled: true,
+        },
+      ],
     ]);
   });
 
@@ -191,9 +254,15 @@ describe('AC-76, AC-78: ManageBudgets', () => {
   });
 
   it('un fallo devuelve el mensaje del servidor y no refresca', async () => {
-    const error = new HttpErrorResponse({ status: 400, error: { message: 'El límite debe ser un número mayor que 0' } });
+    const error = new HttpErrorResponse({
+      status: 400,
+      error: { message: 'El límite debe ser un número mayor que 0' },
+    });
     const { manage, refreshed } = setup({ create: () => throwError(() => error) });
-    expect(await run(manage.save(null, input))).toStrictEqual({ ok: false, message: 'El límite debe ser un número mayor que 0' });
+    expect(await run(manage.save(null, input))).toStrictEqual({
+      ok: false,
+      message: 'El límite debe ser un número mayor que 0',
+    });
     expect(refreshed).not.toHaveBeenCalled();
   });
 
@@ -205,8 +274,21 @@ describe('AC-76, AC-78: ManageBudgets', () => {
 });
 
 describe('AC-83: qué avisa el peor Presupuesto', () => {
-  const near = budget({ id: 'n', scope: 'project_day', project: 'demo', limit_usd: 10, state: 'near', subjects: [budgetSubjectDto({ project: 'demo', spent_usd: 9, ratio: 0.9, state: 'near' })] });
-  const over = budget({ id: 'o', limit_usd: 50, state: 'exceeded', spent_usd: 52, subjects: [budgetSubjectDto({ spent_usd: 52, ratio: 1.04, state: 'exceeded' })] });
+  const near = budget({
+    id: 'n',
+    scope: 'project_day',
+    project: 'demo',
+    limit_usd: 10,
+    state: 'near',
+    subjects: [budgetSubjectDto({ project: 'demo', spent_usd: 9, ratio: 0.9, state: 'near' })],
+  });
+  const over = budget({
+    id: 'o',
+    limit_usd: 50,
+    state: 'exceeded',
+    spent_usd: 52,
+    subjects: [budgetSubjectDto({ spent_usd: 52, ratio: 1.04, state: 'exceeded' })],
+  });
 
   it('elige el Superado sobre el Cerca y cuenta los demás', () => {
     const worst = worstAlert([near, over]);
@@ -216,13 +298,18 @@ describe('AC-83: qué avisa el peor Presupuesto', () => {
 
   it('a igual estado manda la proporción más alta', () => {
     const lower = budget({ id: 'a', subjects: [budgetSubjectDto({ ratio: 0.9, state: 'near' })] });
-    const higher = budget({ id: 'b', subjects: [budgetSubjectDto({ ratio: 0.95, state: 'near' })] });
+    const higher = budget({
+      id: 'b',
+      subjects: [budgetSubjectDto({ ratio: 0.95, state: 'near' })],
+    });
     expect(worstAlert([lower, higher])?.budget.id).toBe('b');
   });
 
   it('ignora los Presupuestos desactivados, los ámbitos con excepción vigente y los Dentro', () => {
     const disabled = { ...over, enabled: false };
-    const allowed = budget({ subjects: [budgetSubjectDto({ state: 'exceeded', allowed: true, ratio: 2 })] });
+    const allowed = budget({
+      subjects: [budgetSubjectDto({ state: 'exceeded', allowed: true, ratio: 2 })],
+    });
     const within = budget({ subjects: [budgetSubjectDto({ state: 'within' })] });
     expect(alertsOf([disabled, allowed, within])).toStrictEqual([]);
     expect(worstAlert([disabled, allowed, within])).toBeNull();
@@ -249,8 +336,16 @@ describe('AC-83: AlertSound', () => {
     currentTime: number;
     destination: object;
     started: number[];
-    createOscillator(): { frequency: { value: number }; connect: () => unknown; start: (at: number) => void; stop: () => void };
-    createGain(): { gain: { setValueAtTime: () => void; exponentialRampToValueAtTime: () => void }; connect: (next: unknown) => unknown };
+    createOscillator(): {
+      frequency: { value: number };
+      connect: () => unknown;
+      start: (at: number) => void;
+      stop: () => void;
+    };
+    createGain(): {
+      gain: { setValueAtTime: () => void; exponentialRampToValueAtTime: () => void };
+      connect: (next: unknown) => unknown;
+    };
     resume(): Promise<void>;
   }
 
@@ -271,10 +366,21 @@ describe('AC-83: AlertSound', () => {
               destination: {},
               started: [],
               createOscillator: () => {
-                const oscillator = { frequency: { value: 0 }, connect: () => oscillator, start: () => frequencies.push(oscillator.frequency.value), stop: () => undefined };
+                const oscillator = {
+                  frequency: { value: 0 },
+                  connect: () => oscillator,
+                  start: () => frequencies.push(oscillator.frequency.value),
+                  stop: () => undefined,
+                };
                 return oscillator;
               },
-              createGain: () => ({ gain: { setValueAtTime: () => undefined, exponentialRampToValueAtTime: () => undefined }, connect: (next: unknown) => next }),
+              createGain: () => ({
+                gain: {
+                  setValueAtTime: () => undefined,
+                  exponentialRampToValueAtTime: () => undefined,
+                },
+                connect: (next: unknown) => next,
+              }),
               resume: () => Promise.resolve(),
             };
             return context as unknown as AudioContext;
@@ -306,6 +412,28 @@ describe('AC-83: AlertSound', () => {
     expect(near).toHaveLength(1);
     expect(frequencies).toHaveLength(2);
     expect(frequencies[0]).toBeLessThan(near[0]!);
+  });
+
+  it('AC-96: Esperando son dos tonos ascendentes, distintos de Cerca y Superado', () => {
+    const sound = setup();
+    document.dispatchEvent(new Event('keydown'));
+    sound.play('waiting');
+    const waiting = [...frequencies];
+    frequencies.length = 0;
+    sound.play('near');
+    sound.play('exceeded');
+    expect(waiting).toHaveLength(2);
+    expect(waiting[1]).toBeGreaterThan(waiting[0]!);
+    expect(frequencies).not.toContain(waiting[0]);
+    expect(frequencies).not.toContain(waiting[1]);
+  });
+
+  it('AC-96: comparte el interruptor de silencio con los avisos de Presupuesto', () => {
+    const sound = setup();
+    document.dispatchEvent(new Event('pointerdown'));
+    sound.setMuted(true);
+    sound.play('waiting');
+    expect(created).toBe(0);
   });
 
   it('silenciado no suena y se recuerda en el navegador', () => {

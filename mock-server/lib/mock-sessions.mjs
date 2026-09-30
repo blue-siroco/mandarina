@@ -32,6 +32,7 @@ const UNKNOWN_TASK = { description: null, prompt: null, result: null };
 import { isClosed } from './mock-closed.mjs';
 import { cacheView, isRewrite, rewriteCause, writeCost } from './mock-cache.mjs';
 import { subagentLives } from './mock-subagents.mjs';
+import { currentWait, lastProgress, toWaitingView } from './mock-waiting.mjs';
 
 const ms = (iso) => Date.parse(iso);
 const text = (v) => (typeof v === 'string' && v !== '' ? v : null);
@@ -76,12 +77,16 @@ function summarize(events, now) {
   const last = events.at(-1);
   const ended = isClosed(events);
   const lastMs = Math.max(...events.map((e) => ms(e.received_at)));
-  const rawActivity = IDLE_AFTER.has(last.event_type) ? 'paused' : 'working';
+  // Un aviso (permiso, notificación) no abre ni cierra el Turno (ADR-0011).
+  const rawActivity = IDLE_AFTER.has(lastProgress(events)?.event_type) ? 'paused' : 'working';
+  const wait = currentWait(events);
+  // Esperar no mantiene la Sesión Activa: tras 5 min pasa a Inactiva como una pausada.
+  const stateActivity = wait ? 'paused' : rawActivity;
   const quiet = now - lastMs;
   let state = 'idle';
   if (ended) state = 'closed';
   else if (quiet > ORPHAN_AFTER_MS) state = 'orphaned';
-  else if (quiet <= ACTIVE_WINDOW_MS || rawActivity === 'working') state = 'active';
+  else if (quiet <= ACTIVE_WINDOW_MS || stateActivity === 'working') state = 'active';
   const live = state === 'active' || state === 'idle';
 
   const pending = new Map();
@@ -113,9 +118,10 @@ function summarize(events, now) {
     directory: last.directory,
     harness: last.harness,
     state,
-    activity: live ? rawActivity : null,
+    activity: live ? (wait ? 'waiting' : rawActivity) : null,
+    waiting: live && wait ? toWaitingView(wait, lives) : null,
     current_tool:
-      live && rawActivity === 'working' && open?.tool_name
+      live && (wait || rawActivity === 'working') && open?.tool_name
         ? { name: open.tool_name, summary: summarizeInput(open.tool_name, open.payload) }
         : null,
     model,

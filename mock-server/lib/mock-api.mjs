@@ -14,10 +14,10 @@ import { listMcpInvocations } from './mock-mcp.mjs';
 import { createEvaluationBook, isObjectType } from './mock-evaluations.mjs';
 import { createInjectionBook } from './mock-injection.mjs';
 import { exporterStatus } from './mock-exporter.mjs';
-import { createSimulation } from './scenario.mjs';
+import { createSimulation, waitingSeedEvents } from './scenario.mjs';
 
 const REQUIRED = ['schema_version', 'harness', 'project', 'directory', 'session_id', 'event_type', 'native_event_type', 'occurred_at', 'payload'];
-const EVENT_TYPES = new Set(['session.started', 'prompt.submitted', 'tool.pre', 'tool.post', 'subagent.started', 'subagent.stopped', 'turn.ended', 'session.ended', 'tool.blocked']);
+const EVENT_TYPES = new Set(['session.started', 'prompt.submitted', 'tool.pre', 'tool.post', 'subagent.started', 'subagent.stopped', 'turn.ended', 'session.ended', 'tool.blocked', 'permission.requested', 'session.notified']);
 const SESSION_STATES = new Set(['active', 'idle', 'orphaned', 'closed']);
 const TEST_KINDS = new Set(['unit', 'e2e']);
 
@@ -56,9 +56,10 @@ function readJson(req) {
  * @param {number} [options.intervalMs] Cada cuánto se genera un Evento en vivo; 0 lo desactiva.
  * @param {number} [options.historySize] Eventos precargados al arrancar.
  * @param {number} [options.seed] Semilla de la simulación.
+ * @param {boolean} [options.waitingSeeds] Añade tres Sesiones que esperan (permiso, pregunta y Subagente; AC-93).
  */
-export function createMockApi({ intervalMs = 1500, historySize = 40, seed = 1 } = {}) {
-  const simulation = createSimulation({ seed });
+export function createMockApi({ intervalMs = 1500, historySize = 40, seed = 1, waitingSeeds = false } = {}) {
+  const simulation = createSimulation({ seed, waits: waitingSeeds });
   /** Más antiguo primero; se sirve invertido. */
   const events = [];
   const book = createEvaluationBook();
@@ -308,6 +309,8 @@ export function createMockApi({ intervalMs = 1500, historySize = 40, seed = 1 } 
     const at = new Date(start + i * 5000);
     ingest(simulation.next(at), at);
   }
+  // Sesiones que ya esperan al arrancar: permiso, pregunta y Subagente (AC-93).
+  if (waitingSeeds) for (const event of waitingSeedEvents(new Date())) ingest(event, new Date(event.occurred_at));
 
   return {
     events,

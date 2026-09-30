@@ -82,7 +82,14 @@ export interface UsageQuery {
 export interface UsageMetrics {
   since: Date;
   generatedAt: Date;
-  sessions: { total: number; working: number; paused: number; orphaned: number; closed: number };
+  sessions: {
+    total: number;
+    working: number;
+    paused: number;
+    waiting: number;
+    orphaned: number;
+    closed: number;
+  };
   subagentsRunning: number;
   activity: { events: number; toolCalls: number; prompts: number; blocks: number };
   tokens: TokenUsage;

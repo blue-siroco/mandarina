@@ -3,9 +3,7 @@ import { EVENT_CATEGORIES, EVENT_TYPE_LABELS, inCategory, maskedSegments, summar
 
 describe('AC-17: summarizeEvent', () => {
   it('resume una herramienta con su nombre y su entrada', () => {
-    expect(summarizeEvent(observedEvent({ toolName: 'Bash', payload: { tool_input: { command: 'npm test' } } }))).toBe(
-      'Bash · npm test',
-    );
+    expect(summarizeEvent(observedEvent({ toolName: 'Bash', payload: { tool_input: { command: 'npm test' } } }))).toBe('Bash · npm test');
   });
 
   it('usa solo el nombre si no hay entrada', () => {
@@ -13,17 +11,28 @@ describe('AC-17: summarizeEvent', () => {
   });
 
   it('resume un prompt con su primera línea', () => {
-    const prompt = observedEvent({ eventType: 'prompt.submitted', toolName: null, payload: { prompt: 'Hola\nmundo' } });
+    const prompt = observedEvent({
+      eventType: 'prompt.submitted',
+      toolName: null,
+      payload: { prompt: 'Hola\nmundo' },
+    });
     expect(summarizeEvent(prompt)).toBe('Hola');
   });
 
   it('muestra el tipo de Subagente', () => {
-    const sub = observedEvent({ eventType: 'subagent.started', toolName: null, payload: { agent_type: 'Explore' } });
+    const sub = observedEvent({
+      eventType: 'subagent.started',
+      toolName: null,
+      payload: { agent_type: 'Explore' },
+    });
     expect(summarizeEvent(sub)).toBe('Explore');
   });
 
   it('resume también un Bloqueo', () => {
-    const blocked = observedEvent({ eventType: 'tool.blocked', payload: { tool_input: { command: 'rm -rf /' } } });
+    const blocked = observedEvent({
+      eventType: 'tool.blocked',
+      payload: { tool_input: { command: 'rm -rf /' } },
+    });
     expect(summarizeEvent(blocked)).toBe('Bash · rm -rf /');
   });
 
@@ -42,6 +51,7 @@ describe('AC-17: categorías', () => {
       'Sesión',
       'Turnos',
       'Bloqueos',
+      'Esperas',
       'MCP',
       'Avisos',
     ]);
@@ -87,7 +97,12 @@ describe('AC-17: maskedSegments', () => {
 });
 
 describe('AC-36: resumen de los Eventos de Subagente', () => {
-  const subagent = { type: 'e2e-builder', description: 'generar tests del AC-28', durationMs: null, internal: false };
+  const subagent = {
+    type: 'e2e-builder',
+    description: 'generar tests del AC-28',
+    durationMs: null,
+    internal: false,
+  };
 
   it('el inicio muestra el Tipo y la tarea', () => {
     const started = observedEvent({ eventType: 'subagent.started', toolName: null, subagent });
@@ -95,12 +110,21 @@ describe('AC-36: resumen de los Eventos de Subagente', () => {
   });
 
   it('el fin añade la duración', () => {
-    const stopped = observedEvent({ eventType: 'subagent.stopped', toolName: null, subagent: { ...subagent, durationMs: 180_000 } });
+    const stopped = observedEvent({
+      eventType: 'subagent.stopped',
+      toolName: null,
+      subagent: { ...subagent, durationMs: 180_000 },
+    });
     expect(summarizeEvent(stopped)).toBe('e2e-builder · generar tests del AC-28 · 3 min');
   });
 
   it('sin Tipo ni tarea sigue leyendo el payload', () => {
-    const legacy = observedEvent({ eventType: 'subagent.stopped', toolName: null, payload: { agent_type: 'Plan' }, subagent: null });
+    const legacy = observedEvent({
+      eventType: 'subagent.stopped',
+      toolName: null,
+      payload: { agent_type: 'Plan' },
+      subagent: null,
+    });
     expect(summarizeEvent(legacy)).toBe('Plan');
     const internal = observedEvent({
       eventType: 'subagent.stopped',
@@ -112,7 +136,10 @@ describe('AC-36: resumen de los Eventos de Subagente', () => {
 });
 
 describe('AC-43: Eventos de Herramientas MCP', () => {
-  const navigate = observedEvent({ toolName: 'mcp__playwright__browser_navigate', payload: { tool_input: { url: 'http://localhost:4200' } } });
+  const navigate = observedEvent({
+    toolName: 'mcp__playwright__browser_navigate',
+    payload: { tool_input: { url: 'http://localhost:4200' } },
+  });
 
   it('se resumen como servidor · herramienta · entrada', () => {
     expect(summarizeEvent(navigate)).toBe('playwright · browser_navigate · http://localhost:4200');
@@ -128,7 +155,12 @@ describe('AC-43: Eventos de Herramientas MCP', () => {
 });
 
 describe('AC-68: categoría Avisos', () => {
-  const warning = (dismissed: boolean) => ({ id: 'e:p', pattern: 'fake-system-tag', severity: 'high' as const, dismissed });
+  const warning = (dismissed: boolean) => ({
+    id: 'e:p',
+    pattern: 'fake-system-tag',
+    severity: 'high' as const,
+    dismissed,
+  });
 
   it('deja solo los Eventos con avisos vigentes, sea cual sea su Tipo', () => {
     expect(inCategory(observedEvent({ eventType: 'tool.post', warnings: [warning(false)] }), 'warnings')).toBe(true);
@@ -139,5 +171,36 @@ describe('AC-68: categoría Avisos', () => {
   it('un aviso descartado no cuenta', () => {
     expect(inCategory(observedEvent({ warnings: [warning(true)] }), 'warnings')).toBe(false);
     expect(inCategory(observedEvent({ warnings: [warning(true), warning(false)] }), 'warnings')).toBe(true);
+  });
+});
+
+describe('AC-97: Eventos de espera', () => {
+  const permission = observedEvent({
+    eventType: 'permission.requested',
+    toolName: 'Bash',
+    payload: { tool_input: { command: 'npm run build' } },
+  });
+  const notified = observedEvent({
+    eventType: 'session.notified',
+    toolName: null,
+    payload: { message: 'Claude necesita tu permiso', notification_type: 'permission_prompt' },
+  });
+
+  it('tienen etiqueta en español, no el identificador crudo', () => {
+    expect(EVENT_TYPE_LABELS['permission.requested']).toBe('Pide permiso');
+    expect(EVENT_TYPE_LABELS['session.notified']).toBe('Notificación');
+  });
+
+  it('el permiso resume herramienta y entrada; la notificación, su mensaje', () => {
+    expect(summarizeEvent(permission)).toBe('Bash · npm run build');
+    expect(summarizeEvent(notified)).toBe('Claude necesita tu permiso');
+    expect(summarizeEvent(observedEvent({ eventType: 'session.notified', toolName: null, payload: {} }))).toBeNull();
+  });
+
+  it('la categoría Esperas los incluye y las de herramientas no', () => {
+    expect(inCategory(permission, 'waits')).toBe(true);
+    expect(inCategory(notified, 'waits')).toBe(true);
+    expect(inCategory(permission, 'tools')).toBe(false);
+    expect(inCategory(observedEvent({ eventType: 'tool.pre' }), 'waits')).toBe(false);
   });
 });

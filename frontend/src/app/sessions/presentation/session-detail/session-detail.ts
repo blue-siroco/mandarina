@@ -1,5 +1,13 @@
 import { DatePipe } from '@angular/common';
-import { CUSTOM_ELEMENTS_SCHEMA, ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import {
+  CUSTOM_ELEMENTS_SCHEMA,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink, convertToParamMap } from '@angular/router';
 import '@lucia/info';
@@ -19,10 +27,20 @@ import { toolLabel } from '../../../shared/tool-summary';
 import { ToggleGroup } from '../../../shared/ui/toggle-group/toggle-group';
 import { ModelBadge } from '../../../shared/ui/model-badge/model-badge';
 import { StateDot } from '../../../shared/ui/state-dot/state-dot';
-import { EvaluationsOfSession, INITIAL_SESSION_EVALUATIONS } from '../../../evaluations/application/evaluations-of-session';
-import { Evaluation, EvaluationObjectType, evaluationKey } from '../../../evaluations/models/evaluation';
+import {
+  EvaluationsOfSession,
+  INITIAL_SESSION_EVALUATIONS,
+} from '../../../evaluations/application/evaluations-of-session';
+import {
+  Evaluation,
+  EvaluationObjectType,
+  evaluationKey,
+} from '../../../evaluations/models/evaluation';
 import { EvaluationControls } from '../../../evaluations/presentation/evaluation-controls/evaluation-controls';
-import { INITIAL_SKILL_INVOCATIONS, WatchSkillInvocations } from '../../../skills/application/watch-skill-invocations';
+import {
+  INITIAL_SKILL_INVOCATIONS,
+  WatchSkillInvocations,
+} from '../../../skills/application/watch-skill-invocations';
 import { SessionSkills } from '../../../skills/presentation/session-skills/session-skills';
 import { INITIAL_MCP, WatchMcpInvocations } from '../../../mcp/application/watch-mcp-invocations';
 import { SessionMcp } from '../../../mcp/presentation/session-mcp/session-mcp';
@@ -33,6 +51,7 @@ import { ActivityLanes } from '../activity-lanes/activity-lanes';
 import { ContextCard, TRANSCRIPT_UNAVAILABLE } from '../context-card/context-card';
 import { stateReason } from '../session-card/session-card';
 import { SubagentList } from '../subagent-list/subagent-list';
+import { WaitingBadge } from '../waiting-badge/waiting-badge';
 import { ToolBars } from '../tool-bars/tool-bars';
 
 export const TABS = [
@@ -72,15 +91,28 @@ function cacheDetail(cache: CacheEfficiency): string {
  * Fichas de tokens del detalle (design §6.3): entrada, salida, caché, peticiones y coste.
  * Con `cache` (AC-72) la ficha Caché da la tasa de acierto y el ahorro neto; sin él, el % leído.
  */
-export function tokenCards(usage: NonNullable<SessionDetail['usage']>, cache: CacheEfficiency | null = null): TokenCard[] {
+export function tokenCards(
+  usage: NonNullable<SessionDetail['usage']>,
+  cache: CacheEfficiency | null = null,
+): TokenCard[] {
   const { tokens } = usage;
   const input = tokens.input + tokens.cacheRead + tokens.cacheCreation;
   // Con la eficiencia del servidor manda su tasa; sin ella, el % leído de los tokens de la Sesión.
   const readShare = input > 0 ? tokens.cacheRead / input : null;
   const cacheRate = cache ? cache.hitRate : readShare;
   return [
-    { key: 'input', label: 'Entrada', value: formatCompact(input), detail: `${formatCompact(tokens.cacheCreation)} escritos en caché` },
-    { key: 'output', label: 'Salida', value: formatCompact(tokens.output), detail: usage.models.join(', ') },
+    {
+      key: 'input',
+      label: 'Entrada',
+      value: formatCompact(input),
+      detail: `${formatCompact(tokens.cacheCreation)} escritos en caché`,
+    },
+    {
+      key: 'output',
+      label: 'Salida',
+      value: formatCompact(tokens.output),
+      detail: usage.models.join(', '),
+    },
     {
       key: 'cache',
       label: 'Caché',
@@ -88,12 +120,20 @@ export function tokenCards(usage: NonNullable<SessionDetail['usage']>, cache: Ca
       detail: cache ? cacheDetail(cache) : `${formatCompact(tokens.cacheRead)} tokens leídos`,
       accent: cache && cache.savingsNetUsd < 0 ? undefined : 'ok',
     },
-    { key: 'requests', label: 'Peticiones', value: formatInteger(usage.requests), detail: 'Respuestas del modelo' },
+    {
+      key: 'requests',
+      label: 'Peticiones',
+      value: formatInteger(usage.requests),
+      detail: 'Respuestas del modelo',
+    },
     {
       key: 'cost',
       label: 'Coste estimado',
       value: usage.estimatedCostUsd === null ? '—' : formatCost(usage.estimatedCostUsd),
-      detail: usage.estimatedCostUsd === null ? 'Algún modelo no tiene Tarifa' : 'Según las Tarifas públicas',
+      detail:
+        usage.estimatedCostUsd === null
+          ? 'Algún modelo no tiene Tarifa'
+          : 'Según las Tarifas públicas',
       accent: 'brand',
     },
   ];
@@ -102,7 +142,22 @@ export function tokenCards(usage: NonNullable<SessionDetail['usage']>, cache: Ca
 /** Detalle de Sesión (AC-19). */
 @Component({
   selector: 'app-session-detail',
-  imports: [DatePipe, RouterLink, EventRows, StateDot, ModelBadge, ActivityLanes, ContextCard, ToolBars, ToggleGroup, SubagentList, SessionSkills, SessionMcp, EvaluationControls],
+  imports: [
+    WaitingBadge,
+    DatePipe,
+    RouterLink,
+    EventRows,
+    StateDot,
+    ModelBadge,
+    ActivityLanes,
+    ContextCard,
+    ToolBars,
+    ToggleGroup,
+    SubagentList,
+    SessionSkills,
+    SessionMcp,
+    EvaluationControls,
+  ],
   templateUrl: './session-detail.html',
   styleUrl: './session-detail.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -118,24 +173,36 @@ export class SessionDetailPage {
   private readonly watchSkills = inject(WatchSkillInvocations);
   private readonly watchMcp = inject(WatchMcpInvocations);
   private readonly evaluationsOfSession = inject(EvaluationsOfSession);
-  private readonly params = toSignal(this.route.queryParamMap, { initialValue: convertToParamMap({}) });
-
-  protected readonly state = toSignal(toObservable(this.id).pipe(switchMap((id) => this.watch.execute(id))), {
-    initialValue: INITIAL_DETAIL,
+  private readonly params = toSignal(this.route.queryParamMap, {
+    initialValue: convertToParamMap({}),
   });
+
+  protected readonly state = toSignal(
+    toObservable(this.id).pipe(switchMap((id) => this.watch.execute(id))),
+    {
+      initialValue: INITIAL_DETAIL,
+    },
+  );
   protected readonly skills = toSignal(
     toObservable(this.id).pipe(switchMap((sessionId) => this.watchSkills.execute({ sessionId }))),
     { initialValue: INITIAL_SKILL_INVOCATIONS },
   );
-  protected readonly mcp = toSignal(toObservable(this.id).pipe(switchMap((sessionId) => this.watchMcp.execute({ sessionId }))), {
-    initialValue: INITIAL_MCP,
-  });
+  protected readonly mcp = toSignal(
+    toObservable(this.id).pipe(switchMap((sessionId) => this.watchMcp.execute({ sessionId }))),
+    {
+      initialValue: INITIAL_MCP,
+    },
+  );
   /** Evaluaciones de la Sesión, de sus Turnos y de sus Subagentes; se cargan una vez (AC-57). */
   protected readonly evaluations = toSignal(
-    toObservable(this.id).pipe(switchMap((sessionId) => this.evaluationsOfSession.execute(sessionId))),
+    toObservable(this.id).pipe(
+      switchMap((sessionId) => this.evaluationsOfSession.execute(sessionId)),
+    ),
     { initialValue: INITIAL_SESSION_EVALUATIONS },
   );
-  protected readonly now = toSignal(timer(0, 5000).pipe(map(() => new Date())), { initialValue: new Date() });
+  protected readonly now = toSignal(timer(0, 5000).pipe(map(() => new Date())), {
+    initialValue: new Date(),
+  });
 
   protected readonly tab = computed<TabKey>(
     () => TABS.find((t) => t.key === this.params().get('pestana'))?.key ?? 'resumen',
@@ -164,7 +231,10 @@ export class SessionDetailPage {
   protected readonly durations = computed(() => {
     const detail = this.state().detail;
     return detail
-      ? { active: formatDuration(detail.activeDurationMs), clock: formatDuration(detail.clockDurationMs) }
+      ? {
+          active: formatDuration(detail.activeDurationMs),
+          clock: formatDuration(detail.clockDurationMs),
+        }
       : null;
   });
   protected readonly tokenCards = computed(() => {

@@ -6,7 +6,9 @@ info:
     Ingesta y consulta de Eventos normalizados (ver `CONTEXT.md` y `spec/mvp-fase1.md`).
 
     **Tiempo real:** el backend expone un WebSocket en `/ws`. Por cada Evento
-    aceptado envía a todos los clientes un mensaje `LiveMessage`.
+    aceptado envía a todos los clientes un mensaje `LiveMessage`. La Actividad
+    *Esperando* (ADR-0011) no tiene mensaje propio: los Eventos que la causan o
+    la terminan llegan como `event.ingested` y el cliente refresca `GET /sessions`.
 servers:
   - url: http://127.0.0.1:4000
 tags:
@@ -1022,6 +1024,7 @@ components:
         - harness
         - state
         - activity
+        - waiting
         - current_tool
         - model
         - started_at
@@ -1048,9 +1051,30 @@ components:
         harness: { type: string }
         state: { $ref: '#/components/schemas/SessionState' }
         activity:
-          description: Trabajando / En pausa; `null` en Sesiones Cerradas o Huérfanas.
+          description: Trabajando / En pausa / Esperando (ADR-0011); `null` en Sesiones Cerradas o Huérfanas.
           type: [string, 'null']
-          enum: [working, paused, null]
+          enum: [working, paused, waiting, null]
+        waiting:
+          description: Espera de la Sesión; `null` salvo con `activity = waiting` (AC-92). Textos ya enmascarados.
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [since, reason, tool, summary, subagent]
+              properties:
+                since: { type: string, format: date-time, description: '`occurred_at` del primer Evento que causó la espera.' }
+                reason: { type: string, enum: [permission, question, idle] }
+                tool: { type: [string, 'null'], description: Herramienta que pide permiso o hace la pregunta. }
+                summary: { type: [string, 'null'], description: Entrada resumida (comando, ruta), texto de la pregunta o mensaje. }
+                subagent:
+                  description: Subagente que espera; `null` si espera el agente principal.
+                  oneOf:
+                    - type: object
+                      required: [id, type]
+                      properties:
+                        id: { type: string }
+                        type: { type: [string, 'null'], description: Tipo de Subagente. }
+                    - { type: 'null' }
+            - { type: 'null' }
         current_tool:
           description: Herramienta en curso de una Sesión Trabajando.
           oneOf:
@@ -1254,6 +1278,7 @@ components:
             total: { type: integer, minimum: 0 }
             working: { type: integer, minimum: 0, description: Trabajando. }
             paused: { type: integer, minimum: 0, description: En pausa. }
+            waiting: { type: integer, minimum: 0, description: Esperando (AC-92); aparte de Trabajando y En pausa. }
             orphaned: { type: integer, minimum: 0, description: Huérfanas. }
             closed: { type: integer, minimum: 0, description: Cerradas. }
         subagents_running: { type: integer, minimum: 0, description: Subagentes en marcha; sin los internos (AC-34). }
@@ -1417,6 +1442,8 @@ components:
         - turn.ended
         - session.ended
         - tool.blocked
+        - permission.requested
+        - session.notified
     Block:
       description: Bloqueo aplicado por una Regla de bloqueo en el Adaptador (ADR-0004, ADR-0006).
       type: object

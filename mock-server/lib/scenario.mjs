@@ -64,6 +64,26 @@ export function createRandom(seed) {
   };
 }
 
+// Probabilidades de las esperas simuladas (solo con `waits`): por herramienta o por Turno.
+const PERMISSION_CHANCE = 0.1;
+const QUESTION_CHANCE = 0.1;
+const IDLE_CHANCE = 0.05;
+const QUESTIONS = [
+  { question: '¿Qué estrategia de migración prefieres?', header: 'Migración', options: [{ label: 'Incremental' }, { label: 'Big bang' }] },
+  { question: '¿Uso Vitest o Jest para estos tests?', header: 'Tests', options: [{ label: 'Vitest' }, { label: 'Jest' }] },
+];
+
+/** El agente pregunta a la persona usuaria con `AskUserQuestion`; la respuesta cierra la espera. */
+function questionPair(hook, rng) {
+  const tool_input = { questions: [rng.pick(QUESTIONS)] };
+  const tool_use_id = `toolu_${rng.hex(12)}`;
+  const answers = { [tool_input.questions[0].question]: tool_input.questions[0].options[0].label };
+  return [
+    hook('PreToolUse', { tool_name: 'AskUserQuestion', tool_input, tool_use_id }),
+    hook('PostToolUse', { tool_name: 'AskUserQuestion', tool_input, tool_response: { questions: tool_input.questions, answers }, tool_use_id }),
+  ];
+}
+
 // Comandos que alguna Regla de bloqueo impide, para que la simulación muestre Bloqueos.
 const DANGEROUS_COMMANDS = [
   'rm -rf /',
@@ -182,7 +202,7 @@ function toolCall(rng, directory, includeSecrets) {
 const blockOf = (native) => evaluate(native);
 
 /** Secuencia completa de payloads nativos de una Sesión, en orden. */
-export function sessionScript(rng, { includeSecrets = false } = {}) {
+export function sessionScript(rng, { includeSecrets = false, waits = false } = {}) {
   const project = rng.pick(PROJECTS);
   const sessionId = `${rng.hex(8)}-${rng.hex(4)}-${rng.hex(4)}-${rng.hex(4)}-${rng.hex(12)}`;
   const base = {
@@ -192,19 +212,34 @@ export function sessionScript(rng, { includeSecrets = false } = {}) {
     permission_mode: 'default',
   };
   const hook = (hook_event_name, extra = {}) => ({ ...base, hook_event_name, ...extra });
+  // Las esperas (ADR-0011) salen de un generador propio, derivado del `session_id`: así no
+  // alteran las Sesiones que produce `rng` y las semillas existentes siguen dando lo mismo.
+  const wrng = createRandom([...sessionId].reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) >>> 0, 17));
+  const waitChance = (p) => waits && wrng.chance(p);
   const toolPair = (agent = {}) => {
     const { tool_name, tool_input, tool_response, error, mcp_server, duration_ms, is_interrupt } = toolCall(rng, project.directory, includeSecrets);
     const tool_use_id = `toolu_${rng.hex(12)}`;
     const pre = hook('PreToolUse', { ...agent, tool_name, tool_input, tool_use_id, ...(mcp_server ? { mcp_server } : {}) });
     // Una invocación bloqueada nunca llega a ejecutarse: no hay PostToolUse (ADR-0006).
     if (blockOf(pre)) return [pre];
-    if (error) return [pre, hook('PostToolUseFailure', { ...agent, tool_name, tool_input, tool_use_id, error, is_interrupt: is_interrupt ?? false })];
-    return [pre, hook('PostToolUse', { ...agent, tool_name, tool_input, tool_response, tool_use_id, ...(duration_ms === undefined ? {} : { duration_ms }) })];
+    // Claude Code pide permiso tras el PreToolUse y, si tarda, avisa con una Notification.
+    const asking = waitChance(PERMISSION_CHANCE)
+      ? [
+          hook('PermissionRequest', { ...agent, tool_name, tool_input, permission_suggestions: [] }),
+          ...(wrng.chance(0.5) ? [hook('Notification', { message: `Claude needs your permission to use ${tool_name}`, notification_type: 'permission_prompt' })] : []),
+        ]
+      : [];
+    if (error) return [pre, ...asking, hook('PostToolUseFailure', { ...agent, tool_name, tool_input, tool_use_id, error, is_interrupt: is_interrupt ?? false })];
+    return [pre, ...asking, hook('PostToolUse', { ...agent, tool_name, tool_input, tool_response, tool_use_id, ...(duration_ms === undefined ? {} : { duration_ms }) })];
   };
 
   const steps = [hook('SessionStart', { source: 'startup', model: rng.pick(MODELS) })];
   for (let turn = rng.int(1, 4); turn > 0; turn--) {
     steps.push(hook('UserPromptSubmit', { prompt: rng.pick(rng.chance(SLASH_CHANCE) ? SLASH_PROMPTS : PROMPTS) }));
+    if (waitChance(IDLE_CHANCE)) {
+      steps.push(hook('Notification', { message: 'Claude is waiting for your input', notification_type: 'idle_prompt' }));
+    }
+    if (waitChance(QUESTION_CHANCE)) steps.push(...questionPair(hook, wrng));
     // A veces el agente carga antes herramientas MCP diferidas; no siempre las usa todas.
     if (rng.chance(TOOL_SEARCH_CHANCE)) {
       const matches = MCP_TOOLS.map((t) => `mcp__playwright__${t.tool}`);
@@ -242,9 +277,9 @@ export function sessionScript(rng, { includeSecrets = false } = {}) {
  * Varias Sesiones concurrentes entrelazadas. Cada `next()` avanza una Sesión
  * al azar y devuelve su siguiente Evento normalizado.
  */
-export function createSimulation({ seed = 1, concurrentSessions = 3, includeSecrets = false } = {}) {
+export function createSimulation({ seed = 1, concurrentSessions = 3, includeSecrets = false, waits = false } = {}) {
   const rng = createRandom(seed);
-  const active = Array.from({ length: concurrentSessions }, () => ({ script: sessionScript(rng, { includeSecrets }), index: 0 }));
+  const active = Array.from({ length: concurrentSessions }, () => ({ script: sessionScript(rng, { includeSecrets, waits }), index: 0 }));
 
   return {
     next(now = new Date()) {
@@ -252,9 +287,62 @@ export function createSimulation({ seed = 1, concurrentSessions = 3, includeSecr
       const session = active[slot];
       const native = session.script.steps[session.index++];
       if (session.index >= session.script.steps.length) {
-        active[slot] = { script: sessionScript(rng, { includeSecrets }), index: 0 };
+        active[slot] = { script: sessionScript(rng, { includeSecrets, waits }), index: 0 };
       }
       return toEvent(native, { env: { MANDARINA_PROJECT: session.script.project }, now, block: blockOf(native) });
     },
   };
+}
+
+/** Ids de las Sesiones semilla que esperan (AC-93), estables para pruebas manuales y E2E. */
+export const WAITING_SEED_IDS = {
+  permission: 'seed-espera-permiso-0001',
+  question: 'seed-espera-pregunta-0002',
+  subagent: 'seed-espera-subagente-0003',
+};
+
+/**
+ * Tres Sesiones que siguen esperando a la persona usuaria: un permiso, una pregunta
+ * abierta y un permiso pedido por un Subagente. Terminan justo en la espera y con
+ * Eventos recientes (`now` menos unos segundos), así que salen como Esperando.
+ * @returns {Array<object>} Eventos normalizados, en orden.
+ */
+export function waitingSeedEvents(now = new Date()) {
+  const seeds = [
+    { id: WAITING_SEED_IDS.permission, project: 'mandarina', cwd: 'C:\\Codev\\mandarina', offset: 100 },
+    { id: WAITING_SEED_IDS.question, project: 'tienda-web', cwd: '/home/dev/proyectos/tienda-web', offset: 80 },
+    { id: WAITING_SEED_IDS.subagent, project: 'api-pagos', cwd: '/home/dev/proyectos/api-pagos', offset: 60 },
+  ];
+  const bash = { command: 'npm install --save-dev vitest' };
+  const write = { file_path: 'docs/plan.md', content: '# Plan' };
+  const agent = { agent_id: 'agent-5eed01', agent_type: 'Plan' };
+  const launch = { subagent_type: 'Plan', description: 'Planificar la implementación', prompt: 'Propón un plan paso a paso.' };
+  const scripts = {
+    [WAITING_SEED_IDS.permission]: (h) => [
+      h('SessionStart', { source: 'startup', model: 'claude-opus-5-5' }),
+      h('UserPromptSubmit', { prompt: 'Añade Vitest al proyecto' }),
+      h('PreToolUse', { tool_name: 'Bash', tool_input: bash, tool_use_id: 'toolu_seed0001' }),
+      h('PermissionRequest', { tool_name: 'Bash', tool_input: bash }),
+    ],
+    [WAITING_SEED_IDS.question]: (h) => [
+      h('SessionStart', { source: 'startup', model: 'claude-sonnet-5' }),
+      h('UserPromptSubmit', { prompt: 'Migra la base de datos' }),
+      h('PreToolUse', { tool_name: 'AskUserQuestion', tool_input: { questions: [QUESTIONS[0]] }, tool_use_id: 'toolu_seed0002' }),
+    ],
+    [WAITING_SEED_IDS.subagent]: (h) => [
+      h('SessionStart', { source: 'startup', model: 'claude-opus-5-5' }),
+      h('UserPromptSubmit', { prompt: 'Planifica el módulo de pagos' }),
+      h('PreToolUse', { tool_name: 'Agent', tool_input: launch, tool_use_id: 'toolu_seed0003' }),
+      h('SubagentStart', agent),
+      h('PreToolUse', { ...agent, tool_name: 'Write', tool_input: write, tool_use_id: 'toolu_seed0004' }),
+      h('PermissionRequest', { ...agent, tool_name: 'Write', tool_input: write }),
+    ],
+  };
+  return seeds.flatMap(({ id, project, cwd, offset }) => {
+    const base = { session_id: id, transcript_path: `/home/dev/.claude/projects/${project}/${id}.jsonl`, cwd, permission_mode: 'default' };
+    const steps = scripts[id]((hook_event_name, extra = {}) => ({ ...base, hook_event_name, ...extra }));
+    return steps.map((native, i) =>
+      toEvent(native, { env: { MANDARINA_PROJECT: project }, now: new Date(now.getTime() - (offset - i * 5) * 1000), block: null }),
+    );
+  });
 }

@@ -1,0 +1,53 @@
+// El pegado bajo la barra superior lo hace el contenedor `.alerts` de la cabecera, para no tapar el aviso de Presupuestos (AC-83, AC-95).
+:host {
+  display: block;
+}
+
+.waiting-alert {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-6);
+  border-bottom: 1px solid var(--border);
+  background: var(--warn-soft);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.waiting-alert__count {
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--warn);
+  color: var(--bg);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.waiting-alert__project {
+  font-weight: 600;
+}
+
+.waiting-alert__reason {
+  flex: 1 1 auto;
+}
+
+.waiting-alert__link {
+  margin-left: auto;
+}
+
+.waiting-alert__mute {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .waiting-alert {
+    padding: var(--space-2) var(--space-4);
+  }
+}

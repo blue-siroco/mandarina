@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { denyDecision, resolveProject, resolveUrl, toEvent } from '../lib/normalize.mjs';
+import { evaluate, loadRules } from '../lib/rules.mjs';
 
 const fixture = (name) =>
   JSON.parse(readFileSync(new URL(`./fixtures/${name}.json`, import.meta.url), 'utf8'));
@@ -51,7 +52,45 @@ test('AC-01: subagent_id identifica al Subagente y es null en la Sesión princip
 });
 
 test('AC-01: un hook no capturado no produce Evento', () => {
-  assert.equal(toEvent({ ...fixture('Stop'), hook_event_name: 'Notification' }, { env, now }), null);
+  assert.equal(toEvent({ ...fixture('Stop'), hook_event_name: 'PreCompact' }, { env, now }), null);
+});
+
+// AC-85: los hooks de espera viajan con Tipos propios (ADR-0011).
+for (const [name, hook, eventType] of [
+  ['PermissionRequest', 'PermissionRequest', 'permission.requested'],
+  ['Notification-permission', 'Notification', 'session.notified'],
+  ['Notification-idle', 'Notification', 'session.notified'],
+]) {
+  test(`AC-85: ${name} se normaliza como ${eventType} con el payload nativo completo`, () => {
+    const native = fixture(name);
+    const event = toEvent(native, { env, now });
+    assert.equal(event.event_type, eventType);
+    assert.equal(event.native_event_type, hook);
+    assert.equal(event.schema_version, 1);
+    assert.equal(event.session_id, native.session_id);
+    assert.equal(event.transcript_path, native.transcript_path);
+    assert.equal(event.directory, 'C:\\Codev\\demo');
+    assert.equal(event.project, 'demo');
+    assert.equal(event.tool_name, native.tool_name ?? null);
+    assert.equal(event.subagent_id, null);
+    assert.equal('block' in event, false);
+    assert.deepEqual(event.payload, native);
+  });
+}
+
+test('AC-85: subagent_id se conserva si el hook trae agent_id', () => {
+  const event = toEvent({ ...fixture('PermissionRequest'), agent_id: 'agent-9a8b7c' }, { env, now });
+  assert.equal(event.subagent_id, 'agent-9a8b7c');
+});
+
+test('AC-85: un Notification sin session_id no produce Evento', () => {
+  const { session_id, ...sinSesion } = fixture('Notification-idle');
+  assert.equal(toEvent(sinSesion, { env, now }), null);
+});
+
+test('AC-85: las Reglas de bloqueo no se evalúan en PermissionRequest', () => {
+  const native = { ...fixture('PermissionRequest'), tool_input: { command: 'rm -rf /' } };
+  assert.equal(evaluate(native, { rules: loadRules({}), project: 'demo', home: '/home/x' }), null);
 });
 
 test('AC-03: MANDARINA_PROJECT tiene prioridad', () => {

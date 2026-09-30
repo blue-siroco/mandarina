@@ -57,8 +57,8 @@ Situación de liveness de una Sesión: **Activa** (actividad reciente o Turno en
 _Avoid_: Vivo, muerto, zombie
 
 **Actividad de la Sesión**:
-Qué está haciendo ahora una Sesión que no está Cerrada ni Huérfana: **Trabajando** (hay un Turno en curso) o **En pausa** (no hay Turno en curso; espera un prompt del usuario). Es independiente del Estado de la Sesión: una Sesión En pausa puede estar Activa o Inactiva.
-_Avoid_: Ocupada, idle, esperando, parada
+Qué está haciendo ahora una Sesión que no está Cerrada ni Huérfana: **Trabajando** (hay un Turno en curso), **En pausa** (no hay Turno en curso; espera un prompt del usuario) o **Esperando** (hay un Turno en curso pero el agente no puede seguir sin la persona usuaria: pide permiso para una herramienta, hace una pregunta o queda inactivo esperando input; lleva su motivo y, si es un Subagente, quién espera; ADR-0011). *Stop* no es esperar: tras `turn.ended` la Sesión está En pausa. Es independiente del Estado de la Sesión: una Sesión En pausa puede estar Activa o Inactiva.
+_Avoid_: Ocupada, idle, parada
 
 **Subagente en marcha**:
 Subagente que ha empezado y aún no ha terminado, dentro de una Sesión que no está Cerrada ni Huérfana.
@@ -83,7 +83,7 @@ Hecho observado en una Sesión, expresado en el formato normalizado de Mandarina
 _Avoid_: Hook, log, mensaje
 
 **Tipo de evento**:
-Categoría normalizada de un Evento (`session.started`, `tool.pre`, `tool.post`, `prompt.submitted`, `subagent.started`, `subagent.stopped`, `turn.ended`, `session.ended`, `tool.blocked`); el nombre nativo del Harness se conserva aparte. `tool.blocked` es un Bloqueo (ADR-0006).
+Categoría normalizada de un Evento (`session.started`, `tool.pre`, `tool.post`, `prompt.submitted`, `subagent.started`, `subagent.stopped`, `turn.ended`, `session.ended`, `tool.blocked`, `permission.requested`, `session.notified`); el nombre nativo del Harness se conserva aparte. `tool.blocked` es un Bloqueo (ADR-0006); `permission.requested` y `session.notified` son las peticiones de permiso y avisos del Harness (ADR-0011).
 _Avoid_: hook_event_type, event name, session.stopped
 
 ### Consumo

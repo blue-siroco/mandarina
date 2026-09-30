@@ -24,7 +24,7 @@ export function usageMetricsDto(overrides: Partial<UsageMetricsDto> = {}): Usage
   return {
     since: '2026-09-24T22:00:00.000Z',
     generated_at: '2026-09-25T10:00:00.000Z',
-    sessions: { total: 6, working: 2, paused: 1, orphaned: 1, closed: 2 },
+    sessions: { total: 6, working: 2, paused: 1, waiting: 0, orphaned: 1, closed: 2 },
     subagents_running: 3,
     activity: { events: 420, tool_calls: 150, prompts: 12, blocks: 2 },
     tokens: { input: 1200, output: 45_000, cache_read: 4_700_000, cache_creation: 240_000 },
@@ -48,7 +48,7 @@ export function usageMetrics(overrides: Partial<UsageMetrics> = {}): UsageMetric
   return {
     since: new Date('2026-09-24T22:00:00.000Z'),
     generatedAt: new Date('2026-09-25T10:00:00.000Z'),
-    sessions: { total: 6, working: 2, paused: 1, orphaned: 1, closed: 2 },
+    sessions: { total: 6, working: 2, paused: 1, waiting: 0, orphaned: 1, closed: 2 },
     subagentsRunning: 3,
     activity: { events: 420, toolCalls: 150, prompts: 12, blocks: 2 },
     tokens: { input: 1200, output: 45_000, cacheRead: 4_700_000, cacheCreation: 240_000 },
@@ -71,12 +71,32 @@ export function usageMetrics(overrides: Partial<UsageMetrics> = {}): UsageMetric
 const DEMO = 'C:\\Codev\\demo';
 const LUCIA = 'C:\\Codev\\lucia';
 
-type Counts = [working: number, paused: number, orphaned: number, subagents: number, tools: number, prompts: number, blocks: number, output: number, cost: number];
+type Counts = [
+  working: number,
+  paused: number,
+  orphaned: number,
+  subagents: number,
+  tools: number,
+  prompts: number,
+  blocks: number,
+  output: number,
+  cost: number,
+];
 
 /** Caché de una fila del desglose: a más salida, más lectura; las filas sin tokens quedan sin tasa. */
 const sliceCacheDto = ([, , , , tools, , , output]: Counts): CacheEfficiencyDto =>
   output === 0
-    ? cacheDto({ hit_rate: null, read_tokens: 0, write_5m_tokens: 0, write_1h_tokens: 0, savings_gross_usd: 0, write_overhead_usd: 0, savings_net_usd: 0, rewrites: 0, rewrite_cost_usd: 0 })
+    ? cacheDto({
+        hit_rate: null,
+        read_tokens: 0,
+        write_5m_tokens: 0,
+        write_1h_tokens: 0,
+        savings_gross_usd: 0,
+        write_overhead_usd: 0,
+        savings_net_usd: 0,
+        rewrites: 0,
+        rewrite_cost_usd: 0,
+      })
     : cacheDto({
         hit_rate: 0.9,
         read_tokens: output * 100,
@@ -118,8 +138,20 @@ const HAIKU_COUNTS: Counts = [0, 0, 0, 3, 20, 0, 0, 5_000, 0.2212];
 export function breakdownDto(): UsageBreakdownDto {
   return {
     by_directory: [
-      { ...sliceDto(DEMO_COUNTS), directory: DEMO, project: 'demo', main_model: OPUS, transcripts_unavailable: 0 },
-      { ...sliceDto(LUCIA_COUNTS), directory: LUCIA, project: 'lucia', main_model: null, transcripts_unavailable: 1 },
+      {
+        ...sliceDto(DEMO_COUNTS),
+        directory: DEMO,
+        project: 'demo',
+        main_model: OPUS,
+        transcripts_unavailable: 0,
+      },
+      {
+        ...sliceDto(LUCIA_COUNTS),
+        directory: LUCIA,
+        project: 'lucia',
+        main_model: null,
+        transcripts_unavailable: 1,
+      },
     ],
     by_model: [
       {
@@ -142,8 +174,20 @@ export function breakdownDto(): UsageBreakdownDto {
 export function breakdown(): UsageBreakdown {
   return {
     byDirectory: [
-      { ...slice(DEMO_COUNTS), directory: DEMO, project: 'demo', mainModel: OPUS, transcriptsUnavailable: 0 },
-      { ...slice(LUCIA_COUNTS), directory: LUCIA, project: 'lucia', mainModel: null, transcriptsUnavailable: 1 },
+      {
+        ...slice(DEMO_COUNTS),
+        directory: DEMO,
+        project: 'demo',
+        mainModel: OPUS,
+        transcriptsUnavailable: 0,
+      },
+      {
+        ...slice(LUCIA_COUNTS),
+        directory: LUCIA,
+        project: 'lucia',
+        mainModel: null,
+        transcriptsUnavailable: 1,
+      },
     ],
     byModel: [
       {

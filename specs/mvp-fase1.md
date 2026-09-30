@@ -56,6 +56,8 @@ docs/adr/
   | `SubagentStop` | `subagent.stopped` |
   | `Stop` | `turn.ended` |
   | `SessionEnd` | `session.ended` |
+  | `Notification` | `session.notified` (ADR-0011) |
+  | `PermissionRequest` | `permission.requested` (ADR-0011) |
 
 - Best-effort: timeout ~1–2 s, descarta si el servidor no responde, sale siempre con 0 — ADR-0004.
 - Sin flag `--add-chat`; el Transcript se lee bajo demanda desde `~/.claude` montado en solo lectura — ADR-0003.
@@ -211,5 +213,6 @@ El modelo no forma parte del Evento: se obtiene del Transcript.
 13. Enmascarado de secretos y PII en el Adaptador y en el servidor con marcadores con tipo (sustituye AC-06); Avisos de inyección y pantalla `/seguridad` — AC-60 a AC-68; ADR-0009. **Hecha.**
 14. Eficiencia de la caché de prompts: ficha Caché con su desglose, tasa y ahorro en el detalle y en el perfil de agente, y Reescrituras de caché en la *Línea de tiempo* — AC-69 a AC-75. **Hecha.**
 15. Presupuestos con aviso en la UI y parada del agente desde el hook; pantalla `/presupuestos` — AC-76 a AC-84; ADR-0010. **Hecha.**
+16. Alerta visual y sonora cuando una Sesión espera a la persona usuaria: Tipos de evento `session.notified` y `permission.requested`, Actividad *Esperando* (permiso, pregunta o inactividad), aviso en la cabecera, contador en el título, favicon y sonido — AC-85 a AC-99; ADR-0011. **Hecha.**
 
 Fuera del alcance entregado (quedan en `spec/design.md` para más adelante): árbol Proyectos → Sesiones en la barra lateral, búsqueda global `Ctrl/⌘ K`, plegado manual de la barra lateral, vista de tabla del board, zoom y tooltip enlazado de los carriles, scroll virtual y "N Eventos nuevos", rango de fechas con calendario y búsqueda en el payload.

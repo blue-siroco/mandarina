@@ -144,7 +144,7 @@ describe('AC-13, AC-39: UsageSummary', () => {
     const fixture = await render();
 
     state$.next({
-      metrics: usageMetrics({ sessions: { total: 9, working: 5, paused: 1, orphaned: 0, closed: 3 } }),
+      metrics: usageMetrics({ sessions: { total: 9, working: 5, paused: 1, waiting: 0, orphaned: 0, closed: 3 } }),
       loaded: true,
       failed: false,
     });

@@ -2,7 +2,8 @@ import { registerLocaleData } from '@angular/common';
 import { provideHttpClient, withFetch } from '@angular/common/http';
 import localeEs from '@angular/common/locales/es';
 import { ApplicationConfig, LOCALE_ID, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { provideRouter, TitleStrategy, withComponentInputBinding } from '@angular/router';
+import { WaitingTitleStrategy } from './sessions/application/waiting-title-strategy';
 import { routes } from './app.routes';
 import { provideBudgets } from './budgets/budgets.providers';
 import { provideEvaluations } from './evaluations/evaluations.providers';
@@ -25,6 +26,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     { provide: LOCALE_ID, useValue: 'es' },
     provideRouter(routes, withComponentInputBinding()),
+    { provide: TitleStrategy, useExisting: WaitingTitleStrategy },
     provideHttpClient(withFetch()),
     provideEvents(),
     provideUsage(),

@@ -4,7 +4,7 @@ import { Injectable, InjectionToken, inject, signal } from '@angular/core';
 /** Clave del interruptor de silencio: una comodidad de cada navegador, no va en la URL ni en el servidor (AC-83). */
 export const MUTE_KEY = 'mandarina.avisos.silenciados';
 
-export type AlertKind = 'near' | 'exceeded';
+export type AlertKind = 'near' | 'exceeded' | 'waiting';
 
 export type AudioContextFactory = () => AudioContext;
 
@@ -13,12 +13,17 @@ export const AUDIO_CONTEXT_FACTORY = new InjectionToken<AudioContextFactory>('AU
   factory: () => () => new AudioContext(),
 });
 
-// Cerca: un tono medio. Superado: dos tonos más graves, para distinguirlo sin mirar la pantalla.
+// Cerca: un tono medio. Superado: dos tonos más graves. Esperando (AC-96): dos tonos agudos y
+// ascendentes; los tres se distinguen sin mirar la pantalla.
 export const TONES: Record<AlertKind, Array<{ hz: number; at: number; length: number }>> = {
   near: [{ hz: 660, at: 0, length: 0.15 }],
   exceeded: [
     { hz: 330, at: 0, length: 0.18 },
     { hz: 330, at: 0.26, length: 0.18 },
+  ],
+  waiting: [
+    { hz: 784, at: 0, length: 0.12 },
+    { hz: 1047, at: 0.16, length: 0.16 },
   ],
 };
 
@@ -31,7 +36,7 @@ const loadMuted = (): boolean => {
 };
 
 /**
- * Sonido corto de los avisos de Presupuesto (AC-83), generado con Web Audio. Los navegadores
+ * Sonido corto de los avisos de Presupuesto (AC-83) y de Sesión Esperando (AC-96), generado con Web Audio. Los navegadores
  * solo dejan sonar tras una interacción de la persona usuaria: hasta entonces se omite en silencio.
  */
 @Injectable({ providedIn: 'root' })

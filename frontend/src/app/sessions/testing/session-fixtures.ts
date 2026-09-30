@@ -18,6 +18,7 @@ export function sessionSummaryDto(overrides: Partial<SessionSummaryDto> = {}): S
     harness: 'claude-code',
     state: 'active',
     activity: 'working',
+    waiting: null,
     current_tool: { name: 'Bash', summary: 'npm test' },
     model: OPUS,
     started_at: '2026-09-25T09:00:00.000Z',
@@ -30,7 +31,12 @@ export function sessionSummaryDto(overrides: Partial<SessionSummaryDto> = {}): S
     subagent_count: 2,
     running_subagents: 1,
     live_subagents: [
-      { subagent_id: SUBAGENT, agent_type: 'Explore', description: TASK, current_tool: { name: 'Grep', summary: 'TODO' } },
+      {
+        subagent_id: SUBAGENT,
+        agent_type: 'Explore',
+        description: TASK,
+        current_tool: { name: 'Grep', summary: 'TODO' },
+      },
     ],
     block_count: 1,
     evaluation_score: null,
@@ -51,6 +57,7 @@ export function sessionSummary(overrides: Partial<SessionSummary> = {}): Session
     harness: 'claude-code',
     state: 'active',
     activity: 'working',
+    waiting: null,
     currentTool: { name: 'Bash', summary: 'npm test' },
     model: OPUS,
     startedAt: new Date('2026-09-25T09:00:00.000Z'),
@@ -63,7 +70,12 @@ export function sessionSummary(overrides: Partial<SessionSummary> = {}): Session
     subagentCount: 2,
     runningSubagents: 1,
     liveSubagents: [
-      { subagentId: SUBAGENT, agentType: 'Explore', description: TASK, currentTool: { name: 'Grep', summary: 'TODO' } },
+      {
+        subagentId: SUBAGENT,
+        agentType: 'Explore',
+        description: TASK,
+        currentTool: { name: 'Grep', summary: 'TODO' },
+      },
     ],
     blockCount: 1,
     evaluationScore: null,
@@ -103,7 +115,15 @@ export function sessionDetailDto(overrides: Partial<SessionDetailDto> = {}): Ses
         prompt: 'Añade un test',
         tool_count: 8,
       },
-      { id: 'prompt-2', index: 2, started_at: '2026-09-25T10:00:00.000Z', ended_at: null, duration_ms: 600_000, prompt: null, tool_count: 3 },
+      {
+        id: 'prompt-2',
+        index: 2,
+        started_at: '2026-09-25T10:00:00.000Z',
+        ended_at: null,
+        duration_ms: 600_000,
+        prompt: null,
+        tool_count: 3,
+      },
     ],
     subagents: [
       {
@@ -119,8 +139,18 @@ export function sessionDetailDto(overrides: Partial<SessionDetailDto> = {}): Ses
         tokens: { input: 500, output: 900, cache_read: 0, cache_creation: 0 },
         task: { description: TASK, prompt: 'Busca los plugins de observabilidad' },
         tools: [
-          { name: 'Grep', summary: 'observe', started_at: '2026-09-25T09:13:00.000Z', status: 'ok' },
-          { name: 'Read', summary: 'a.ts', started_at: '2026-09-25T09:14:00.000Z', status: 'error' },
+          {
+            name: 'Grep',
+            summary: 'observe',
+            started_at: '2026-09-25T09:13:00.000Z',
+            status: 'ok',
+          },
+          {
+            name: 'Read',
+            summary: 'a.ts',
+            started_at: '2026-09-25T09:14:00.000Z',
+            status: 'error',
+          },
         ],
         result: 'Hay 3 plugins.',
       },
@@ -192,8 +222,18 @@ export function sessionDetail(overrides: Partial<SessionDetail> = {}): SessionDe
         tokens: { input: 500, output: 900, cacheRead: 0, cacheCreation: 0 },
         task: { description: TASK, prompt: 'Busca los plugins de observabilidad' },
         tools: [
-          { name: 'Grep', summary: 'observe', startedAt: new Date('2026-09-25T09:13:00.000Z'), status: 'ok' },
-          { name: 'Read', summary: 'a.ts', startedAt: new Date('2026-09-25T09:14:00.000Z'), status: 'error' },
+          {
+            name: 'Grep',
+            summary: 'observe',
+            startedAt: new Date('2026-09-25T09:13:00.000Z'),
+            status: 'ok',
+          },
+          {
+            name: 'Read',
+            summary: 'a.ts',
+            startedAt: new Date('2026-09-25T09:14:00.000Z'),
+            status: 'error',
+          },
         ],
         result: 'Hay 3 plugins.',
       },

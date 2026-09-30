@@ -36,12 +36,30 @@ interface MetricsSliceDto {
 
 /** `breakdown` de `UsageMetrics` en `spec/api-spec.yaml`. */
 export interface UsageBreakdownDto {
-  by_directory: Array<MetricsSliceDto & { directory: string; project: string; main_model: string | null; transcripts_unavailable: number }>;
+  by_directory: Array<
+    MetricsSliceDto & {
+      directory: string;
+      project: string;
+      main_model: string | null;
+      transcripts_unavailable: number;
+    }
+  >;
   by_model: Array<
     MetricsSliceDto & {
       model: string | null;
-      rate: { input: number; output: number; cache_read: number; cache_write_5m: number; cache_write_1h: number } | null;
-      cost_breakdown: { input: number; output: number; cache_read: number; cache_creation: number } | null;
+      rate: {
+        input: number;
+        output: number;
+        cache_read: number;
+        cache_write_5m: number;
+        cache_write_1h: number;
+      } | null;
+      cost_breakdown: {
+        input: number;
+        output: number;
+        cache_read: number;
+        cache_creation: number;
+      } | null;
     }
   >;
 }
@@ -50,7 +68,15 @@ export interface UsageBreakdownDto {
 export interface UsageMetricsDto {
   since: string;
   generated_at: string;
-  sessions: { total: number; working: number; paused: number; orphaned: number; closed: number };
+  /** `waiting` opcional para aceptar backends anteriores a la rebanada 16. */
+  sessions: {
+    total: number;
+    working: number;
+    paused: number;
+    waiting?: number;
+    orphaned: number;
+    closed: number;
+  };
   subagents_running: number;
   activity: { events: number; tool_calls: number; prompts: number; blocks: number };
   tokens: TokenUsageDto;
@@ -91,7 +117,11 @@ function toSlice(dto: MetricsSliceDto): MetricsSlice {
   return {
     sessions: { ...dto.sessions },
     subagentsRunning: dto.subagents_running,
-    activity: { toolCalls: dto.activity.tool_calls, prompts: dto.activity.prompts, blocks: dto.activity.blocks },
+    activity: {
+      toolCalls: dto.activity.tool_calls,
+      prompts: dto.activity.prompts,
+      blocks: dto.activity.blocks,
+    },
     tokens: toTokenUsage(dto.tokens),
     estimatedCostUsd: dto.estimated_cost_usd,
     unpricedModels: [...dto.unpriced_models],
@@ -132,7 +162,7 @@ export function toUsageMetrics(dto: UsageMetricsDto): UsageMetrics {
   return {
     since: new Date(dto.since),
     generatedAt: new Date(dto.generated_at),
-    sessions: { ...dto.sessions },
+    sessions: { ...dto.sessions, waiting: dto.sessions.waiting ?? 0 },
     subagentsRunning: dto.subagents_running,
     activity: {
       events: dto.activity.events,

@@ -7,7 +7,9 @@ export type EventType =
   | 'subagent.stopped'
   | 'turn.ended'
   | 'session.ended'
-  | 'tool.blocked';
+  | 'tool.blocked'
+  | 'permission.requested'
+  | 'session.notified';
 
 /** Bloqueo aplicado por una Regla de bloqueo (ADR-0006). */
 export interface Block {

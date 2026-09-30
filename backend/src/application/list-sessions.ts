@@ -6,6 +6,7 @@ import {
   type SessionCore,
   type SessionEventRow,
   type SessionState,
+  type WaitingCore,
 } from '../domain/session-summary.js';
 import { normalizeAgentId } from '../domain/agent-id.js';
 import type { StoredEvent } from '../domain/event.js';
@@ -33,6 +34,8 @@ export interface SessionSummary {
   harness: string;
   state: SessionState;
   activity: SessionActivity | null;
+  /** Solo con `activity = waiting` (ADR-0011, AC-92). */
+  waiting: WaitingCore | null;
   current_tool: CurrentTool;
   model: string | null;
   started_at: string;
@@ -166,7 +169,8 @@ export function toSessionSummary(
   injectionAlerts = 0,
   budgetStopped = false,
 ): SessionSummary {
-  const currentTool = core.activity === 'working' ? toolOf(lookup, core.open_tool_event_id) : null;
+  // Esperando conserva la herramienta abierta: es la que pide permiso o hace la pregunta (AC-92).
+  const currentTool = core.activity === 'working' || core.activity === 'waiting' ? toolOf(lookup, core.open_tool_event_id) : null;
   return {
     session_id: core.session_id,
     project: core.project,
@@ -174,6 +178,7 @@ export function toSessionSummary(
     harness: core.harness,
     state: core.state,
     activity: core.activity,
+    waiting: core.waiting,
     current_tool: currentTool,
     model: transcript ? latestModel(transcript.entries) : null,
     started_at: core.started_at,

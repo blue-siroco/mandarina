@@ -24,9 +24,13 @@
       >
         <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
           @if (s.evaluationScore === 1) {
-            <path d="M7 11v9H4v-9zM7 11l4-8a2 2 0 0 1 2 2v4h6a2 2 0 0 1 2 2.3l-1.4 7A2 2 0 0 1 17.6 20H7" />
+            <path
+              d="M7 11v9H4v-9zM7 11l4-8a2 2 0 0 1 2 2v4h6a2 2 0 0 1 2 2.3l-1.4 7A2 2 0 0 1 17.6 20H7"
+            />
           } @else {
-            <path d="M7 13V4H4v9zM7 13l4 8a2 2 0 0 0 2-2v-4h6a2 2 0 0 0 2-2.3l-1.4-7A2 2 0 0 0 17.6 4H7" />
+            <path
+              d="M7 13V4H4v9zM7 13l4 8a2 2 0 0 0 2-2v-4h6a2 2 0 0 0 2-2.3l-1.4-7A2 2 0 0 0 17.6 4H7"
+            />
           }
         </svg>
         <span class="visually-hidden">{{ scoreLabel() }}</span>
@@ -69,11 +73,16 @@
     </a>
   }
 
-  @if (working()) {
+  @if (s.activity === 'waiting' && s.waiting) {
+    <app-waiting-badge [waiting]="s.waiting" />
+  } @else if (working()) {
     <p class="card-session__working" data-testid="working">
       Trabajando…
       @if (s.currentTool) {
-        <span class="mono">{{ toolLabel(s.currentTool.name) }}{{ s.currentTool.summary ? ' · ' + s.currentTool.summary : '' }}</span>
+        <span class="mono"
+          >{{ toolLabel(s.currentTool.name)
+          }}{{ s.currentTool.summary ? ' · ' + s.currentTool.summary : '' }}</span
+        >
       }
     </p>
   } @else if (s.activity === 'paused') {
@@ -83,8 +92,12 @@
   <app-sparkline [values]="s.sparkline" />
 
   <p class="card-session__durations num">
-    <span><strong>{{ durations().active }}</strong> Duración activa</span>
-    <span><strong>{{ durations().clock }}</strong> Duración de reloj</span>
+    <span
+      ><strong>{{ durations().active }}</strong> Duración activa</span
+    >
+    <span
+      ><strong>{{ durations().clock }}</strong> Duración de reloj</span
+    >
   </p>
 
   <p class="card-session__counters">
@@ -95,13 +108,20 @@
   @if (s.liveSubagents.length > 0) {
     <ul class="card-session__subagents" aria-label="Subagentes en marcha">
       @for (sub of s.liveSubagents; track sub.subagentId ?? $index) {
-        <li class="live-subagent" data-testid="live-subagent" [title]="sub.subagentId ?? 'Lanzado, aún sin enlazar'">
+        <li
+          class="live-subagent"
+          data-testid="live-subagent"
+          [title]="sub.subagentId ?? 'Lanzado, aún sin enlazar'"
+        >
           <span class="live-subagent__type">└ {{ sub.agentType ?? 'Subagente' }}</span>
           @if (sub.description) {
             <span class="live-subagent__task">{{ sub.description }}</span>
           }
           @if (sub.currentTool) {
-            <span class="live-subagent__tool mono">{{ toolLabel(sub.currentTool.name) }}{{ sub.currentTool.summary ? ' ' + sub.currentTool.summary : '' }}</span>
+            <span class="live-subagent__tool mono"
+              >{{ toolLabel(sub.currentTool.name)
+              }}{{ sub.currentTool.summary ? ' ' + sub.currentTool.summary : '' }}</span
+            >
           }
         </li>
       }

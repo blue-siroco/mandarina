@@ -5,6 +5,7 @@
 import { isClosed } from './mock-closed.mjs';
 import { cacheView, isRewrite, writeCost } from './mock-cache.mjs';
 import { subagentLives } from './mock-subagents.mjs';
+import { currentWait, lastProgress } from './mock-waiting.mjs';
 
 const ORPHAN_AFTER_MS = 30 * 60 * 1000;
 const IDLE_AFTER = new Set(['session.started', 'turn.ended']);
@@ -112,7 +113,7 @@ export function computeMetrics(events, since, now, { directory, breakdown = fals
     bySession.set(event.session_id, session);
   }
 
-  const sessions = { total: 0, working: 0, paused: 0, orphaned: 0, closed: 0 };
+  const sessions = { total: 0, working: 0, paused: 0, waiting: 0, orphaned: 0, closed: 0 };
   const contributions = [];
   let eventCount = 0;
   for (const { events: own, model } of bySession.values()) {
@@ -123,10 +124,12 @@ export function computeMetrics(events, since, now, { directory, breakdown = fals
     let condition;
     if (isClosed(own)) condition = 'closed';
     else if (now - Date.parse(last.received_at) > ORPHAN_AFTER_MS) condition = 'orphaned';
-    else condition = IDLE_AFTER.has(last.event_type) ? 'paused' : 'working';
+    else if (currentWait(own)) condition = 'waiting';
+    else condition = IDLE_AFTER.has(lastProgress(own).event_type) ? 'paused' : 'working';
     sessions[condition] += 1;
-    if (condition !== 'closed') contributions.push({ ...base, model, [condition]: 1 });
-    if (condition === 'working' || condition === 'paused') {
+    // `MetricsSlice.sessions` no tiene Esperando: en los desgloses no suma a Trabajando ni a En pausa.
+    if (condition !== 'closed') contributions.push({ ...base, model, ...(condition === 'waiting' ? {} : { [condition]: 1 }) });
+    if (condition === 'working' || condition === 'paused' || condition === 'waiting') {
       // Con los lanzamientos pendientes y sin los internos (AC-34).
       for (const life of subagentLives(own).filter((l) => !l.internal && l.stopped_at === null)) {
         contributions.push({ ...base, model: life.subagent_id ? SUBAGENT_MODEL : null, subagents_running: 1 });

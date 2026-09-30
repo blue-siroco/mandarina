@@ -686,7 +686,7 @@ El coste solo tiene sentido frente a lo que se obtuvo:
 
 Hecho (ver `mvp-fase1.md`): esquema de Evento, ingesta + SQLite + WebSocket, board, detalle de Sesión, Bloqueos, Estado de los tests y uso de skills.
 
-1. Cerrar la Fase 1: rebanada 3b y los puntos 1.11 a 1.16 (exportación OTLP, evaluación humana, enmascarado y Avisos de inyección, caché de prompts, presupuestos y alerta de Sesiones que esperan). Para 1.16, empezar por el ADR de los Tipos de evento nuevos (`Notification`, `PermissionRequest`, `PreCompact`).
+1. Cerrar la Fase 1: rebanada 3b y los puntos 1.11 a 1.16 (exportación OTLP, evaluación humana, enmascarado y Avisos de inyección, caché de prompts, presupuestos y alerta de Sesiones que esperan). 1.16 (Sesiones que esperan) está hecha; `PreCompact` queda para 1A.3.
 2. Atención requerida (1A.1): bandeja, notificaciones del sistema y métrica de fricción sobre la Actividad *Esperando* de 1.16.
 3. Importación del historial previo (1A.8) y salud de la ingesta (1A.7), para que los datos estén completos y sean fiables.
 4. Cambios de código por Sesión (1A.2) y detección de fricción (1A.4).

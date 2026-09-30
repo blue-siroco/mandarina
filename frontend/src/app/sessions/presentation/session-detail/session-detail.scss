@@ -254,3 +254,7 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.detail__waiting {
+  margin-top: var(--space-2);
+}

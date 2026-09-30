@@ -55,6 +55,10 @@ const SCHEMA = `
 // Pistas del payload para el ciclo de vida de los Subagentes (AC-33); `hintsOf`
 // (dominio) calcula lo mismo a partir de un payload completo.
 const LAUNCH = "tool_name IN ('Agent', 'Task')";
+// Campos de `tool_input` que resume `summarizeToolInput` (tool-summary.ts).
+const PERMISSION_FIELDS = ['command', 'file_path', 'notebook_path', 'pattern', 'url', 'query', 'description', 'skill']
+  .map((field) => `'${field}', substr(json_extract(payload, '$.tool_input.${field}'), 1, 300)`)
+  .join(', ');
 const HINT_COLUMNS = [
   "CASE WHEN event_type LIKE 'subagent.%' THEN json_extract(payload, '$.agent_type') END AS agent_type",
   "json_extract(payload, '$.tool_use_id') AS tool_use_id",
@@ -66,6 +70,11 @@ const HINT_COLUMNS = [
   "CASE WHEN event_type = 'tool.post' AND coalesce(json_extract(payload, '$.error'), '') <> '' AND coalesce(json_extract(payload, '$.is_interrupt'), 0) <> 1 THEN 1 ELSE 0 END AS tool_error",
   "CASE WHEN event_type = 'tool.pre' AND tool_name = 'Skill' THEN json_extract(payload, '$.tool_input.skill') END AS skill_name",
   "CASE WHEN subagent_id IS NULL AND event_type NOT LIKE 'subagent.%' THEN json_extract(payload, '$.agent_type') END AS session_agent_type",
+  // Esperas (ADR-0011): solo lo que resume la espera, recortado para no cargar entradas enormes (un Write).
+  "CASE WHEN event_type = 'session.notified' THEN json_extract(payload, '$.notification_type') END AS notification_type",
+  "CASE WHEN event_type = 'session.notified' THEN substr(json_extract(payload, '$.message'), 1, 300) END AS wait_message",
+  `CASE WHEN event_type = 'permission.requested' THEN json_object(${PERMISSION_FIELDS}) END AS permission_input`,
+  "CASE WHEN event_type = 'tool.pre' AND tool_name = 'AskUserQuestion' THEN substr(json_extract(payload, '$.tool_input.questions[0].question'), 1, 300) END AS wait_question",
 ].join(', ');
 const ROW_COLUMNS = `id, session_id, project, directory, harness, subagent_id, event_type, tool_name, occurred_at, received_at, transcript_path, ${HINT_COLUMNS}`;
 
@@ -159,8 +168,17 @@ interface InjectionRow extends Omit<InjectionCandidate, 'tool_input'> {
   tool_input: string | null;
 }
 
-type RawRow = Omit<SessionEventRow, 'launch_background' | 'tool_error'> & { launch_background: 0 | 1; tool_error: 0 | 1 };
-const toRow = (row: RawRow): SessionEventRow => ({ ...row, launch_background: row.launch_background === 1, tool_error: row.tool_error === 1 });
+type RawRow = Omit<SessionEventRow, 'launch_background' | 'tool_error' | 'permission_input'> & {
+  launch_background: 0 | 1;
+  tool_error: 0 | 1;
+  permission_input: string | null;
+};
+const toRow = (row: RawRow): SessionEventRow => ({
+  ...row,
+  launch_background: row.launch_background === 1,
+  tool_error: row.tool_error === 1,
+  permission_input: parseJson(row.permission_input) as Record<string, unknown> | null,
+});
 
 export class SqliteEventRepository implements EventRepository {
   private readonly db: Database.Database;

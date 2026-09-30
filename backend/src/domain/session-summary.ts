@@ -3,6 +3,7 @@
 import type { EventType } from './event.js';
 import { ORPHAN_AFTER_MS } from './session-activity.js';
 import { subagentLives, type SubagentLife } from './subagent-lifecycle.js';
+import { currentWait, type Wait, type WaitHints, type WaitReason } from './waiting.js';
 
 /** Umbral de Activa de `spec/mvp-fase1.md`. */
 export const ACTIVE_WINDOW_MS = 5 * 60 * 1000;
@@ -10,13 +11,23 @@ export const SPARKLINE_BUCKETS = 12;
 export const SPARKLINE_BUCKET_MS = 5 * 60 * 1000;
 
 export type SessionState = 'active' | 'idle' | 'orphaned' | 'closed';
-export type SessionActivity = 'working' | 'paused';
+export type SessionActivity = 'working' | 'paused' | 'waiting';
+
+/** Espera de la Sesión con su Subagente ya resuelto (ADR-0011). */
+export interface WaitingCore {
+  since: string;
+  reason: WaitReason;
+  tool: string | null;
+  summary: string | null;
+  /** `null` si espera el agente principal o un Subagente interno. */
+  subagent: { id: string; type: string | null } | null;
+}
 
 /**
  * Datos del payload que necesita el ciclo de vida de los Subagentes (AC-33).
  * El repositorio los extrae en SQL para no cargar payloads enteros.
  */
-export interface SubagentHints {
+export interface SubagentHints extends WaitHints {
   /** `agent_type` de `subagent.*`. */
   agent_type?: string | null;
   tool_use_id?: string | null;
@@ -72,6 +83,8 @@ export interface SessionCore {
   state: SessionState;
   /** Solo para Sesiones que no están Cerradas ni Huérfanas. */
   activity: SessionActivity | null;
+  /** Solo con `activity = waiting`. */
+  waiting: WaitingCore | null;
   /** Último `tool.pre` sin su `tool.post`, en cualquier carril. */
   open_tool_event_id: string | null;
   /** `tool.pre` abierto de cada carril (`main` o id de Subagente). */
@@ -99,7 +112,22 @@ export interface SessionCore {
 // Tras estos Eventos no hay Turno en curso: la Sesión espera un prompt.
 const IDLE_AFTER: ReadonlySet<EventType> = new Set(['session.started', 'turn.ended']);
 
+// Eventos que solo avisan a la persona usuaria: no cuentan como avance del Turno.
+const WAIT_ONLY: ReadonlySet<EventType> = new Set(['permission.requested', 'session.notified']);
+
 const ms = (iso: string) => Date.parse(iso);
+
+/** Un Subagente interno (fuera de `subagents`) no aparece como quien espera: se atribuye a la Sesión. */
+function toWaitingCore(wait: Wait, subagents: SubagentLife[]): WaitingCore {
+  const life = wait.subagent_id === null ? undefined : subagents.find((s) => s.subagent_id === wait.subagent_id);
+  return {
+    since: wait.since,
+    reason: wait.reason,
+    tool: wait.tool,
+    summary: wait.summary,
+    subagent: life ? { id: life.subagent_id!, type: life.agent_type } : null,
+  };
+}
 
 function buildTurns(rows: SessionEventRow[]): Turn[] {
   const turns: Turn[] = [];
@@ -208,8 +236,12 @@ export function summarizeSession(
   const ended = isClosed(rows);
   const lastReceived = Math.max(...rows.map((r) => ms(r.received_at)));
   const lastActivityMs = Math.max(lastReceived, transcriptMtimeMs ?? 0);
-  const rawActivity: SessionActivity = IDLE_AFTER.has(last.event_type) ? 'paused' : 'working';
-  const state = sessionState(ended, lastActivityMs, rawActivity, now);
+  // Un aviso (`permission.requested`, `session.notified`) no abre ni cierra el Turno: cuenta el último Evento que sí.
+  const lastProgress = rows.findLast((r) => !WAIT_ONLY.has(r.event_type));
+  const rawActivity: 'working' | 'paused' = lastProgress && IDLE_AFTER.has(lastProgress.event_type) ? 'paused' : 'working';
+  const wait = currentWait(rows);
+  // Esperar no mantiene a la Sesión Activa: si la espera se alarga pasa a Inactiva (ADR-0011).
+  const state = sessionState(ended, lastActivityMs, wait ? 'paused' : rawActivity, now);
 
   const subagents = subagentLives(rows, metaLinks).filter((s) => !s.internal);
   const live = state === 'active' || state === 'idle';
@@ -225,7 +257,8 @@ export function summarizeSession(
     harness: last.harness,
     transcript_path: [...rows].reverse().find((r) => r.transcript_path !== null)?.transcript_path ?? null,
     state,
-    activity: live ? rawActivity : null,
+    activity: live ? (wait ? 'waiting' : rawActivity) : null,
+    waiting: live && wait ? toWaitingCore(wait, subagents) : null,
     open_tool_event_id: latestOf(tools.values()),
     open_tools: Object.fromEntries([...tools].map(([lane, row]) => [lane, row.id])),
     subagents,

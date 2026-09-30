@@ -30,6 +30,9 @@ const text = (value: unknown): string | null => (typeof value === 'string' && va
 const record = (value: unknown): Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 
+const firstQuestion = (input: Record<string, unknown>): string | null =>
+  Array.isArray(input.questions) ? text(record(input.questions[0]).question) : null;
+
 const isLaunch = (row: SessionEventRow) => row.event_type === 'tool.pre' && row.tool_name !== null && LAUNCH_TOOLS.has(row.tool_name);
 const isLaunchPost = (row: SessionEventRow) => row.event_type === 'tool.post' && row.tool_name !== null && LAUNCH_TOOLS.has(row.tool_name);
 
@@ -54,6 +57,10 @@ export function hintsOf(
     tool_error: eventType === 'tool.post' && text(payload.error) !== null && payload.is_interrupt !== true,
     skill_name: toolName === 'Skill' && eventType === 'tool.pre' ? text(input.skill) : null,
     session_agent_type: subagentId === null && !eventType.startsWith('subagent.') ? text(payload.agent_type) : null,
+    notification_type: eventType === 'session.notified' ? text(payload.notification_type) : null,
+    wait_message: eventType === 'session.notified' ? text(payload.message) : null,
+    permission_input: eventType === 'permission.requested' ? input : null,
+    wait_question: eventType === 'tool.pre' && toolName === 'AskUserQuestion' ? firstQuestion(input) : null,
   };
 }
 

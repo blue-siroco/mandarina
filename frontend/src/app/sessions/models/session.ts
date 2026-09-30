@@ -6,8 +6,21 @@ export type EvaluationScore = 1 | -1;
 /** Estado de la Sesión (ver `CONTEXT.md`, AC-14). */
 export type SessionState = 'active' | 'idle' | 'orphaned' | 'closed';
 
-/** Actividad de la Sesión: Trabajando / En pausa. */
-export type SessionActivity = 'working' | 'paused';
+/** Actividad de la Sesión: Trabajando / En pausa / Esperando (ADR-0011). */
+export type SessionActivity = 'working' | 'paused' | 'waiting';
+
+export type WaitingReason = 'permission' | 'question' | 'idle';
+
+/** Espera de una Sesión Esperando; textos ya enmascarados por el servidor. */
+export interface SessionWaiting {
+  /** Inicio de la espera: `occurred_at` del primer Evento que la causó. */
+  since: Date;
+  reason: WaitingReason;
+  tool: string | null;
+  summary: string | null;
+  /** Subagente que espera; `null` si espera el agente principal. */
+  subagent: { id: string; type: string | null } | null;
+}
 
 export type CurrentTool = { name: string; summary: string | null } | null;
 
@@ -28,6 +41,8 @@ export interface SessionSummary {
   harness: string;
   state: SessionState;
   activity: SessionActivity | null;
+  /** `null` salvo con `activity = waiting`. */
+  waiting: SessionWaiting | null;
   currentTool: CurrentTool;
   model: string | null;
   startedAt: Date;
@@ -152,7 +167,12 @@ export interface SessionDetail extends SessionSummary {
   /** Eficiencia de la caché de la Sesión y sus Subagentes; `null` sin Transcript (AC-72). */
   cache: CacheEfficiency | null;
   cacheRewrites: CacheRewrite[];
-  usage: { tokens: TokenUsage; estimatedCostUsd: number | null; requests: number; models: string[] } | null;
+  usage: {
+    tokens: TokenUsage;
+    estimatedCostUsd: number | null;
+    requests: number;
+    models: string[];
+  } | null;
   context: { model: string; used: number; limit: number } | null;
   tools: Array<{ name: string; count: number }>;
   turns: SessionTurn[];

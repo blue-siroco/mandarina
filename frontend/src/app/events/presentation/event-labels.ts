@@ -12,6 +12,8 @@ export const EVENT_TYPE_LABELS: Record<EventType, string> = {
   'turn.ended': 'Fin de turno',
   'session.ended': 'Sesión cerrada',
   'tool.blocked': 'Bloqueado',
+  'permission.requested': 'Pide permiso',
+  'session.notified': 'Notificación',
 };
 
 /** Categorías del filtro de Eventos (spec/design.md §5.5), en su orden. */
@@ -26,6 +28,7 @@ export const EVENT_CATEGORIES = [
   { key: 'session', label: 'Sesión', types: ['session.started', 'session.ended'] },
   { key: 'turns', label: 'Turnos', types: ['turn.ended'] },
   { key: 'blocks', label: 'Bloqueos', types: BLOCK_EVENTS },
+  { key: 'waits', label: 'Esperas', types: ['permission.requested', 'session.notified'] },
   { key: 'mcp', label: 'MCP', types: [...TOOL_EVENTS, ...BLOCK_EVENTS] },
   // Sin tipos: cuenta cualquier Evento que traiga un Aviso de inyección vigente (AC-68).
   { key: 'warnings', label: 'Avisos', types: [] },
@@ -45,6 +48,11 @@ export const activeWarnings = (event: ObservedEvent) => event.warnings.filter((w
 export const hasActiveWarnings = (event: ObservedEvent) => event.warnings.some((w) => !w.dismissed);
 
 const text = (value: unknown): string | null => (typeof value === 'string' && value.trim() !== '' ? value : null);
+
+const firstLine = (value: unknown): string | null => {
+  const line = text(value);
+  return line ? oneLine(line) : null;
+};
 
 function summarizeTool(event: ObservedEvent): string | null {
   const input = summarizeToolInput(event.toolName, event.payload);
@@ -69,11 +77,12 @@ export function summarizeEvent(event: ObservedEvent): string | null {
     case 'tool.pre':
     case 'tool.post':
     case 'tool.blocked':
+    case 'permission.requested':
       return summarizeTool(event);
-    case 'prompt.submitted': {
-      const prompt = text(payload['prompt']);
-      return prompt ? oneLine(prompt) : null;
-    }
+    case 'prompt.submitted':
+      return firstLine(payload['prompt']);
+    case 'session.notified':
+      return firstLine(payload['message']);
     case 'subagent.started':
     case 'subagent.stopped':
       return summarizeSubagent(event);

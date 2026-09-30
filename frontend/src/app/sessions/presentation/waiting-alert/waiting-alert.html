@@ -1,0 +1,25 @@
+<!-- La región de estado existe siempre: si no, el lector de pantalla no anunciaría el aviso al aparecer. -->
+<div class="alert-region" role="status">
+  @if (oldest(); as s) {
+    <div class="waiting-alert" data-testid="waiting-alert">
+      <span class="waiting-alert__count" data-testid="waiting-alert-count">{{ countLabel() }}</span>
+      <span class="waiting-alert__project" data-testid="waiting-alert-project">{{
+        s.project
+      }}</span>
+      @if (s.waiting; as w) {
+        <app-waiting-badge class="waiting-alert__reason" [waiting]="w" [reasonOnly]="true" />
+      }
+      <a class="waiting-alert__link" [routerLink]="['/sesiones', s.sessionId]">Ver Sesión</a>
+      <label class="waiting-alert__mute">
+        <input
+          type="checkbox"
+          role="switch"
+          data-testid="waiting-alert-mute"
+          [checked]="muted()"
+          (change)="onMute($event)"
+        />
+        Silenciar avisos sonoros
+      </label>
+    </div>
+  }
+</div>

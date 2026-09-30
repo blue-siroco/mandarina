@@ -21,10 +21,14 @@ Añade esto al `.claude/settings.json` del proyecto que quieras observar (o a `~
     "SubagentStart":    [{ "hooks": [{ "type": "command", "command": "node <MANDARINA>/adapters/claude-code/send_event.mjs" }] }],
     "SubagentStop":     [{ "hooks": [{ "type": "command", "command": "node <MANDARINA>/adapters/claude-code/send_event.mjs" }] }],
     "Stop":             [{ "hooks": [{ "type": "command", "command": "node <MANDARINA>/adapters/claude-code/send_event.mjs" }] }],
-    "SessionEnd":       [{ "hooks": [{ "type": "command", "command": "node <MANDARINA>/adapters/claude-code/send_event.mjs" }] }]
+    "SessionEnd":       [{ "hooks": [{ "type": "command", "command": "node <MANDARINA>/adapters/claude-code/send_event.mjs" }] }],
+    "Notification":     [{ "hooks": [{ "type": "command", "command": "node <MANDARINA>/adapters/claude-code/send_event.mjs" }] }],
+    "PermissionRequest": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "node <MANDARINA>/adapters/claude-code/send_event.mjs" }] }]
   }
 }
 ```
+
+`Notification` y `PermissionRequest` son los que permiten a Mandarina saber qué Sesiones esperan a la persona usuaria (ADR-0011): `PermissionRequest` se envía como `permission.requested` (diálogo de permiso de una herramienta) y `Notification` como `session.notified` (permiso pendiente, inactividad…). Solo observan: no aprueban, no deniegan ni retrasan el diálogo, no evalúan Reglas ni Presupuestos y no escriben en stdout. Su `message` y `tool_input` se enmascaran igual que el resto (ADR-0009).
 
 ## Configuración (variables de entorno)
 
