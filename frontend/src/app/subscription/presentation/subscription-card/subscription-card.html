@@ -1,38 +1,45 @@
-@if (meters().length > 0) {
-  <article class="kpi subscription" data-testid="subscription-card" aria-labelledby="subscription-title">
-    <h3 id="subscription-title" class="overline">
-      Uso de la suscripción
+@for (m of meters(); track m.key) {
+  <article
+    class="kpi subscription"
+    data-testid="subscription-meter"
+    [attr.data-window]="m.key"
+    [attr.data-status]="m.status"
+    [attr.aria-label]="m.title"
+  >
+    <h3 class="overline">
+      Suscripción · {{ m.title }}
       <button type="button" class="help" data-testid="subscription-help" [attr.title]="helpText" [attr.aria-label]="'Ayuda: ' + helpText">?</button>
     </h3>
-
-    <div class="meters">
-      @for (m of meters(); track m.key) {
-        <section class="meter" data-testid="subscription-meter" [attr.data-window]="m.key" [attr.data-status]="m.status" [attr.aria-label]="m.title">
-          <h4 class="meter__title">{{ m.title }}</h4>
-          @if (m.status === 'reset_pending') {
-            <p class="meter__pending" data-testid="meter-pending">{{ m.resetPendingText }}</p>
-          } @else {
-            <p class="meter__value">
-              <span class="kpi__value" data-testid="meter-remaining">{{ m.window.remainingPercent }} %</span>
-              <span class="meter__unit">pendiente</span>
-              <strong class="meter__state" data-testid="meter-state">{{ m.statusLabel }}</strong>
-            </p>
-            <div
-              class="meter__bar"
-              role="progressbar"
-              [attr.aria-label]="m.title + ': queda el ' + m.window.remainingPercent + ' %'"
-              aria-valuemin="0"
-              aria-valuemax="100"
-              [attr.aria-valuenow]="m.window.remainingPercent"
-            >
-              <span class="meter__fill" [style.width.%]="m.window.remainingPercent"></span>
-            </div>
-            <p class="kpi__detail" data-testid="meter-reset">{{ m.reset }}</p>
-          }
-        </section>
-      }
-    </div>
-
-    <p class="kpi__detail subscription__updated" data-testid="subscription-updated">{{ updated() }}</p>
+    @if (m.status === 'reset_pending') {
+      <p class="meter__pending" data-testid="meter-pending">{{ m.resetPendingText }}</p>
+    } @else {
+      <p class="meter__value">
+        <span class="kpi__value" data-testid="meter-used">{{ m.window.usedPercent }} %</span>
+        <span class="meter__unit">usado</span>
+        <strong class="meter__state" data-testid="meter-state">{{ m.statusLabel }}</strong>
+      </p>
+      <div
+        class="meter__bar"
+        role="progressbar"
+        [attr.aria-label]="m.title + ': usado el ' + m.window.usedPercent + ' %'"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        [attr.aria-valuenow]="m.window.usedPercent"
+      >
+        <span class="meter__fill" [style.width.%]="m.window.usedPercent"></span>
+      </div>
+      <p class="kpi__detail" data-testid="meter-reset">{{ m.reset }}</p>
+    }
   </article>
+}
+
+@if (showEmpty()) {
+  <details class="subscription-empty" data-testid="subscription-empty">
+    <summary>Uso de la suscripción: sin datos</summary>
+    <p class="kpi__detail" data-testid="subscription-empty-help">
+      @for (line of emptyHelp; track $index) {
+        {{ line }}
+      }
+    </p>
+  </details>
 }

@@ -115,6 +115,15 @@
   padding: var(--space-4);
 }
 
+// En pantalla ancha, las mismas cinco columnas que las fichas KPI: una Sesión nueva ocupa siempre
+// su hueco en la rejilla y solo se abre otra fila al llenarse la anterior. Con `auto-fill` el nº de
+// columnas cambiaba con el ancho (p. ej. al aparecer la barra de scroll) y las fichas saltaban.
+@media (min-width: 960px) {
+  .grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 768px) {
   .grid {
     grid-template-columns: minmax(0, 1fr);
