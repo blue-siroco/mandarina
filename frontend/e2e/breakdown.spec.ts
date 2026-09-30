@@ -6,10 +6,9 @@ import { EMPTY_METRICS, mockApi, sessionDto } from './fixtures';
 const DEMO = 'C:\\Codev\\demo';
 const LUCIA = 'C:\\Codev\\lucia';
 
-const slice = (working: number, paused: number, tools: number, output: number, cost: number) => ({
+const slice = (working: number, paused: number, output: number, cost: number) => ({
   sessions: { working, paused, orphaned: 0 },
   subagents_running: 0,
-  activity: { tool_calls: tools, prompts: 1, blocks: 0 },
   tokens: { input: 100, output, cache_read: 1000, cache_creation: 50 },
   estimated_cost_usd: cost,
   unpriced_models: [],
@@ -17,24 +16,23 @@ const slice = (working: number, paused: number, tools: number, output: number, c
 
 const breakdown = {
   by_directory: [
-    { ...slice(1, 0, 30, 4000, 1.2), directory: DEMO, project: 'demo', main_model: 'claude-opus-5-5', transcripts_unavailable: 0 },
-    { ...slice(1, 1, 70, 1000, 2.8), directory: LUCIA, project: 'lucia', main_model: 'claude-sonnet-5', transcripts_unavailable: 0 },
+    { ...slice(1, 0, 4000, 1.2), directory: DEMO, project: 'demo', main_model: 'claude-opus-5-5', transcripts_unavailable: 0 },
+    { ...slice(1, 1, 1000, 2.8), directory: LUCIA, project: 'lucia', main_model: 'claude-sonnet-5', transcripts_unavailable: 0 },
   ],
   by_model: [
     {
-      ...slice(1, 0, 60, 3000, 3),
+      ...slice(1, 0, 3000, 3),
       model: 'claude-opus-5-5',
       rate: { input: 4, output: 20, cache_read: 0.2, cache_write_5m: 5, cache_write_1h: 8 },
       cost_breakdown: { input: 0.5, output: 2, cache_read: 0.3, cache_creation: 0.2 },
     },
-    { ...slice(1, 1, 40, 2000, 1), model: null, rate: null, cost_breakdown: null },
+    { ...slice(1, 1, 2000, 1), model: null, rate: null, cost_breakdown: null },
   ],
 };
 
 const totals = (directory: string | null) => ({
   ...EMPTY_METRICS,
   sessions: directory ? { total: 1, working: 1, paused: 0, orphaned: 0, closed: 0 } : { total: 3, working: 2, paused: 1, orphaned: 0, closed: 0 },
-  activity: { events: 200, tool_calls: directory ? 30 : 100, prompts: 2, blocks: 0 },
   tokens: { input: 200, output: 5000, cache_read: 2000, cache_creation: 100 },
   estimated_cost_usd: directory ? 1.2 : 4,
   by_model: [{ model: 'claude-opus-5-5', tokens: { input: 200, output: 5000, cache_read: 2000, cache_creation: 100 }, estimated_cost_usd: 4 }],
@@ -55,16 +53,16 @@ test.describe('AC-39: fichas que abren su desglose', () => {
     const api = await mockApi(page, { metrics, sessions: () => board });
     await page.goto('/sesiones?rango=7d');
 
-    const tools = page.locator('[data-testid="usage-card"][data-kpi="tools"]');
-    await expect(tools).toContainText('100');
+    const paused = page.locator('[data-testid="usage-card"][data-kpi="paused"]');
+    await expect(paused).toContainText('1');
     expect(api.requests.metrics.every((u) => !u.searchParams.has('breakdown'))).toBe(true);
 
-    await tools.click();
+    await paused.click();
     const modal = page.getByTestId('breakdown-modal');
-    await expect(modal.getByRole('heading')).toHaveText('Herramientas · Últimos 7 días');
+    await expect(modal.getByRole('heading')).toHaveText('En pausa · Últimos 7 días');
     await expect.poll(() => api.requests.metrics.some((u) => u.searchParams.get('breakdown') === 'true')).toBe(true);
 
-    await expect(page.getByTestId('breakdown-total')).toContainText('100');
+    await expect(page.getByTestId('breakdown-total')).toContainText('1');
     await expect(page.getByTestId('breakdown-row').first()).toContainText('…/Codev/lucia');
   });
 
@@ -105,7 +103,7 @@ test.describe('AC-39: fichas que abren su desglose', () => {
     await page.keyboard.press('Escape');
 
     await page.reload();
-    await page.locator('[data-testid="usage-card"][data-kpi="tools"]').click();
+    await page.locator('[data-testid="usage-card"][data-kpi="working"]').click();
     await expect(page.getByTestId('breakdown-table')).toHaveAttribute('data-view', 'model');
     await expect(page.getByTestId('breakdown-row').last()).toContainText('Modelo desconocido');
   });

@@ -130,6 +130,10 @@ _Avoid_: Budget, cuota, tope
 Situación de un Presupuesto frente a lo gastado: **Dentro**, **Cerca** (pasado su umbral de aviso) o **Superado**.
 _Avoid_: Alerta, nivel
 
+**Uso de la suscripción**:
+Cuota que queda de la suscripción de Claude (Pro o Max) en dos ventanas, la de 5 horas y la semanal, con el momento en que se reinician. Es un dato de la cuenta, no de la Sesión, y llega por el `statusLine` de Claude Code (ADR-0012). Cada ventana está **Holgada**, **Cerca** (queda el 20 % o menos), **Agotada** o con el **reinicio pendiente** de una nueva lectura. Sin datos no hay suscripción.
+_Avoid_: Créditos, límite de uso, rate limit
+
 **Enmascarado**:
 Sustitución de un secreto o un dato personal (PII) por un **Marcador** con su tipo (`[REDACTED_API_KEY]`, `[REDACTED_EMAIL]`) antes de enviarlo, guardarlo, mostrarlo o exportarlo (ADR-0009).
 _Avoid_: Redacción, anonimización, censura

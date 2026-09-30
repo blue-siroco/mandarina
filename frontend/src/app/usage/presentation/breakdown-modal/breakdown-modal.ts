@@ -91,7 +91,6 @@ export class BreakdownModal {
     return {
       sessions: { working: m.sessions.working, paused: m.sessions.paused, orphaned: m.sessions.orphaned },
       subagentsRunning: m.subagentsRunning,
-      activity: { toolCalls: m.activity.toolCalls, prompts: m.activity.prompts, blocks: m.activity.blocks },
       tokens: m.tokens,
       estimatedCostUsd: m.estimatedCostUsd,
       unpricedModels: m.unpricedModels,

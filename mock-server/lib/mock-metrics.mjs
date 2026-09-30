@@ -48,7 +48,7 @@ function rateTable(model) {
   return rate ? { input: rate.input, output: rate.output, cache_read: rate.cacheRead, cache_write_5m: rate.input * 1.25, cache_write_1h: rate.input * 2 } : null;
 }
 
-const emptyCounts = () => ({ working: 0, paused: 0, orphaned: 0, subagents_running: 0, tool_calls: 0, prompts: 0, blocks: 0 });
+const emptyCounts = () => ({ working: 0, paused: 0, orphaned: 0, subagents_running: 0 });
 
 /** Suma contribuciones { directory, project, model, ...conteos, tokens? } en un corte (AC-38). */
 function aggregate(contributions) {
@@ -76,7 +76,6 @@ function aggregate(contributions) {
     slice: {
       sessions: { working: counts.working, paused: counts.paused, orphaned: counts.orphaned },
       subagents_running: counts.subagents_running,
-      activity: { tool_calls: counts.tool_calls, prompts: counts.prompts, blocks: counts.blocks },
       tokens: [...byModel.values()].reduce(add, zero()),
       estimated_cost_usd: round(cost),
       unpriced_models: unpriced.sort(),
@@ -139,9 +138,6 @@ export function computeMetrics(events, since, now, { directory, breakdown = fals
       if (e.received_at < sinceIso) continue;
       eventCount += 1;
       const at = e.subagent_id ? SUBAGENT_MODEL : model;
-      if (e.event_type === 'tool.pre') contributions.push({ ...base, model: at, tool_calls: 1 });
-      if (e.event_type === 'prompt.submitted') contributions.push({ ...base, model: at, prompts: 1 });
-      if (e.event_type === 'tool.blocked') contributions.push({ ...base, model: at, blocks: 1 });
       if (REPLY_EVENTS.has(e.event_type)) contributions.push({ ...base, model: at, tokens: syntheticUsage(e), rewrite: isRewrite(e) });
     }
   }
@@ -158,7 +154,7 @@ export function computeMetrics(events, since, now, { directory, breakdown = fals
     generated_at: now.toISOString(),
     sessions,
     subagents_running: total.slice.subagents_running,
-    activity: { events: eventCount, ...total.slice.activity },
+    activity: { events: eventCount },
     tokens: total.slice.tokens,
     estimated_cost_usd: total.slice.estimated_cost_usd,
     unpriced_models: total.slice.unpriced_models,

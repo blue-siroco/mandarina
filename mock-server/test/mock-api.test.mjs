@@ -208,7 +208,6 @@ test('AC-38: GET /api/v1/metrics filtra por Directorio y desglosa sumando el tot
   const body = await (await fetch(`${base}/api/v1/metrics?since=${since}&breakdown=true`)).json();
   for (const rows of [body.breakdown.by_directory, body.breakdown.by_model]) {
     const sum = (pick) => rows.reduce((n, r) => n + pick(r), 0);
-    assert.equal(sum((r) => r.activity.tool_calls), body.activity.tool_calls);
     assert.equal(sum((r) => r.tokens.output), body.tokens.output);
     assert.equal(sum((r) => r.sessions.working + r.sessions.paused + r.sessions.orphaned), body.sessions.working + body.sessions.paused + body.sessions.orphaned);
   }
@@ -217,7 +216,7 @@ test('AC-38: GET /api/v1/metrics filtra por Directorio y desglosa sumando el tot
   const directory = body.breakdown.by_directory[0].directory;
   const filtered = await (await fetch(`${base}/api/v1/metrics?since=${since}&directory=${encodeURIComponent(directory)}&breakdown=true`)).json();
   assert.deepEqual(filtered.breakdown.by_directory.map((d) => d.directory), [directory]);
-  assert.equal(filtered.activity.tool_calls, body.breakdown.by_directory[0].activity.tool_calls);
+  assert.equal(filtered.tokens.output, body.breakdown.by_directory[0].tokens.output);
   assert.equal((await fetch(`${base}/api/v1/metrics?since=${since}&directory=`)).status, 400);
   assert.equal((await fetch(`${base}/api/v1/metrics?since=${since}&breakdown=si`)).status, 400);
   await api.close();

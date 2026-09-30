@@ -2,7 +2,7 @@
 import { formatCompact, formatCost, formatInteger, formatPercent } from '../../shared/format';
 import { DirectoryBreakdown, MetricsSlice, ModelBreakdown } from '../models/usage-metrics';
 
-export type KpiKey = 'working' | 'paused' | 'input' | 'output' | 'cache' | 'cost' | 'tools';
+export type KpiKey = 'working' | 'paused' | 'input' | 'output' | 'cache' | 'cost';
 export type BreakdownView = 'directory' | 'model';
 export type SortDirection = 'asc' | 'desc';
 
@@ -97,11 +97,6 @@ const COLUMNS: Record<KpiKey, (view: BreakdownView) => BreakdownColumn[]> = {
           },
         ]
       : []),
-  ],
-  tools: () => [
-    count('tools', 'Herramientas', (r) => r.activity.toolCalls),
-    count('prompts', 'Prompts', (r) => r.activity.prompts),
-    count('blocks', 'Bloqueos', (r) => r.activity.blocks),
   ],
 };
 

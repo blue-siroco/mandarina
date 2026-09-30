@@ -30,6 +30,39 @@ Añade esto al `.claude/settings.json` del proyecto que quieras observar (o a `~
 
 `Notification` y `PermissionRequest` son los que permiten a Mandarina saber qué Sesiones esperan a la persona usuaria (ADR-0011): `PermissionRequest` se envía como `permission.requested` (diálogo de permiso de una herramienta) y `Notification` como `session.notified` (permiso pendiente, inactividad…). Solo observan: no aprueban, no deniegan ni retrasan el diálogo, no evalúan Reglas ni Presupuestos y no escriben en stdout. Su `message` y `tool_input` se enmascaran igual que el resto (ADR-0009).
 
+## Uso de la suscripción (`statusline.mjs`)
+
+Para enseñar en el board lo que queda de la cuota de tu suscripción de Claude (ventana de 5 horas y semanal), el Adaptador también puede ejecutarse como comando de `statusLine` (ADR-0012). Los hooks no traen ese dato: Claude Code solo lo pasa, como `rate_limits.five_hour` y `rate_limits.seven_day`, en el JSON de la `statusLine`.
+
+```json
+{
+  "statusLine": { "type": "command", "command": "node <MANDARINA>/adapters/claude-code/statusline.mjs" }
+}
+```
+
+- Envía `PUT /api/v1/subscription-usage` con las ventanas válidas (cada una es independiente y puede faltar) y el `session_id`. Solo lleva números: no hay nada que enmascarar. Sin `rate_limits` o con un JSON mal formado no envía nada.
+- Es **best-effort** como el hook (ADR-0004): timeout de 1,5 s, nunca lanza y sale siempre con código 0.
+- **Sin cadena no imprime nada**, así que la línea de estado queda vacía. Si ya tenías una `statusLine`, encadénala.
+
+### Encadenar la `statusLine` que ya tenías
+
+Claude Code solo admite una `statusLine`. Deja tu comando anterior en `MANDARINA_STATUSLINE_CHAIN` y registra `statusline.mjs` en su lugar: el Adaptador ejecuta tu comando con el mismo JSON por stdin y reenvía su stdout y stderr tal cual, mientras envía la lectura a Mandarina en paralelo.
+
+```json
+{
+  "env": { "MANDARINA_STATUSLINE_CHAIN": "npx ccstatusline@latest" },
+  "statusLine": { "type": "command", "command": "node <MANDARINA>/adapters/claude-code/statusline.mjs" }
+}
+```
+
+Si tu comando falla, la salida queda vacía y la lectura se envía igual.
+
+### Cuándo no hay datos
+
+- Solo hay datos con una suscripción (Pro o Max) y **después de la primera respuesta de la API de la Sesión**. Con API key, Bedrock o Vertex Claude Code no envía `rate_limits`; si el Harness tiene `ANTHROPIC_API_KEY`, esa clave tiene prioridad sobre la suscripción.
+- Claude Code retira una ventana del JSON cuando su reinicio expira; Mandarina conserva la última lectura hasta entonces y luego la marca como pendiente de nueva lectura.
+- **Supuesto por verificar:** el esquema sale de la documentación de Claude Code. Los fixtures `test/fixtures/statusline-*.json` son simulados y deben sustituirse por un payload real.
+
 ## Configuración (variables de entorno)
 
 | Variable | Por defecto | Uso |
@@ -38,6 +71,7 @@ Añade esto al `.claude/settings.json` del proyecto que quieras observar (o a `~
 | `MANDARINA_URL` | `http://127.0.0.1:4000` | Backend de Mandarina (cámbialo si usas otro `BACKEND_PORT`) |
 | `MANDARINA_RULES` | `rules.json` junto a `send_event.mjs` | Fichero de configuración de las Reglas de bloqueo |
 | `MANDARINA_MASK_PII` | todas | Datos personales que se tapan antes de enviar: `email`, `phone`, `iban`, `card`, `id` (separadas por comas), `all` o `none`. Los secretos siempre se tapan (AC-60, AC-61) |
+| `MANDARINA_STATUSLINE_CHAIN` | — | Solo `statusline.mjs`: comando de `statusLine` previo que se ejecuta y cuya salida se reenvía |
 | `MANDARINA_DEBUG` | — | Si tiene valor, los errores de envío y de configuración se escriben en stderr |
 
 Antes de enviar, el hook sustituye los secretos y los datos personales del Evento por marcadores con su tipo (`[REDACTED_API_KEY]`, `[REDACTED_EMAIL]`…), de modo que no salen de tu máquina en claro (ADR-0009). El servidor lo repite al ingerir. Las Reglas de bloqueo se evalúan antes, sobre el texto original.

@@ -1,0 +1,13 @@
+{
+  "_nota": "SIMULADO a partir de la documentacion de Claude Code (supuesto A, ADR-0012): sustituir por un payload real capturado.",
+  "session_id": "7f3c2a10-1b2c-4d5e-9f00-aa11bb22cc33",
+  "transcript_path": "C:\\Users\\dev\\.claude\\projects\\C--Codev-demo\\7f3c2a10-1b2c-4d5e-9f00-aa11bb22cc33.jsonl",
+  "cwd": "C:\\Codev\\demo",
+  "model": { "id": "claude-sonnet-5", "display_name": "Sonnet 5" },
+  "workspace": { "current_dir": "C:\\Codev\\demo", "project_dir": "C:\\Codev\\demo" },
+  "version": "2.1.0",
+  "rate_limits": {
+    "five_hour": { "used_percentage": 23.5, "resets_at": 1790000000 },
+    "seven_day": { "used_percentage": 41.2, "resets_at": 1790400000 }
+  }
+}

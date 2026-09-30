@@ -1,7 +1,7 @@
 import { normalizeAgentId } from '../domain/agent-id.js';
 import { cacheEfficiency, cacheRewrites, type CacheEfficiency, type CacheRewrite } from '../domain/cache-efficiency.js';
 import { latestModel } from '../domain/context-window.js';
-import { aggregate, aggregateBy, modelAt, type Contribution, type Slice } from '../domain/metrics-breakdown.js';
+import { aggregate, aggregateBy, type Contribution, type Slice } from '../domain/metrics-breakdown.js';
 import { costByClass, estimateCost, rateTable } from '../domain/pricing.js';
 import { summarizeSession, type SessionCore, type SessionEventRow } from '../domain/session-summary.js';
 import { ZERO_USAGE, type TokenUsage, type UsageEntry } from '../domain/token-usage.js';
@@ -22,7 +22,6 @@ export type SessionCondition = 'working' | 'paused' | 'waiting' | 'orphaned' | '
 export interface MetricsSlice {
   sessions: { working: number; paused: number; orphaned: number };
   subagents_running: number;
-  activity: { tool_calls: number; prompts: number; blocks: number };
   tokens: TokenUsageView;
   estimated_cost_usd: number;
   unpriced_models: string[];
@@ -86,8 +85,6 @@ interface SessionData {
   hasTranscriptPath: boolean;
 }
 
-const ACTIVITY_FIELD = { 'tool.pre': 'tool_calls', 'prompt.submitted': 'prompts', 'tool.blocked': 'blocks' } as const;
-
 function conditionOf(core: SessionCore): SessionCondition {
   if (core.state === 'closed' || core.state === 'orphaned') return core.state;
   return core.activity ?? 'paused';
@@ -97,8 +94,8 @@ function conditionOf(core: SessionCore): SessionCondition {
  * Lo que aporta una Sesión a las fichas, atribuido a su Directorio y al modelo
  * en uso (AC-38). `seen` evita contar dos veces una respuesta repetida entre Transcripts.
  */
-function contributionsOf({ rows, core, transcript }: SessionData, since: Date, seen: Set<string>): Contribution[] {
-  const base = { directory: core.directory, project: core.project, working: 0, paused: 0, orphaned: 0, subagents_running: 0, tool_calls: 0, prompts: 0, blocks: 0 };
+function contributionsOf({ core, transcript }: SessionData, since: Date, seen: Set<string>): Contribution[] {
+  const base = { directory: core.directory, project: core.project, working: 0, paused: 0, orphaned: 0, subagents_running: 0 };
   const main = transcript?.entries ?? [];
   const entriesOf = (subagentId: string | null) =>
     subagentId === null ? main : (transcript?.subagents.find((s) => s.agentId === normalizeAgentId(subagentId))?.entries ?? []);
@@ -117,12 +114,6 @@ function contributionsOf({ rows, core, transcript }: SessionData, since: Date, s
   for (const life of core.running_subagents_list) {
     contributions.push({ ...base, model: latestModel(entriesOf(life.subagent_id)), subagents_running: 1 });
   }
-  const sinceIso = since.toISOString();
-  for (const row of rows) {
-    const field = ACTIVITY_FIELD[row.event_type as keyof typeof ACTIVITY_FIELD];
-    if (!field || row.received_at < sinceIso) continue;
-    contributions.push({ ...base, model: modelAt(entriesOf(row.subagent_id), row.occurred_at), [field]: 1 });
-  }
   for (const entry of allEntries(transcript)) {
     if (seen.has(entry.messageId) || Date.parse(entry.timestamp) < since.getTime()) continue;
     seen.add(entry.messageId);
@@ -135,7 +126,6 @@ function toSliceView(slice: Slice): MetricsSlice {
   return {
     sessions: { ...slice.sessions },
     subagents_running: slice.subagents_running,
-    activity: { ...slice.activity },
     tokens: toView(slice.tokens),
     estimated_cost_usd: roundCost(slice.estimated_cost_usd),
     unpriced_models: [...slice.unpriced_models],
@@ -197,7 +187,6 @@ export class GetUsageMetrics {
       subagents_running: total.subagents_running,
       activity: {
         events: selected.reduce((n, s) => n + s.rows.filter((r) => r.received_at >= sinceIso).length, 0),
-        ...total.activity,
       },
       tokens: toView(total.tokens),
       estimated_cost_usd: roundCost(total.estimated_cost_usd),

@@ -1,4 +1,9 @@
-import { CacheEfficiencyDto, UsageBreakdownDto, UsageMetricsDto, toCache } from '../mappers/usage-metrics.mapper';
+import {
+  CacheEfficiencyDto,
+  UsageBreakdownDto,
+  UsageMetricsDto,
+  toCache,
+} from '../mappers/usage-metrics.mapper';
 import { UsageBreakdown, UsageMetrics } from '../models/usage-metrics';
 
 const OPUS = 'claude-opus-5-5';
@@ -26,7 +31,6 @@ export function usageMetricsDto(overrides: Partial<UsageMetricsDto> = {}): Usage
     generated_at: '2026-09-25T10:00:00.000Z',
     sessions: { total: 6, working: 2, paused: 1, waiting: 0, orphaned: 1, closed: 2 },
     subagents_running: 3,
-    activity: { events: 420, tool_calls: 150, prompts: 12, blocks: 2 },
     tokens: { input: 1200, output: 45_000, cache_read: 4_700_000, cache_creation: 240_000 },
     estimated_cost_usd: 3.4212,
     unpriced_models: [],
@@ -50,7 +54,6 @@ export function usageMetrics(overrides: Partial<UsageMetrics> = {}): UsageMetric
     generatedAt: new Date('2026-09-25T10:00:00.000Z'),
     sessions: { total: 6, working: 2, paused: 1, waiting: 0, orphaned: 1, closed: 2 },
     subagentsRunning: 3,
-    activity: { events: 420, toolCalls: 150, prompts: 12, blocks: 2 },
     tokens: { input: 1200, output: 45_000, cacheRead: 4_700_000, cacheCreation: 240_000 },
     estimatedCostUsd: 3.4212,
     unpricedModels: [],
@@ -76,15 +79,13 @@ type Counts = [
   paused: number,
   orphaned: number,
   subagents: number,
-  tools: number,
-  prompts: number,
-  blocks: number,
+  calls: number,
   output: number,
   cost: number,
 ];
 
 /** Caché de una fila del desglose: a más salida, más lectura; las filas sin tokens quedan sin tasa. */
-const sliceCacheDto = ([, , , , tools, , , output]: Counts): CacheEfficiencyDto =>
+const sliceCacheDto = ([, , , , calls, , output]: Counts): CacheEfficiencyDto =>
   output === 0
     ? cacheDto({
         hit_rate: null,
@@ -105,35 +106,39 @@ const sliceCacheDto = ([, , , , tools, , , output]: Counts): CacheEfficiencyDto 
         savings_gross_usd: output / 1000,
         write_overhead_usd: output / 10_000,
         savings_net_usd: output / 1000 - output / 10_000,
-        rewrites: tools > 50 ? 2 : 1,
+        rewrites: calls > 50 ? 2 : 1,
         rewrite_cost_usd: 0.1,
       });
 
-const sliceDto = ([working, paused, orphaned, subagents, tools, prompts, blocks, output, cost]: Counts) => ({
-  sessions: { working, paused, orphaned },
-  subagents_running: subagents,
-  activity: { tool_calls: tools, prompts, blocks },
-  tokens: { input: output / 50, output, cache_read: output * 100, cache_creation: output * 5 },
-  estimated_cost_usd: cost,
-  unpriced_models: [],
-  cache: sliceCacheDto([working, paused, orphaned, subagents, tools, prompts, blocks, output, cost]),
-});
+const sliceDto = (counts: Counts) => {
+  const [working, paused, orphaned, subagents, , output, cost] = counts;
+  return {
+    sessions: { working, paused, orphaned },
+    subagents_running: subagents,
+    tokens: { input: output / 50, output, cache_read: output * 100, cache_creation: output * 5 },
+    estimated_cost_usd: cost,
+    unpriced_models: [],
+    cache: sliceCacheDto(counts),
+  };
+};
 
-const slice = ([working, paused, orphaned, subagents, tools, prompts, blocks, output, cost]: Counts) => ({
-  cache: toCache(sliceCacheDto([working, paused, orphaned, subagents, tools, prompts, blocks, output, cost])),
-  sessions: { working, paused, orphaned },
-  subagentsRunning: subagents,
-  activity: { toolCalls: tools, prompts, blocks },
-  tokens: { input: output / 50, output, cacheRead: output * 100, cacheCreation: output * 5 },
-  estimatedCostUsd: cost,
-  unpricedModels: [],
-});
+const slice = (counts: Counts) => {
+  const [working, paused, orphaned, subagents, , output, cost] = counts;
+  return {
+    cache: toCache(sliceCacheDto(counts)),
+    sessions: { working, paused, orphaned },
+    subagentsRunning: subagents,
+    tokens: { input: output / 50, output, cacheRead: output * 100, cacheCreation: output * 5 },
+    estimatedCostUsd: cost,
+    unpricedModels: [],
+  };
+};
 
 // Suma el total de `usageMetrics()`: demo con Opus y Haiku, lucia sin Transcript.
-const DEMO_COUNTS: Counts = [2, 0, 1, 3, 120, 10, 2, 45_000, 3.4212];
-const LUCIA_COUNTS: Counts = [0, 1, 0, 0, 30, 2, 0, 0, 0];
-const OPUS_COUNTS: Counts = [2, 0, 1, 0, 100, 10, 2, 40_000, 3.2];
-const HAIKU_COUNTS: Counts = [0, 0, 0, 3, 20, 0, 0, 5_000, 0.2212];
+const DEMO_COUNTS: Counts = [2, 0, 1, 3, 120, 45_000, 3.4212];
+const LUCIA_COUNTS: Counts = [0, 1, 0, 0, 30, 0, 0];
+const OPUS_COUNTS: Counts = [2, 0, 1, 0, 100, 40_000, 3.2];
+const HAIKU_COUNTS: Counts = [0, 0, 0, 3, 20, 5_000, 0.2212];
 
 export function breakdownDto(): UsageBreakdownDto {
   return {

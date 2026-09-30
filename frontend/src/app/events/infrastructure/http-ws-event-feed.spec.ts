@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { LiveSignal } from '../models/observed-event';
+import { subscriptionUsageDto } from '../../subscription/testing/subscription-fixtures';
 import { eventDto } from '../testing/event-fixtures';
 import { HttpWsEventFeed, LIVE_URL, RECONNECT_DELAY_MS, WEBSOCKET_FACTORY } from './http-ws-event-feed';
 
@@ -16,7 +17,10 @@ class FakeSocket {
   }
 }
 
-const signalLabel = (s: LiveSignal) => (s.kind === 'event' ? s.event.id : s.connection);
+const signalLabel = (s: LiveSignal) => {
+  if (s.kind === 'event') return s.event.id;
+  return s.kind === 'connection' ? s.connection : s.kind;
+};
 
 describe('HttpWsEventFeed', () => {
   let feed: HttpWsEventFeed;
@@ -129,6 +133,17 @@ describe('HttpWsEventFeed', () => {
         kind: 'budget',
         change: { budgetId: 'b1', scope: 'session', project: 'demo', sessionId: 's1', action: 'stop', state: 'exceeded', previousState: 'near', spentUsd: 9.5, limitUsd: 5 },
       });
+    });
+
+    it('AC-136: traduce el subscription.usage del WebSocket, también el null de una cuenta sin suscripción', () => {
+      const signals: LiveSignal[] = [];
+      feed.live().subscribe((s) => signals.push(s));
+      sockets[0]?.onmessage?.({ data: JSON.stringify({ type: 'subscription.usage', usage: subscriptionUsageDto() }) });
+      sockets[0]?.onmessage?.({ data: JSON.stringify({ type: 'subscription.usage', usage: null }) });
+
+      const [first, second] = signals.slice(-2);
+      expect(first).toMatchObject({ kind: 'subscription', usage: { fiveHour: { remainingPercent: 62 } } });
+      expect(second).toStrictEqual({ kind: 'subscription', usage: null });
     });
 
     it('ignora mensajes de otro tipo', () => {

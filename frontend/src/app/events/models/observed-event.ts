@@ -1,3 +1,5 @@
+import { SubscriptionUsage } from '../../subscription/models/subscription-usage';
+
 export type EventType =
   | 'session.started'
   | 'prompt.submitted'
@@ -89,4 +91,6 @@ export interface BudgetStateChange {
 export type LiveSignal =
   | { kind: 'connection'; connection: LiveConnection }
   | { kind: 'event'; event: ObservedEvent }
-  | { kind: 'budget'; change: BudgetStateChange };
+  | { kind: 'budget'; change: BudgetStateChange }
+  /** Lectura nueva de la cuota de la suscripción, mensaje `subscription.usage` (AC-136). */
+  | { kind: 'subscription'; usage: SubscriptionUsage | null };

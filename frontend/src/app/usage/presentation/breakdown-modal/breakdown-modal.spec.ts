@@ -14,14 +14,14 @@ describe('AC-39, AC-40: BreakdownModal', () => {
   let state$: BehaviorSubject<UsageState>;
   let calls: Array<[number | undefined, UsageQuery | undefined]>;
 
-  async function render(kpi: KpiKey = 'tools', inputs: Record<string, unknown> = {}) {
+  async function render(kpi: KpiKey = 'working', inputs: Record<string, unknown> = {}) {
     calls = [];
     await TestBed.configureTestingModule({
       imports: [BreakdownModal],
       providers: [{ provide: WatchUsageMetrics, useValue: { execute: (w?: number, q?: UsageQuery) => (calls.push([w, q]), state$) } }],
     }).compileComponents();
     const fixture = TestBed.createComponent(BreakdownModal);
-    const values = { isOpen: true, kpi, label: 'Herramientas', periodTitle: 'Últimos 7 días', windowMs: 7 * 86_400_000, ...inputs };
+    const values = { isOpen: true, kpi, label: 'Trabajando', periodTitle: 'Últimos 7 días', windowMs: 7 * 86_400_000, ...inputs };
     for (const [name, value] of Object.entries(values)) fixture.componentRef.setInput(name, value);
     await fixture.whenStable();
     return fixture;
@@ -44,22 +44,22 @@ describe('AC-39, AC-40: BreakdownModal', () => {
   });
 
   it('pide el desglose del periodo y del Directorio del board, y lo rotula', async () => {
-    const fixture = await render('tools', { directory: 'C:\\Codev\\demo' });
+    const fixture = await render('working', { directory: 'C:\\Codev\\demo' });
     expect(calls).toStrictEqual([[7 * 86_400_000, { directory: 'C:\\Codev\\demo', breakdown: true }]]);
-    expect(text(el(fixture).querySelector('h2'))).toBe('Herramientas · Últimos 7 días');
+    expect(text(el(fixture).querySelector('h2'))).toBe('Trabajando · Últimos 7 días');
     expect(text(el(fixture).querySelector('[data-testid="breakdown-filter"]'))).toBe('Solo …/Codev/demo');
   });
 
   it('cerrado no pide nada', async () => {
-    await render('tools', { isOpen: false });
+    await render('working', { isOpen: false });
     expect(calls).toStrictEqual([]);
   });
 
   it('empieza por el total y sigue en orden descendente por la métrica de la ficha', async () => {
-    const fixture = await render('tools');
-    expect(cells(el(fixture).querySelector('[data-testid="breakdown-total"]'))).toBe('Total 150 12 2');
-    expect(rows(fixture).map((r) => cells(r))).toStrictEqual(['…/Codev/demo demo 120 10 2', '…/Codev/lucia lucia 30 2 0']);
-    expect(el(fixture).querySelector('th[aria-sort="descending"]')?.textContent).toContain('Herramientas');
+    const fixture = await render('working');
+    expect(cells(el(fixture).querySelector('[data-testid="breakdown-total"]'))).toBe('Total 2 3');
+    expect(rows(fixture).map((r) => cells(r))).toStrictEqual(['…/Codev/demo demo 2 3', '…/Codev/lucia lucia 0 0']);
+    expect(el(fixture).querySelector('th[aria-sort="descending"]')?.textContent).toContain('Sesiones trabajando');
   });
 
   it('AC-74: la ficha Caché reparte el ahorro neto, la tasa y las Reescrituras, ordenado por ahorro neto', async () => {
@@ -102,20 +102,20 @@ describe('AC-39, AC-40: BreakdownModal', () => {
   });
 
   it('reordena al pulsar una cabecera, primero descendente y luego ascendente', async () => {
-    const fixture = await render('tools');
-    const prompts = el(fixture).querySelector('[data-column="prompts"]') as HTMLButtonElement;
-    prompts.click();
+    const fixture = await render('working');
+    const subagents = el(fixture).querySelector('[data-column="subagents"]') as HTMLButtonElement;
+    subagents.click();
     await fixture.whenStable();
-    expect(prompts.closest('th')?.getAttribute('aria-sort')).toBe('descending');
+    expect(subagents.closest('th')?.getAttribute('aria-sort')).toBe('descending');
 
-    prompts.click();
+    subagents.click();
     await fixture.whenStable();
-    expect(prompts.closest('th')?.getAttribute('aria-sort')).toBe('ascending');
+    expect(subagents.closest('th')?.getAttribute('aria-sort')).toBe('ascending');
     expect(text(rows(fixture)[0])).toContain('lucia');
   });
 
   it('por modelo muestra el badge y "Modelo desconocido", y recuerda la vista', async () => {
-    const fixture = await render('tools');
+    const fixture = await render('working');
     await pickView(fixture, 1);
 
     expect(el(fixture).querySelectorAll('[data-testid="breakdown-row"] app-model-badge')).toHaveLength(2);
@@ -123,7 +123,7 @@ describe('AC-39, AC-40: BreakdownModal', () => {
     expect(localStorage.getItem(VIEW_STORAGE_KEY)).toBe('model');
 
     TestBed.resetTestingModule();
-    const reopened = await render('tools');
+    const reopened = await render('working');
     expect(views(reopened).toogleOptions.defaultSelectedOption).toBe(1);
   });
 
@@ -143,7 +143,7 @@ describe('AC-39, AC-40: BreakdownModal', () => {
   });
 
   it('pulsar un Directorio lo elige y cierra el modal', async () => {
-    const fixture = await render('tools');
+    const fixture = await render('working');
     const selected: string[] = [];
     let closed = 0;
     fixture.componentInstance.directorySelected.subscribe((d) => selected.push(d));
@@ -156,7 +156,7 @@ describe('AC-39, AC-40: BreakdownModal', () => {
   });
 
   it('se cierra con Esc, con el botón de cerrar y pulsando fuera, pero no pulsando dentro', async () => {
-    const fixture = await render('tools');
+    const fixture = await render('working');
     let closed = 0;
     fixture.componentInstance.closed.subscribe(() => closed++);
 
@@ -171,14 +171,14 @@ describe('AC-39, AC-40: BreakdownModal', () => {
 
   it('si falla un refresco avisa y conserva las cifras', async () => {
     state$.next({ metrics: usageMetrics({ breakdown: breakdown() }), loaded: true, failed: true });
-    const fixture = await render('tools');
+    const fixture = await render('working');
     expect(el(fixture).querySelector('[data-testid="breakdown-error"]')).not.toBeNull();
     expect(rows(fixture)).toHaveLength(2);
   });
 
   it('mientras carga lo dice', async () => {
     state$.next(INITIAL_USAGE_STATE);
-    const fixture = await render('tools');
+    const fixture = await render('working');
     expect(text(el(fixture))).toContain('Cargando el desglose');
   });
 });

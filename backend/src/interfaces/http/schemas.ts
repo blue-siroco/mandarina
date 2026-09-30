@@ -191,3 +191,21 @@ export const evaluationParamsSchema = {
     object_id: nonEmpty,
   },
 } as const;
+
+const subscriptionWindow = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['used_percentage', 'resets_at'],
+  properties: {
+    used_percentage: { type: 'number', minimum: 0, maximum: 100 },
+    // Epoch en segundos, como lo pasa Claude Code al statusLine.
+    // Acotado (año 2100): un epoch desmesurado no es una fecha válida y daría un 500 al convertirlo.
+    resets_at: { type: 'integer', minimum: 0, maximum: 4_102_444_800 },
+  },
+} as const;
+
+export const subscriptionUsageBodySchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: { session_id: { type: 'string', minLength: 1, maxLength: 200 }, five_hour: subscriptionWindow, seven_day: subscriptionWindow },
+} as const;

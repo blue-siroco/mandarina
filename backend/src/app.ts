@@ -16,11 +16,14 @@ import { ExportTurns } from './application/export-turns.js';
 import { InjectionWarnings, type WarningFilter } from './application/injection-warnings.js';
 import { ManageBudgets } from './application/manage-budgets.js';
 import { ManageEvaluations } from './application/manage-evaluations.js';
+import { ManageSubscriptionUsage } from './application/manage-subscription-usage.js';
 import type { EvaluationFilter } from './application/ports.js';
 import type { EvaluationObjectType } from './domain/evaluation.js';
 import { SqliteBudgetStore } from './infrastructure/sqlite-budget-store.js';
 import { SqliteEvaluationStore } from './infrastructure/sqlite-evaluation-store.js';
 import { SqliteInjectionDismissals } from './infrastructure/sqlite-injection-dismissals.js';
+import { SqliteSubscriptionUsageStore } from './infrastructure/sqlite-subscription-usage-store.js';
+import type { SubscriptionReading } from './domain/subscription-usage.js';
 import { parseOtlpConfig } from './domain/otlp-config.js';
 import { SqliteExportStore } from './infrastructure/sqlite-export-store.js';
 import type { TestKind } from './domain/test-results.js';
@@ -44,6 +47,7 @@ import {
   evaluationsQuerySchema,
   injectionWarningsQuerySchema,
   maskingStatsQuerySchema,
+  subscriptionUsageBodySchema,
 } from './interfaces/http/schemas.js';
 
 export interface AppOptions {
@@ -234,6 +238,20 @@ export async function buildApp({
   );
 
   app.get('/api/v1/exporter', async () => exporter.status());
+
+  const subscriptionUsage = new ManageSubscriptionUsage(new SqliteSubscriptionUsageStore(repository.connection), clock, publisher);
+
+  app.get('/api/v1/subscription-usage', async () => ({ usage: subscriptionUsage.current() }));
+
+  app.put<{ Body: SubscriptionReading & { session_id?: string } }>(
+    '/api/v1/subscription-usage',
+    // El cuerpo real son unos pocos bytes: un tope pequeño evita escrituras y difusiones con cuerpos enormes.
+    { schema: { body: subscriptionUsageBodySchema }, bodyLimit: 1024 },
+    async (request, reply) => {
+      const result = subscriptionUsage.record(request.body);
+      return result.ok ? reply.code(204).send() : reply.code(result.status).send({ message: result.message });
+    },
+  );
 
   // Tras cambiar un Presupuesto se revisa al momento, sin esperar al temporizador (AC-81).
   const changed = async <T>(value: T): Promise<T> => {

@@ -51,6 +51,12 @@ El mock también queda publicado en `http://127.0.0.1:4001` (`MOCK_PORT`) para p
 - Para forzar una a mano contra `serve`: `POST /api/v1/events` con `event_type = permission.requested` (o `session.notified`) y, para terminarla, un `tool.post` del mismo carril.
 - La UI las ve por `/ws` como `event.ingested` y por `GET /api/v1/sessions`.
 
+## Uso de la suscripción
+
+`GET` y `PUT /api/v1/subscription-usage` imitan la ficha *Uso de la suscripción* (ADR-0012, AC-132). `serve` arranca con una cuenta de suscripción: la ventana de 5 h cerca del límite y la semanal holgada. Con `--no-subscription` devuelve `{ "usage": null }` y la ficha no aparece. Un `PUT` válido (204) sustituye la lectura y difunde `{ "type": "subscription.usage", "usage": … }` por `/ws`; sin ventanas, con un porcentaje fuera de 0..100 o con campos desconocidos responde 400. `send` manda una lectura al empezar y otra cada cinco Eventos, con la ventana de 5 h gastándose poco a poco.
+
+`GET /api/v1/metrics` ya no trae `tool_calls`, `prompts` ni `blocks` (AC-133): `activity` solo cuenta Eventos.
+
 ## Opciones
 
 ```bash
@@ -64,6 +70,7 @@ node cli.mjs send  [--target http://127.0.0.1:4000] [--count 0] [--interval 1000
 | `--history` | `serve` | 40 | Eventos precargados al arrancar |
 | `--count` | `send` | 0 (sin fin) | Eventos a enviar; con un número, termina y sale con 1 si alguno fue rechazado o falló |
 | `--seed` | ambos | 1 / aleatoria | Misma semilla, mismas Sesiones |
+| `--no-subscription` | ambos | (desactivada) | `serve`: arranca sin datos de suscripción (`usage: null`, como una cuenta con API key). `send`: no envía lecturas del uso de la suscripción |
 | `--target` | `send` | `http://127.0.0.1:4000` (`MOCK_TARGET`) | Backend al que se envía |
 
 Ejemplo de prueba de carga rápida contra el backend: `docker compose --profile simulate run --rm event-simulator node cli.mjs send --count 1000 --interval 0`.

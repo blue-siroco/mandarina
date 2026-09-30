@@ -33,7 +33,6 @@ export interface CacheEfficiency {
 export interface MetricsSlice {
   sessions: { working: number; paused: number; orphaned: number };
   subagentsRunning: number;
-  activity: { toolCalls: number; prompts: number; blocks: number };
   tokens: TokenUsage;
   /** Sin los modelos sin Tarifa. */
   estimatedCostUsd: number;
@@ -91,7 +90,6 @@ export interface UsageMetrics {
     closed: number;
   };
   subagentsRunning: number;
-  activity: { events: number; toolCalls: number; prompts: number; blocks: number };
   tokens: TokenUsage;
   estimatedCostUsd: number;
   unpricedModels: string[];

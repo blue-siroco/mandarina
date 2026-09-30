@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
 import { createBudgetBook } from './mock-budgets.mjs';
+import { createSubscriptionBook, seedReading } from './mock-subscription.mjs';
 import { SUBAGENT_MODEL, computeMetrics, costOf, syntheticUsage } from './mock-metrics.mjs';
 import { listSessions, sessionDetail, syntheticTokens } from './mock-sessions.mjs';
 import { agentProfile, describeEvents, listAgents, listSubagents } from './mock-subagents.mjs';
@@ -57,14 +58,17 @@ function readJson(req) {
  * @param {number} [options.historySize] Eventos precargados al arrancar.
  * @param {number} [options.seed] Semilla de la simulación.
  * @param {boolean} [options.waitingSeeds] Añade tres Sesiones que esperan (permiso, pregunta y Subagente; AC-93).
+ * @param {boolean} [options.subscriptionSeed] Arranca con una cuenta de suscripción con datos; si no, `usage` es `null` (AC-132).
  */
-export function createMockApi({ intervalMs = 1500, historySize = 40, seed = 1, waitingSeeds = false } = {}) {
+export function createMockApi({ intervalMs = 1500, historySize = 40, seed = 1, waitingSeeds = false, subscriptionSeed = false } = {}) {
   const simulation = createSimulation({ seed, waits: waitingSeeds });
   /** Más antiguo primero; se sirve invertido. */
   const events = [];
   const book = createEvaluationBook();
   const injections = createInjectionBook();
   const budgets = createBudgetBook(costOf, syntheticUsage, SUBAGENT_MODEL);
+  const subscription = createSubscriptionBook();
+  if (subscriptionSeed) subscription.put(seedReading());
   let timer;
 
   const server = createServer(async (req, res) => {
@@ -82,6 +86,7 @@ export function createMockApi({ intervalMs = 1500, historySize = 40, seed = 1, w
     if (url.pathname === '/api/v1/evaluations' || url.pathname.startsWith('/api/v1/evaluations/')) return evaluations(req, url, res);
     if (url.pathname === '/api/v1/injection-warnings' || url.pathname.startsWith('/api/v1/injection-warnings/')) return injectionWarnings(req, url, res);
     if (req.method === 'GET' && url.pathname === '/api/v1/masking-stats') return maskingStats(url, res);
+    if (url.pathname === '/api/v1/subscription-usage') return subscriptionUsage(req, res);
     if (url.pathname === '/api/v1/budgets' || url.pathname.startsWith('/api/v1/budgets/')) return budgetRoutes(req, url, res);
     if (req.method === 'GET' && url.pathname.startsWith('/api/v1/agents/')) return agents(url, res, decodeURIComponent(url.pathname.slice('/api/v1/agents/'.length)));
     if (req.method === 'GET' && url.pathname.startsWith('/api/v1/sessions/')) {
@@ -218,6 +223,16 @@ export function createMockApi({ intervalMs = 1500, historySize = 40, seed = 1, w
       const data = JSON.stringify(message);
       for (const client of wss.clients) if (client.readyState === client.OPEN) client.send(data);
     }
+  }
+
+  async function subscriptionUsage(req, res) {
+    if (req.method === 'GET') return sendJson(res, 200, { usage: subscription.current() });
+    if (req.method !== 'PUT') return sendJson(res, 404, { message: 'No encontrado' });
+    const result = subscription.put(await readJson(req));
+    if (!result.ok) return sendJson(res, 400, { message: result.message });
+    const message = JSON.stringify({ type: 'subscription.usage', usage: subscription.current() });
+    for (const client of wss.clients) if (client.readyState === client.OPEN) client.send(message);
+    res.writeHead(204).end();
   }
 
   async function budgetRoutes(req, url, res) {

@@ -6,7 +6,6 @@ const total = (() => {
   return {
     sessions: { working: m.sessions.working, paused: m.sessions.paused, orphaned: m.sessions.orphaned },
     subagentsRunning: m.subagentsRunning,
-    activity: { toolCalls: m.activity.toolCalls, prompts: m.activity.prompts, blocks: m.activity.blocks },
     tokens: m.tokens,
     estimatedCostUsd: m.estimatedCostUsd,
     unpricedModels: m.unpricedModels,
@@ -27,9 +26,12 @@ describe('AC-40: columnas del desglose', () => {
     ['output', 'model', ['Salida']],
     ['cost', 'directory', ['Coste estimado', '% del total']],
     ['cost', 'model', ['Coste estimado', '% del total', 'Tarifa (entrada / salida, $/M)', 'Entrada', 'Salida', 'Lectura de caché', 'Escritura de caché']],
-    ['tools', 'model', ['Herramientas', 'Prompts', 'Bloqueos']],
   ] as const)('la ficha %s por %s muestra sus columnas', (kpi, view, labels) => {
     expect(breakdownColumns(kpi, view).map((c) => c.label)).toStrictEqual(labels);
+  });
+
+  it('AC-135: el desglose ya no conoce la ficha Herramientas', () => {
+    expect(() => breakdownColumns('tools' as never, 'model')).toThrow();
   });
 
   it('formatea cada cifra y marca como desconocido lo que no se sabe', () => {
@@ -45,13 +47,13 @@ describe('AC-40: columnas del desglose', () => {
 
 describe('AC-40: orden del desglose', () => {
   const rows: BreakdownRow[] = breakdown().byModel;
-  const [tools] = breakdownColumns('tools', 'model');
+  const [, subagents] = breakdownColumns('working', 'model');
   const [, , rate] = breakdownColumns('cost', 'model');
 
   it('ordena por la cifra en los dos sentidos sin tocar el original', () => {
-    expect(sortRows(rows, tools!, 'desc', total).map((r) => r.activity.toolCalls)).toStrictEqual([100, 30, 20]);
-    expect(sortRows(rows, tools!, 'asc', total).map((r) => r.activity.toolCalls)).toStrictEqual([20, 30, 100]);
-    expect(rows.map((r) => r.activity.toolCalls)).toStrictEqual([100, 20, 30]);
+    expect(sortRows(rows, subagents!, 'desc', total).map((r) => r.subagentsRunning)).toStrictEqual([3, 0, 0]);
+    expect(sortRows(rows, subagents!, 'asc', total).map((r) => r.subagentsRunning)).toStrictEqual([0, 0, 3]);
+    expect(rows.map((r) => r.subagentsRunning)).toStrictEqual([0, 3, 0]);
   });
 
   it('deja siempre al final lo desconocido', () => {

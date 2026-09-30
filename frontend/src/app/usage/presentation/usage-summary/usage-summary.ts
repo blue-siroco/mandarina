@@ -5,6 +5,7 @@ import { switchMap } from 'rxjs';
 import { dayProgress } from '../../../budgets/application/budget-alerts';
 import { INITIAL_BUDGETS, WatchBudgets } from '../../../budgets/application/watch-budgets';
 import { STATE_LABELS } from '../../../budgets/models/budget';
+import { SubscriptionCard } from '../../../subscription/presentation/subscription-card/subscription-card';
 import { INITIAL_USAGE_STATE, WatchUsageMetrics } from '../../application/watch-usage-metrics';
 import { CacheEfficiency, UsageMetrics } from '../../models/usage-metrics';
 import { KpiKey } from '../breakdown-columns';
@@ -96,18 +97,12 @@ export function toKpiCards(m: UsageMetrics): KpiCard[] {
       detail: costDetail,
       accent: 'brand',
     },
-    {
-      key: 'tools',
-      label: 'Herramientas',
-      value: integer.format(m.activity.toolCalls),
-      detail: `${plural(m.activity.prompts, 'prompt', 'prompts')} · ${plural(m.activity.blocks, 'Bloqueo', 'Bloqueos')}`,
-    },
   ];
 }
 
 @Component({
   selector: 'app-usage-summary',
-  imports: [BreakdownModal, DatePipe, PercentPipe],
+  imports: [BreakdownModal, DatePipe, PercentPipe, SubscriptionCard],
   templateUrl: './usage-summary.html',
   styleUrl: './usage-summary.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -133,7 +128,7 @@ export class UsageSummary {
     const metrics = this.state().metrics;
     return metrics ? toKpiCards(metrics) : [];
   });
-  protected readonly skeletonCards = [1, 2, 3, 4, 5, 6, 7];
+  protected readonly skeletonCards = [1, 2, 3, 4, 5, 6];
 
   /** Presupuesto global del día: es del día natural, no del periodo elegido en el board (AC-84). */
   private readonly budgets = toSignal(inject(WatchBudgets).state$, { initialValue: INITIAL_BUDGETS });

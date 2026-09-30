@@ -170,7 +170,6 @@ export const EMPTY_METRICS = {
   generated_at: minutesAgo(0),
   sessions: { total: 0, working: 0, paused: 0, orphaned: 0, closed: 0 },
   subagents_running: 0,
-  activity: { events: 0, tool_calls: 0, prompts: 0, blocks: 0 },
   tokens: { input: 0, output: 0, cache_read: 0, cache_creation: 0 },
   estimated_cost_usd: 0,
   unpriced_models: [],
@@ -417,6 +416,8 @@ export interface ApiMocks {
   detail?: (id: string) => unknown | null;
   /** Respuesta fija, o calculada a partir de la petición (AC-38: `directory`, `breakdown`). */
   metrics?: unknown | ((url: URL) => unknown);
+  /** Uso de la suscripción (AC-136); por defecto `{ usage: null }`: cuenta sin suscripción, sin ficha. */
+  subscriptionUsage?: unknown | (() => unknown);
 }
 
 export interface MockedApi {
@@ -473,6 +474,10 @@ export async function mockApi(page: Page, mocks: ApiMocks = {}): Promise<MockedA
     const type = current.pathname.split('/api/v1/agents/')[1];
     if (type === undefined) return route.fulfill({ json: mocks.agents?.(current) ?? { items: [], facets: { projects: [] } } });
     return route.fulfill({ json: mocks.agentProfile?.(decodeURIComponent(type), current) ?? { message: 'Sin perfil' }, status: mocks.agentProfile ? 200 : 404 });
+  });
+  await page.route('**/api/v1/subscription-usage', (route) => {
+    const usage = typeof mocks.subscriptionUsage === 'function' ? mocks.subscriptionUsage() : mocks.subscriptionUsage;
+    return route.fulfill({ json: usage ?? { usage: null } });
   });
   const securityCalls: SecurityCall[] = [];
   await page.route(/\/api\/v1\/injection-warnings(\/[^?]*)?(\?|$)/, (route) => {

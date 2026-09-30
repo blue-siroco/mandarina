@@ -6,7 +6,7 @@
 - cuántas están **Trabajando** (su último Evento no es `turn.ended` ni `session.started`) y cuántas **En pausa** (su último Evento es `turn.ended` o `session.started`), ambas sin `session.ended` y con actividad en los últimos 30 min;
 - cuántas están **Huérfanas** (sin `session.ended` ni Eventos en más de 30 min) y cuántas **Cerradas**;
 - cuántos **Subagentes en marcha** hay (`subagent.started` sin su `subagent.stopped`) en Sesiones Trabajando o En pausa;
-- cuántos Eventos, invocaciones de herramienta (`tool.pre`) y prompts se recibieron desde `since`.
+- cuántos Eventos se recibieron desde `since` (las llamadas a herramientas, los prompts y los Bloqueos dejaron de exponerse: AC-133).
 
 Sin `since`, o con un `since` que no es fecha, responde 400.
 

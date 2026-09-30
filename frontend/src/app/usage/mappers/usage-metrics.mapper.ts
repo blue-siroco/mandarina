@@ -26,7 +26,6 @@ export interface CacheEfficiencyDto {
 interface MetricsSliceDto {
   sessions: { working: number; paused: number; orphaned: number };
   subagents_running: number;
-  activity: { tool_calls: number; prompts: number; blocks: number };
   tokens: TokenUsageDto;
   estimated_cost_usd: number;
   unpriced_models: string[];
@@ -78,7 +77,6 @@ export interface UsageMetricsDto {
     closed: number;
   };
   subagents_running: number;
-  activity: { events: number; tool_calls: number; prompts: number; blocks: number };
   tokens: TokenUsageDto;
   estimated_cost_usd: number;
   unpriced_models: string[];
@@ -117,11 +115,6 @@ function toSlice(dto: MetricsSliceDto): MetricsSlice {
   return {
     sessions: { ...dto.sessions },
     subagentsRunning: dto.subagents_running,
-    activity: {
-      toolCalls: dto.activity.tool_calls,
-      prompts: dto.activity.prompts,
-      blocks: dto.activity.blocks,
-    },
     tokens: toTokenUsage(dto.tokens),
     estimatedCostUsd: dto.estimated_cost_usd,
     unpricedModels: [...dto.unpriced_models],
@@ -164,12 +157,6 @@ export function toUsageMetrics(dto: UsageMetricsDto): UsageMetrics {
     generatedAt: new Date(dto.generated_at),
     sessions: { ...dto.sessions, waiting: dto.sessions.waiting ?? 0 },
     subagentsRunning: dto.subagents_running,
-    activity: {
-      events: dto.activity.events,
-      toolCalls: dto.activity.tool_calls,
-      prompts: dto.activity.prompts,
-      blocks: dto.activity.blocks,
-    },
     tokens: toTokenUsage(dto.tokens),
     estimatedCostUsd: dto.estimated_cost_usd,
     unpricedModels: [...dto.unpriced_models],

@@ -1,0 +1,6 @@
+{
+  "_nota": "SIMULADO (supuesto A, ADR-0012): cuenta con API key, Bedrock o Vertex; no trae rate_limits.",
+  "session_id": "7f3c2a10-1b2c-4d5e-9f00-aa11bb22cc33",
+  "cwd": "C:\\Codev\\demo",
+  "model": { "id": "claude-sonnet-5", "display_name": "Sonnet 5" }
+}

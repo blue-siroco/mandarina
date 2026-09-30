@@ -87,8 +87,14 @@ describe('AC-11: GET /api/v1/metrics — actividad', () => {
       generated_at: NOW.toISOString(),
       sessions: { total: 4, working: 1, paused: 1, orphaned: 1, closed: 1 },
       subagents_running: 1,
-      activity: { events: 8, tool_calls: 2, prompts: 1 },
+      activity: { events: 8 },
     });
+  });
+
+  it('AC-133: activity solo cuenta Eventos; las llamadas, prompts y Bloqueos ya no se exponen', async () => {
+    await ingest('working', 'tool.pre', { tool_name: 'Bash' }, new Date(NOW.getTime() - 60_000));
+    const body = (await metrics()).json();
+    expect(body.activity).toStrictEqual({ events: 1 });
   });
 
   it.each(['', '?since=ayer', `?since=${TODAY}&extra=1`])('%s → 400', async (query) => {
@@ -175,7 +181,6 @@ describe('AC-38: GET /api/v1/metrics — Directorio y desglose', () => {
 
   type Row = Record<string, unknown> & {
     sessions: { working: number; paused: number; orphaned: number };
-    activity: { tool_calls: number; prompts: number; blocks: number };
     tokens: { input: number; output: number; cache_read: number };
   };
   const get = async (query: string) => {
@@ -192,7 +197,6 @@ describe('AC-38: GET /api/v1/metrics — Directorio y desglose', () => {
     await seed();
     const { body } = await get(`?since=${TODAY}&directory=${encodeURIComponent(OTHER)}`);
     expect(body.sessions).toMatchObject({ total: 1, paused: 1, working: 0 });
-    expect(body.activity).toMatchObject({ prompts: 1, tool_calls: 0 });
     expect(body.tokens.output).toBe(0);
     expect(body.transcripts).toStrictEqual({ read: 0, unavailable: 0 });
   });
@@ -208,7 +212,6 @@ describe('AC-38: GET /api/v1/metrics — Directorio y desglose', () => {
       project: 'demo',
       sessions: { working: 1, paused: 0, orphaned: 0 },
       subagents_running: 1,
-      activity: { tool_calls: 2, prompts: 1, blocks: 1 },
       main_model: 'claude-opus-5-5',
       transcripts_unavailable: 0,
     });
@@ -223,16 +226,13 @@ describe('AC-38: GET /api/v1/metrics — Directorio y desglose', () => {
     const byModel = new Map(body.breakdown!.by_model.map((m) => [m.model as string | null, m]));
 
     expect([...byModel.keys()].sort()).toStrictEqual(['claude-haiku-4-5', 'claude-opus-5-5', 'claude-sonnet-5', null].sort());
-    expect(byModel.get('claude-opus-5-5')).toMatchObject({ sessions: { working: 1 }, activity: { tool_calls: 0, prompts: 0, blocks: 1 } });
-    expect(byModel.get('claude-sonnet-5')).toMatchObject({ activity: { tool_calls: 1, prompts: 1, blocks: 0 } });
-    expect(byModel.get('claude-haiku-4-5')).toMatchObject({ subagents_running: 1, activity: { tool_calls: 1 } });
-    expect(byModel.get(null)).toMatchObject({ sessions: { paused: 1 }, activity: { prompts: 1 }, rate: null, cost_breakdown: null });
+    expect(byModel.get('claude-opus-5-5')).toMatchObject({ sessions: { working: 1 } });
+    expect(byModel.get('claude-haiku-4-5')).toMatchObject({ subagents_running: 1 });
+    expect(byModel.get(null)).toMatchObject({ sessions: { paused: 1 }, rate: null, cost_breakdown: null });
     expect(byModel.get('claude-opus-5-5')!.rate).toStrictEqual({ input: 4, output: 20, cache_read: 0.2, cache_write_5m: 5, cache_write_1h: 8 });
     expect(byModel.get('claude-opus-5-5')!.cost_breakdown).toMatchObject({ output: 0.04 });
 
     const sum = (pick: (m: Row) => number) => body.breakdown!.by_model.reduce((n, m) => n + pick(m), 0);
-    expect(sum((m) => m.activity.tool_calls)).toBe(body.activity.tool_calls);
-    expect(sum((m) => m.activity.prompts)).toBe(body.activity.prompts);
     expect(sum((m) => m.sessions.working + m.sessions.paused)).toBe(body.sessions.working + body.sessions.paused);
     expect(sum((m) => m.tokens.output)).toBe(body.tokens.output);
   });

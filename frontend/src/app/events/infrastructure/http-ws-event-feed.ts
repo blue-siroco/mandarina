@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, InjectionToken, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
+import { SubscriptionUsageDto, toSubscriptionUsage } from '../../subscription/mappers/subscription-usage.mapper';
 import { EventDto, toObservedEvent } from '../mappers/event.mapper';
 import { BudgetLiveState, BudgetStateChange, EventQuery, LiveSignal, ObservedEvent } from '../models/observed-event';
 import { EventFeed } from '../ports/event-feed';
@@ -38,7 +39,13 @@ interface BudgetMessage {
   limit_usd: number;
 }
 
-type LiveMessage = EventMessage | BudgetMessage;
+/** `SubscriptionUsageMessage` de `spec/api-spec.yaml` (AC-136). */
+interface SubscriptionUsageMessage {
+  type: 'subscription.usage';
+  usage: SubscriptionUsageDto | null;
+}
+
+type LiveMessage = EventMessage | BudgetMessage | SubscriptionUsageMessage;
 
 const toBudgetChange = (m: BudgetMessage): BudgetStateChange => ({
   budgetId: m.budget_id,
@@ -86,6 +93,8 @@ export class HttpWsEventFeed extends EventFeed {
             subscriber.next({ kind: 'event', event: toObservedEvent(message.event) });
           } else if (message.type === 'budget.state') {
             subscriber.next({ kind: 'budget', change: toBudgetChange(message) });
+          } else if (message.type === 'subscription.usage') {
+            subscriber.next({ kind: 'subscription', usage: toSubscriptionUsage(message.usage) });
           }
         };
         socket.onclose = () => {

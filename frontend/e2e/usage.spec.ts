@@ -10,7 +10,6 @@ const metrics = (overrides: Record<string, unknown> = {}) => ({
   generated_at: '2026-09-25T10:00:00.000Z',
   sessions: { total: 6, working: 2, paused: 1, orphaned: 1, closed: 2 },
   subagents_running: 3,
-  activity: { events: 420, tool_calls: 150, prompts: 12, blocks: 2 },
   tokens: { input: 1200, output: 45000, cache_read: 4700000, cache_creation: 240000 },
   estimated_cost_usd: 3.4212,
   unpriced_models: [],
@@ -33,6 +32,7 @@ async function openWith(page: Page, responses: Array<{ status: number; body: unk
     const { status, body } = responses.length > 1 ? responses.shift()! : responses[0]!;
     return route.fulfill({ status, json: body });
   });
+  await page.route('**/api/v1/subscription-usage', (route) => route.fulfill({ json: { usage: null } }));
   await page.route('**/api/v1/events?*', (route) => route.fulfill({ json: { items: [] } }));
   await page.route(/\/api\/v1\/sessions(\?|$)/, (route) =>
     route.fulfill({ json: { items: [sessionDto('s-1')], facets: { projects: ['demo'], directories: [] } } }),
@@ -46,12 +46,13 @@ test('muestra las fichas de uso del periodo en el board, encima de las Sesiones'
   const since = await openWith(page, [{ status: 200, body: metrics() }]);
   const card = (kpi: string) => page.locator(`[data-kpi="${kpi}"]`);
 
-  await expect(page.getByTestId('usage-card')).toHaveCount(7);
+  await expect(page.getByTestId('usage-card')).toHaveCount(6);
   await expect(card('working')).toContainText('2');
   await expect(card('working')).toContainText('3 Subagentes en marcha');
   await expect(card('paused')).toContainText('1 Huérfana');
   await expect(card('cost')).toContainText('~3,42');
-  await expect(card('tools')).toContainText('12 prompts · 2 Bloqueos');
+  // AC-135: la ficha Herramientas ya no está en el board.
+  await expect(card('tools')).toHaveCount(0);
 
   // Por defecto el board muestra las últimas 24 h, y las fichas también.
   await expect(page.locator('#usage-title')).toHaveText('Últimas 24 h');
@@ -67,7 +68,7 @@ test('muestra las fichas de uso del periodo en el board, encima de las Sesiones'
 test('al cambiar el periodo del board las fichas piden y rotulan esa ventana', async ({ page }) => {
   const since = await openWith(page, [{ status: 200, body: metrics() }]);
   const range = page.getByTestId('range-filter');
-  await expect(page.getByTestId('usage-card')).toHaveCount(7);
+  await expect(page.getByTestId('usage-card')).toHaveCount(6);
 
   await range.getByText('7 d', { exact: true }).click();
   await expect(page.locator('#usage-title')).toHaveText('Últimos 7 días');
@@ -95,7 +96,7 @@ test('se refresca sola y, si falla, conserva las últimas cifras', async ({ page
 test('en pantalla estrecha las fichas no desbordan', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openWith(page, [{ status: 200, body: metrics() }]);
-  await expect(page.getByTestId('usage-card')).toHaveCount(7);
+  await expect(page.getByTestId('usage-card')).toHaveCount(6);
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
   expect(overflow).toBe(false);

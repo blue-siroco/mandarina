@@ -34,7 +34,7 @@ test.describe('AC-16: board de Sesiones', () => {
 
     await expect(page).toHaveURL(/\/sesiones$/);
     await expect(page.getByTestId('state-summary')).toHaveText('1 activa · 1 inactiva · 1 huérfana · 1 cerrada');
-    await expect(page.getByTestId('usage-card')).toHaveCount(7);
+    await expect(page.getByTestId('usage-card')).toHaveCount(6);
     await expect(page.getByTestId('project-group')).toHaveCount(2);
 
     const first = page.getByTestId('session-card').first();

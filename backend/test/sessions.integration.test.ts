@@ -331,13 +331,6 @@ describe('AC-21: ingesta y consulta de Bloqueos', () => {
     expect(response.statusCode).toBe(400);
   });
 
-  it('las métricas del día cuentan los Bloqueos', async () => {
-    await ingest('s', 'tool.blocked', NOW, { block });
-    await ingest('s', 'tool.blocked', NOW, { block });
-    const { body } = await get<{ activity: { blocks: number } }>(`/api/v1/metrics?since=${minutesAgo(60).toISOString()}`);
-    expect(body.activity.blocks).toBe(2);
-  });
-
   it('una base de datos anterior a la rebanada 4 se migra sola', async () => {
     const file = join(home, 'old.sqlite');
     const legacy = new Database(file);

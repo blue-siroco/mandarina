@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, distinctUntilChanged, filter, map, share, shareReplay, startWith } from 'rxjs';
+import { SubscriptionUsage } from '../../subscription/models/subscription-usage';
 import { BudgetStateChange, LiveConnection, LiveSignal, ObservedEvent } from '../models/observed-event';
 import { EventFeed } from '../ports/event-feed';
 
@@ -21,6 +22,12 @@ export class LiveEvents {
   readonly budgetChanges$: Observable<BudgetStateChange> = this.signals$.pipe(
     filter((s): s is Extract<LiveSignal, { kind: 'budget' }> => s.kind === 'budget'),
     map((s) => s.change),
+  );
+
+  /** Lecturas nuevas de la cuota de la suscripción; `null` es que la cuenta ya no la informa (AC-136). */
+  readonly subscriptionUsage$: Observable<SubscriptionUsage | null> = this.signals$.pipe(
+    filter((s): s is Extract<LiveSignal, { kind: 'subscription' }> => s.kind === 'subscription'),
+    map((s) => s.usage),
   );
 
   /**

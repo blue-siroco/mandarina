@@ -9,7 +9,6 @@ const LUCIA = 'C:\\Codev\\lucia';
 const slice = (cache: Record<string, unknown>) => ({
   sessions: { working: 1, paused: 0, orphaned: 0 },
   subagents_running: 0,
-  activity: { tool_calls: 10, prompts: 1, blocks: 0 },
   tokens: { input: 100, output: 1000, cache_read: 1000, cache_creation: 50 },
   estimated_cost_usd: 1,
   unpriced_models: [],

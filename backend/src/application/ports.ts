@@ -5,6 +5,7 @@ import type { SessionEventRow } from '../domain/session-summary.js';
 import type { McpPostDigest } from '../domain/mcp-invocations.js';
 import type { TranscriptSkillUse } from '../domain/skill-invocations.js';
 import type { SubagentActivity, SubagentMeta } from '../domain/subagent-activity.js';
+import type { StoredUsage } from '../domain/subscription-usage.js';
 import type { UsageEntry } from '../domain/token-usage.js';
 
 export interface EventQuery {
@@ -25,9 +26,6 @@ export interface SessionRowsFilter {
 
 export interface ActivityCounts {
   events: number;
-  tool_calls: number;
-  prompts: number;
-  blocks: number;
 }
 
 export interface EventRepository {
@@ -257,4 +255,12 @@ export interface BudgetStore {
 /** Difunde un mensaje a todos los clientes del WebSocket (AC-81). */
 export interface Broadcaster {
   broadcast(message: unknown): void;
+}
+
+/** Última lectura de la cuota de la suscripción; una sola fila, sobrevive a los reinicios (AC-130). */
+export interface SubscriptionUsageStore {
+  /** `null` si nunca llegó una lectura. */
+  get(): StoredUsage | null;
+  /** Sustituye la lectura guardada. */
+  save(usage: StoredUsage): void;
 }

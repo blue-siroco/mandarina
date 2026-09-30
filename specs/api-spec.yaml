@@ -9,6 +9,7 @@ info:
     aceptado envía a todos los clientes un mensaje `LiveMessage`. La Actividad
     *Esperando* (ADR-0011) no tiene mensaje propio: los Eventos que la causan o
     la terminan llegan como `event.ingested` y el cliente refresca `GET /sessions`.
+    El Uso de la suscripción (ADR-0012) sí lo tiene: `subscription.usage` con la última lectura de la cuenta.
 servers:
   - url: http://127.0.0.1:4000
 tags:
@@ -25,6 +26,7 @@ tags:
   - name: evaluations
   - name: security
   - name: budgets
+  - name: subscription
 paths:
   /api/v1/health:
     get:
@@ -921,6 +923,42 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ExporterStatus' }
+  /api/v1/subscription-usage:
+    get:
+      tags: [subscription]
+      operationId: getSubscriptionUsage
+      summary: Uso de la suscripción de Claude, última lectura de la cuenta (AC-131).
+      description: |
+        El dato es de la cuenta, no de la Sesión (ADR-0012). `usage` es `null` si nunca
+        llegó una lectura, que es lo que ocurre con API key, Bedrock o Vertex. El `status` de
+        cada ventana se calcula al consultar con el reloj del servidor.
+      responses:
+        '200':
+          description: La última lectura o `null`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubscriptionUsageResponse' }
+    put:
+      tags: [subscription]
+      operationId: putSubscriptionUsage
+      summary: Registra la última lectura de la cuota (AC-130).
+      description: |
+        Lo llama el Adaptador desde el comando de `statusLine` (ADR-0012). Sustituye a la
+        lectura anterior y difunde `subscription.usage` por el WebSocket. Las dos ventanas son
+        opcionales e independientes: una ventana ausente conserva la anterior solo si su
+        `resets_at` sigue en el futuro. Sin ninguna ventana responde 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubscriptionUsageInput' }
+      responses:
+        '204': { description: Guardada. }
+        '400':
+          description: Ninguna ventana, porcentaje fuera de 0..100 o campos desconocidos.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 components:
   parameters:
     EvaluationObjectType:
@@ -1291,12 +1329,9 @@ components:
         subagents_running: { type: integer, minimum: 0, description: Subagentes en marcha; sin los internos (AC-34). }
         activity:
           type: object
-          required: [events, tool_calls, prompts, blocks]
+          required: [events]
           properties:
             events: { type: integer, minimum: 0 }
-            tool_calls: { type: integer, minimum: 0, description: Eventos `tool.pre`. }
-            prompts: { type: integer, minimum: 0, description: Eventos `prompt.submitted`. }
-            blocks: { type: integer, minimum: 0, description: Eventos `tool.blocked` (AC-21). }
         tokens: { $ref: '#/components/schemas/TokenUsage' }
         estimated_cost_usd: { type: number, minimum: 0 }
         unpriced_models:
@@ -1336,7 +1371,7 @@ components:
     MetricsSlice:
       description: Las cifras de las fichas para una parte de la ventana; las filas de un desglose suman el total (AC-38).
       type: object
-      required: [sessions, subagents_running, activity, tokens, estimated_cost_usd, unpriced_models, cache]
+      required: [sessions, subagents_running, tokens, estimated_cost_usd, unpriced_models, cache]
       properties:
         sessions:
           type: object
@@ -1346,13 +1381,6 @@ components:
             paused: { type: integer, minimum: 0 }
             orphaned: { type: integer, minimum: 0 }
         subagents_running: { type: integer, minimum: 0 }
-        activity:
-          type: object
-          required: [tool_calls, prompts, blocks]
-          properties:
-            tool_calls: { type: integer, minimum: 0 }
-            prompts: { type: integer, minimum: 0 }
-            blocks: { type: integer, minimum: 0 }
         tokens: { $ref: '#/components/schemas/TokenUsage' }
         estimated_cost_usd: { type: number, minimum: 0, description: Sin los modelos sin Tarifa. }
         unpriced_models: { type: array, items: { type: string } }
@@ -1705,6 +1733,7 @@ components:
       oneOf:
         - $ref: '#/components/schemas/EventIngestedMessage'
         - $ref: '#/components/schemas/BudgetStateMessage'
+        - $ref: '#/components/schemas/SubscriptionUsageMessage'
     EventIngestedMessage:
       description: Un Evento aceptado.
       type: object
@@ -1727,6 +1756,68 @@ components:
         previous_state: { $ref: '#/components/schemas/BudgetState' }
         spent_usd: { type: number }
         limit_usd: { type: number }
+    SubscriptionUsageInput:
+      description: Lectura de `rate_limits` del `statusLine` de Claude Code, tal como la envía el Adaptador (ADR-0012).
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        session_id: { type: string, minLength: 1, description: Sesión que hizo la lectura; informativa, el dato es de la cuenta. }
+        five_hour: { $ref: '#/components/schemas/SubscriptionWindowInput' }
+        seven_day: { $ref: '#/components/schemas/SubscriptionWindowInput' }
+    SubscriptionWindowInput:
+      type: object
+      additionalProperties: false
+      required: [used_percentage, resets_at]
+      properties:
+        used_percentage: { type: number, minimum: 0, maximum: 100 }
+        resets_at: { type: integer, description: Reinicio de la ventana en segundos desde epoch. }
+    SubscriptionUsageResponse:
+      type: object
+      required: [usage]
+      properties:
+        usage:
+          oneOf:
+            - { $ref: '#/components/schemas/SubscriptionUsage' }
+            - { type: 'null' }
+    SubscriptionUsage:
+      description: Última lectura de la cuota de la cuenta. Una ventana es `null` si Claude Code no la envió.
+      type: object
+      required: [five_hour, seven_day, updated_at]
+      properties:
+        five_hour:
+          oneOf:
+            - { $ref: '#/components/schemas/UsageWindow' }
+            - { type: 'null' }
+        seven_day:
+          oneOf:
+            - { $ref: '#/components/schemas/UsageWindow' }
+            - { type: 'null' }
+        updated_at: { type: string, format: date-time, description: Cuándo llegó la lectura. }
+    UsageWindow:
+      type: object
+      required: [used_percent, remaining_percent, resets_at, status]
+      properties:
+        used_percent: { type: number, minimum: 0, maximum: 100 }
+        remaining_percent: { type: number, minimum: 0, maximum: 100, description: '`100 - used_percent`.' }
+        resets_at: { type: string, format: date-time }
+        status:
+          description: |
+            Calculado al consultar: `reset_pending` si `resets_at` ya pasó (lectura vieja; no se
+            muestra su porcentaje como vigente), `exhausted` si no queda nada, `near` si queda el
+            20 % o menos y `comfortable` en otro caso.
+          type: string
+          enum: [comfortable, near, exhausted, reset_pending]
+    SubscriptionUsageMessage:
+      description: Llegó una lectura nueva de la cuota de la suscripción (AC-130).
+      type: object
+      required: [type, usage]
+      properties:
+        type: { type: string, const: subscription.usage }
+        usage:
+          oneOf:
+            - { $ref: '#/components/schemas/SubscriptionUsage' }
+            - { type: 'null' }
     TestKind:
       description: Tipo de tests (ver `CONTEXT.md`).
       type: string

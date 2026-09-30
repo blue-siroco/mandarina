@@ -11,6 +11,7 @@ import { provideSecurity } from './security/security.providers';
 import { provideExporter } from './exporter/exporter.providers';
 import { provideEvents } from './events/events.providers';
 import { provideSessions } from './sessions/sessions.providers';
+import { provideSubscription } from './subscription/subscription.providers';
 import { provideSkills } from './skills/skills.providers';
 import { provideSubagents } from './subagents/subagents.providers';
 import { provideMcp } from './mcp/mcp.providers';
@@ -40,5 +41,6 @@ export const appConfig: ApplicationConfig = {
     provideEvaluations(),
     provideSecurity(),
     provideBudgets(),
+    provideSubscription(),
   ],
 };

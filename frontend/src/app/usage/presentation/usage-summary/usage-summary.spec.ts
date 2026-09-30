@@ -5,6 +5,7 @@ import { budget, budgetSubjectDto, noBudgets } from '../../../budgets/testing/bu
 import { INITIAL_USAGE_STATE, UsageState, WatchUsageMetrics } from '../../application/watch-usage-metrics';
 import { UsageQuery } from '../../models/usage-metrics';
 import { breakdown, cache, usageMetrics } from '../../testing/usage-fixtures';
+import { noSubscription } from '../../../subscription/testing/subscription-fixtures';
 import { UsageSummary, toKpiCards } from './usage-summary';
 
 const text = (el: Element | null) => el?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
@@ -20,7 +21,6 @@ describe('AC-13: toKpiCards', () => {
       'output',
       'cache',
       'cost',
-      'tools',
     ]);
   });
 
@@ -72,8 +72,8 @@ describe('AC-13: toKpiCards', () => {
     expect(card('cache', usageMetrics({ cache: null }))).toMatchObject({ value: '—', detail: 'Sin datos' });
   });
 
-  it('cuenta herramientas, prompts y Bloqueos del día', () => {
-    expect(card('tools')).toMatchObject({ value: '150', detail: '12 prompts · 2 Bloqueos' });
+  it('AC-135: no hay ficha de Herramientas', () => {
+    expect(card('tools')).toBeUndefined();
   });
 });
 
@@ -87,6 +87,7 @@ describe('AC-13, AC-39: UsageSummary', () => {
       providers: [
         { provide: WatchUsageMetrics, useValue: { execute: (w?: number) => (windows.push(w), state$) } },
         noBudgets,
+        noSubscription,
       ],
     }).compileComponents();
     const fixture = TestBed.createComponent(UsageSummary);
@@ -131,7 +132,7 @@ describe('AC-13, AC-39: UsageSummary', () => {
     const fixture = await render();
     const cards = (fixture.nativeElement as HTMLElement).querySelectorAll('[data-testid="usage-card"]');
 
-    expect(cards).toHaveLength(7);
+    expect(cards).toHaveLength(6);
     const first = cards[0] as HTMLElement;
     expect(text(first.querySelector('h3'))).toBe('Trabajando');
     expect(text(first.querySelector('.kpi__value'))).toBe('2');
@@ -160,7 +161,7 @@ describe('AC-13, AC-39: UsageSummary', () => {
     const el = fixture.nativeElement as HTMLElement;
 
     expect(text(el.querySelector('[data-testid="usage-error"]'))).toContain('últimas conocidas');
-    expect(el.querySelectorAll('[data-testid="usage-card"]')).toHaveLength(7);
+    expect(el.querySelectorAll('[data-testid="usage-card"]')).toHaveLength(6);
   });
 
   it('si falla la primera carga lo dice', async () => {
@@ -180,7 +181,7 @@ describe('AC-39: fichas que abren su desglose', () => {
     calls = [];
     await TestBed.configureTestingModule({
       imports: [UsageSummary],
-      providers: [{ provide: WatchUsageMetrics, useValue: { execute: (w?: number, q?: UsageQuery) => (calls.push([w, q]), state$) } }, noBudgets],
+      providers: [{ provide: WatchUsageMetrics, useValue: { execute: (w?: number, q?: UsageQuery) => (calls.push([w, q]), state$) } }, noBudgets, noSubscription],
     }).compileComponents();
     const fixture = TestBed.createComponent(UsageSummary);
     fixture.componentRef.setInput('windowMs', 3_600_000);
@@ -216,13 +217,13 @@ describe('AC-39: fichas que abren su desglose', () => {
 
   it('se abre también con Enter o Espacio', async () => {
     const fixture = await render();
-    const tools = card(fixture, 'tools');
-    expect(tools.getAttribute('role')).toBe('button');
-    expect(tools.getAttribute('tabindex')).toBe('0');
+    const working = card(fixture, 'working');
+    expect(working.getAttribute('role')).toBe('button');
+    expect(working.getAttribute('tabindex')).toBe('0');
 
-    tools.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    working.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
     await fixture.whenStable();
-    expect(text(el(fixture).querySelector('#breakdown-title'))).toBe('Herramientas · Última hora');
+    expect(text(el(fixture).querySelector('#breakdown-title'))).toBe('Trabajando · Última hora');
 
     el(fixture).querySelector('[data-testid="breakdown-modal"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     await fixture.whenStable();
@@ -266,6 +267,7 @@ describe('AC-84: la ficha de Coste estimado y el Presupuesto global del día', (
       providers: [
         { provide: WatchUsageMetrics, useValue: { execute: () => new BehaviorSubject<UsageState>({ metrics: usageMetrics(), loaded: true, failed: false }) } },
         { provide: WatchBudgets, useValue: { state$: of({ items, loaded: true, failed: false }) } },
+        noSubscription,
       ],
     }).compileComponents();
     const fixture = TestBed.createComponent(UsageSummary);
@@ -311,6 +313,6 @@ describe('AC-84: la ficha de Coste estimado y el Presupuesto global del día', (
     TestBed.resetTestingModule();
     const other = await render([budget()]);
     expect(other.querySelectorAll('[data-testid="day-budget"]')).toHaveLength(1);
-    expect(other.querySelector('[data-kpi="tools"] [data-testid="day-budget"]')).toBeNull();
+    expect(other.querySelector('[data-kpi="input"] [data-testid="day-budget"]')).toBeNull();
   });
 });
