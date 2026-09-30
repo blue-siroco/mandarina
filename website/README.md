@@ -25,7 +25,7 @@ Prioridad: **URL** → **elección guardada** (localStorage) → **preferencia d
 ## Estructura
 
 ```
-index.html                  la página (texto en español; el inglés se aplica desde translations.js)
+index.html                  la página (orden de secciones = orden del menú) (texto en español; el inglés se aplica desde translations.js)
 assets/js/init.js           decide tema e idioma antes de pintar (evita parpadeos)
 assets/js/app.js            idioma, tema, botones de copiar, resaltado del menú
 assets/js/translations.js   TODOS los textos, en {es:{…}, en:{…}}
@@ -48,10 +48,8 @@ tailwind.config.js          tokens de diseño (colores, tipografías, espaciados
 
   Para desarrollar con recarga: `npm run watch` y sirve la carpeta con `python3 -m http.server`.
 
-## Pendiente de revisar (valores heredados de las páginas originales)
+## Pendiente de revisar
 
-- [ ] Enlaces a **GitHub**: apuntan a `https://github.com` (busca `github.com` en `index.html`).
-- [ ] **Logo:** se carga desde una URL de `googleusercontent.com` generada por la herramienta de diseño y podría caducar.
-      Descárgalo a `assets/img/` y cambia el `src` (aparece 2 veces en `index.html`).
-- [ ] **Fechas del roadmap** (Q2/Q3/Q4 2025) y **versión** (v0.9.4): ya son anteriores a hoy o están desfasadas.
-- [ ] Enlace **Privacidad y términos** del pie: no lleva a ninguna página todavía (`href="#"`).
+- [ ] Enlaces a **GitHub**: apuntan a `https://github.com/victor-de-andres-personal/mandarina` (el `origin` del repo); confirma que es la URL pública definitiva.
+- [ ] **Licencia:** el repositorio no tiene `LICENSE`, así que el pie ya no declara ninguna.
+- [ ] **Capturas** (`assets/img/app-*.png`): salen de `mock-server` (datos simulados). Regenerarlas cuando cambie el Board o el detalle de Sesión.

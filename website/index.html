@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mandarina — Observabilidad de agentes IA para Claude Code</title>
-<meta name="description" content="Capa de observabilidad pasiva y desacoplada 100% local para Claude Code, Codex CLI, Cursor y OpenCode. WebSockets en tiempo real, sin fugas en la nube y control preventivo de costes.">
+<meta name="description" content="Observabilidad local de Claude Code: un hook en tu máquina envía cada Evento a un backend Node.js con SQLite y lo muestra en vivo en un dashboard Angular. Sin nube y con control preventivo de costes.">
 <meta name="theme-color" content="#f8f9ff">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Mandarina — Observabilidad de agentes IA para Claude Code">
-<meta property="og:description" content="Capa de observabilidad pasiva y desacoplada 100% local para Claude Code, Codex CLI, Cursor y OpenCode. WebSockets en tiempo real, sin fugas en la nube y control preventivo de costes.">
+<meta property="og:description" content="Observabilidad local de Claude Code: un hook en tu máquina envía cada Evento a un backend Node.js con SQLite y lo muestra en vivo en un dashboard Angular. Sin nube y con control preventivo de costes.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8D%8A%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,15 +22,15 @@
 <div class="h-16 w-full px-margin sm:px-margin-lg flex items-center justify-between gap-space-sm sm:gap-gutter">
 <div class="flex items-center gap-space-lg shrink-0 min-w-0">
 <a class="flex items-center gap-space-sm" href="#top"><img alt="Mandarina" class="h-8 w-auto object-contain" src="assets/img/logo.svg"><span class="font-headline-sm text-headline-sm text-on-surface tracking-tight font-bold">Mandarina</span></a>
-<div class="hidden xl:flex items-center gap-space-xs px-space-sm py-space-2xs bg-surface-container-low rounded-lg"><span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span><span class="font-code-sm text-code-sm text-on-surface-variant font-medium">ws://localhost:4201</span><span class="font-code-sm text-code-sm text-tertiary font-semibold">OK</span></div>
+<div class="hidden xl:flex items-center gap-space-xs px-space-sm py-space-2xs bg-surface-container-low rounded-lg"><span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span><span class="font-code-sm text-code-sm text-on-surface-variant font-medium">localhost:4200</span><span class="font-code-sm text-code-sm text-tertiary font-semibold">OK</span></div>
 </div>
 <nav class="hidden lg:flex items-center gap-space-xs" data-i18n-aria="nav.aria" aria-label="Navegación principal">
 <a class="nav-link" data-nav="capabilities" href="#capabilities" data-i18n="nav.features">Características</a>
-<a class="nav-link" data-nav="cockpit-showcase" href="#cockpit-showcase">Cockpit</a>
 <a class="nav-link" data-nav="architecture" href="#architecture" data-i18n="nav.architecture">Arquitectura</a>
 <a class="nav-link" data-nav="metrics-bar" href="#metrics-bar" data-i18n="nav.metrics">Métricas</a>
-<a class="nav-link" data-nav="roadmap" href="#roadmap">Roadmap</a>
-<a class="nav-link" data-nav="quickstart" href="#quickstart">Docs</a>
+<a class="nav-link" data-nav="cockpit-showcase" href="#cockpit-showcase" data-i18n="nav.cockpit">Cockpit</a>
+<a class="nav-link" data-nav="roadmap" href="#roadmap" data-i18n="nav.roadmap">Roadmap</a>
+<a class="nav-link" data-nav="docs" href="#docs" data-i18n="nav.docs">Docs</a>
 </nav>
 <div class="flex items-center gap-space-sm shrink-0">
 <div class="flex items-center bg-surface-container-low p-space-2xs rounded-lg" role="group" data-i18n-aria="ui.language" aria-label="Idioma">
@@ -38,8 +38,8 @@
 <button class="seg-btn" data-lang-btn="en" aria-pressed="false" type="button">EN</button>
 </div>
 <button id="theme-toggle" class="h-8 w-8 flex items-center justify-center rounded-lg bg-surface-container-low text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors" type="button" aria-label="Cambiar a modo oscuro" title="Cambiar a modo oscuro"><span id="theme-icon" class="material-symbols-outlined text-[18px]">light_mode</span></button>
-<a class="h-8 w-8 flex items-center justify-center rounded-lg bg-surface-container-low text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors" href="https://github.com" rel="noreferrer" target="_blank" data-i18n-title="ui.github" data-i18n-aria="ui.github" title="Repositorio en GitHub" aria-label="Repositorio en GitHub"><span class="material-symbols-outlined text-[18px]">code</span></a>
-<a class="hidden sm:inline-flex items-center gap-space-xs px-space-md py-space-sm bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md rounded-lg transition-colors font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.08)]" href="#quickstart"><span class="material-symbols-outlined text-[16px]">terminal</span><span data-i18n="nav.start_docker">Iniciar Docker</span></a>
+<a class="h-8 w-8 flex items-center justify-center rounded-lg bg-surface-container-low text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors" href="https://github.com/victor-de-andres-personal/mandarina" rel="noreferrer" target="_blank" data-i18n-title="ui.github" data-i18n-aria="ui.github" title="Repositorio en GitHub" aria-label="Repositorio en GitHub"><span class="material-symbols-outlined text-[18px]">code</span></a>
+<a class="hidden sm:inline-flex items-center gap-space-xs px-space-md py-space-sm bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md rounded-lg transition-colors font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.08)]" href="#docs"><span class="material-symbols-outlined text-[16px]">terminal</span><span data-i18n="nav.start_docker">Iniciar Docker</span></a>
 <div class="hidden sm:flex w-8 h-8 rounded-full bg-primary items-center justify-center" aria-hidden="true"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div>
 </div>
 </div>
@@ -70,15 +70,15 @@
 
 <div class="inline-flex items-center gap-space-xs px-space-md py-space-xs bg-surface-container-lowest rounded-full shadow-sm mb-space-lg">
 <span class="material-symbols-outlined text-primary text-[18px]">verified_user</span>
-<span class="font-code-sm text-code-sm text-on-surface-variant" data-i18n="hero.telemetry_harness_for_claude_code">Harness de Telemetría para Claude Code, MCP Servers &amp; Agents</span>
+<span class="font-code-sm text-code-sm text-on-surface-variant" data-i18n="hero.telemetry_harness_for_claude_code">Observabilidad para Claude Code: Sesiones, Subagentes, skills y MCP</span>
 </div>
 
-<h1 class="font-headline-xl text-headline-xl text-on-surface max-w-4xl tracking-tight leading-tight mb-space-md" data-i18n="hero.ai_agent_observability_for_claude">Observabilidad de Agentes IA para Claude Code &amp; Harnesses Autónomos</h1>
+<h1 class="font-headline-xl text-headline-xl text-on-surface max-w-4xl tracking-tight leading-tight mb-space-md" data-i18n="hero.ai_agent_observability_for_claude">Observabilidad de agentes de código, Claude Code primero</h1>
 
-<p class="font-body-lg text-body-lg text-on-surface-variant max-w-3xl mb-space-2xl leading-relaxed" data-i18n="hero.decoupled_local_observability_layer_for">Capa de observabilidad pasiva y desacoplada 100% local para Claude Code, Codex CLI, Cursor y OpenCode. Stack Angular SPA (Signals) y Node.js con SQLite WAL, WebSockets en tiempo real, sin fugas en la nube y control preventivo de costes.</p>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-3xl mb-space-2xl leading-relaxed" data-i18n="hero.decoupled_local_observability_layer_for">Un hook en tu máquina envía cada Evento a un backend Node.js con SQLite, que lo muestra en vivo en un dashboard Angular por WebSocket. Todo corre en local: sin cuenta, sin nube y con control preventivo de costes.</p>
 
 <div class="flex flex-wrap items-center justify-center gap-space-md mb-space-2xl">
-<a class="inline-flex items-center gap-space-sm px-space-xl py-space-md bg-primary hover:bg-primary-container text-on-primary font-headline-sm text-headline-sm rounded-xl shadow-md transition-all" href="#quickstart">
+<a class="inline-flex items-center gap-space-sm px-space-xl py-space-md bg-primary hover:bg-primary-container text-on-primary font-headline-sm text-headline-sm rounded-xl shadow-md transition-all" href="#docs">
 <span class="material-symbols-outlined text-[20px]">rocket_launch</span>
 <span class="" data-i18n="hero.start_docker_now">Iniciar Docker Ahora</span>
 </a>
@@ -86,9 +86,9 @@
 <span class="material-symbols-outlined text-[20px] text-primary">visibility</span>
 <span class="" data-i18n="hero.explore_live_cockpit">Explorar Cockpit en Vivo</span>
 </a>
-<a class="inline-flex items-center gap-space-xs px-space-md py-space-md bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md rounded-xl transition-all" href="https://github.com" rel="noreferrer" target="_blank">
+<a class="inline-flex items-center gap-space-xs px-space-md py-space-md bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md rounded-xl transition-all" href="https://github.com/victor-de-andres-personal/mandarina" rel="noreferrer" target="_blank">
 <span class="material-symbols-outlined text-[18px]">terminal</span>
-<span class="">GitHub v0.9.4</span>
+<span class="">GitHub</span>
 </a>
 </div>
 
@@ -98,7 +98,7 @@
 <span class="w-2.5 h-2.5 rounded-full bg-error"></span>
 <span class="w-2.5 h-2.5 rounded-full bg-primary-fixed-dim"></span>
 <span class="w-2.5 h-2.5 rounded-full bg-tertiary"></span>
-<span class="font-code-sm text-code-sm text-on-surface-variant ml-space-sm">terminal — mandarina local bootstrap</span>
+<span class="font-code-sm text-code-sm text-on-surface-variant ml-space-sm">terminal — raíz del repositorio</span>
 </div>
 <button class="flex items-center gap-space-2xs text-on-surface-variant hover:text-primary font-code-sm text-code-sm transition-colors" data-copy-from="#hero-cmd" id="copy-docker-btn" type="button">
 <span class="material-symbols-outlined text-[14px]">content_copy</span>
@@ -106,101 +106,8 @@
 </button>
 </div>
 <div class="px-space-md py-space-xs font-code-md text-code-md text-on-surface flex items-center justify-between overflow-x-auto">
-<code class="text-on-surface" id="hero-cmd"><span class="text-primary font-bold">curl</span> -sSL https://get.mandarina.sh | bash &amp;&amp; docker compose up -d</code>
+<code class="text-on-surface" id="hero-cmd"><span class="text-primary font-bold">docker</span> compose up</code>
 </div>
-</div>
-</div>
-</section>
-
-<section class="w-full px-margin-lg -mt-space-xl relative z-20" id="metrics-bar">
-<div class="max-w-7xl mx-auto bg-surface-container-lowest rounded-xl shadow-md p-space-lg">
-<div class="flex items-center justify-between mb-space-md flex-wrap gap-space-sm">
-<div class="flex items-center gap-space-xs">
-<span class="material-symbols-outlined text-primary text-[20px]">analytics</span>
-<span class="font-headline-sm text-headline-sm text-on-surface" data-i18n="metrics.real_time_telemetry_last_24">Métricas en Tiempo Real · Últimas 24h</span>
-</div>
-<div class="flex items-center gap-space-sm">
-<span class="font-code-sm text-code-sm text-on-surface-variant" data-i18n="metrics.ingest_engine_local_sqlite_wal">Motor de Ingesta: Local SQLite WAL (21.4 MB)</span>
-<span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
-</div>
-</div>
-
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-space-md">
-
-<div class="bg-surface-container-low rounded-lg p-space-md flex flex-col justify-between">
-<div class="flex items-center justify-between text-on-surface-variant font-code-sm text-code-sm mb-space-xs">
-<span class="" data-i18n="metrics.active_runs">TRABAJANDO</span>
-<span class="material-symbols-outlined text-[16px] text-tertiary">alt_route</span>
-</div>
-<div class="font-headline-lg text-headline-lg text-on-surface font-bold tracking-tight" data-i18n="misc.1_active">1 activa</div>
-<div class="font-code-sm text-code-sm text-tertiary mt-space-2xs" data-i18n="metrics.3_subagents_in_parallel">3 Subagentes concurrentes</div>
-</div>
-
-<div class="bg-surface-container-low rounded-lg p-space-md flex flex-col justify-between">
-<div class="flex items-center justify-between text-on-surface-variant font-code-sm text-code-sm mb-space-xs">
-<span class="" data-i18n="metrics.input_tokens">TOKENS ENTRADA</span>
-<span class="material-symbols-outlined text-[16px] text-primary">data_usage</span>
-</div>
-<div class="font-headline-lg text-headline-lg text-on-surface font-bold tracking-tight" data-i18n="misc.210_4_m">210,4 M</div>
-<div class="font-code-sm text-code-sm text-primary font-medium mt-space-2xs" data-i18n="metrics.99_cached_203_5m_read">99% en caché (203,5M leídos)</div>
-</div>
-
-<div class="bg-surface-container-low rounded-lg p-space-md flex flex-col justify-between">
-<div class="flex items-center justify-between text-on-surface-variant font-code-sm text-code-sm mb-space-xs">
-<span class="" data-i18n="metrics.output_tokens">TOKENS SALIDA</span>
-<span class="material-symbols-outlined text-[16px] text-secondary">token</span>
-</div>
-<div class="font-headline-lg text-headline-lg text-on-surface font-bold tracking-tight" data-i18n="misc.586_1_k">586,1 mil</div>
-<div class="font-code-sm text-code-sm text-on-surface-variant mt-space-2xs">claude-sonnet-5.5 / 8% Opus</div>
-</div>
-
-<div class="bg-surface-container-low rounded-lg p-space-md flex flex-col justify-between">
-<div class="flex items-center justify-between text-on-surface-variant font-code-sm text-code-sm mb-space-xs">
-<span class="" data-i18n="metrics.estimated_cost">COSTE ESTIMADO</span>
-<span class="material-symbols-outlined text-[16px] text-tertiary">savings</span>
-</div>
-<div class="font-headline-lg text-headline-lg text-on-surface font-bold tracking-tight" data-i18n="misc.57_36_usd">~$57,36 US$</div>
-<div class="font-code-sm text-code-sm text-tertiary font-semibold mt-space-2xs" data-i18n="metrics.saved_412_via_cache">Ahorro de $412 por caché</div>
-</div>
-
-<div class="bg-surface-container-low rounded-lg p-space-md flex flex-col justify-between">
-<div class="flex items-center justify-between text-on-surface-variant font-code-sm text-code-sm mb-space-xs">
-<span class="" data-i18n="metrics.tools_policies">HERRAMIENTAS &amp; POLÍTICAS</span>
-<span class="material-symbols-outlined text-[16px] text-error">security</span>
-</div>
-<div class="font-headline-lg text-headline-lg text-on-surface font-bold tracking-tight" data-i18n="misc.690_calls">690 llamadas</div>
-<div class="font-code-sm text-code-sm text-error font-semibold mt-space-2xs" data-i18n="metrics.2_security_halts_triggered">2 Bloqueos de Seguridad</div>
-</div>
-</div>
-</div>
-</section>
-
-<section class="w-full px-margin-lg py-space-3xl" id="cockpit-showcase">
-<div class="max-w-7xl mx-auto flex flex-col gap-space-xl">
-
-<div class="flex flex-col md:flex-row md:items-end justify-between gap-space-md">
-<div>
-<span class="font-code-sm text-code-sm text-primary tracking-wider uppercase font-semibold" data-i18n="cockpit.live_harness_inspection_flight_cockpit">INSPECCIÓN EN VIVO · CABINA DE MANDO</span>
-<h2 class="font-headline-xl text-headline-xl text-on-surface mt-space-xs" data-i18n="cockpit.the_ultimate_cockpit_for_claude">El Cockpit Definitivo para Agentes Claude Code</h2>
-</div>
-<p class="font-body-md text-body-md text-on-surface-variant max-w-md" data-i18n="cockpit.trace_bash_tool_calls_inspect">Traza ejecuciones de Bash, inspecciona forks de agentes en árbol y monitorea la saturación del contexto de 1M tokens sin tocar la nube.</p>
-</div>
-
-<div class="grid grid-cols-1 gap-space-xl">
-<figure class="flex flex-col gap-space-sm">
-<div class="rounded-xl overflow-hidden border border-outline-variant shadow-sm bg-surface-container-lowest">
-<img alt="Board de Sesiones de Mandarina con las métricas de las últimas 24 horas y una Sesión activa" class="shot-light block w-full h-auto" height="900" loading="lazy" src="assets/img/app-board-light.png" width="1440">
-<img alt="Board de Sesiones de Mandarina con las métricas de las últimas 24 horas y una Sesión activa" class="shot-dark w-full h-auto" height="900" loading="lazy" src="assets/img/app-board-dark.png" width="1440">
-</div>
-<figcaption class="font-body-md text-body-md text-on-surface-variant" data-i18n="cockpit.shot_board">Board: métricas de las últimas 24 h y las Sesiones por Proyecto, en directo.</figcaption>
-</figure>
-<figure class="flex flex-col gap-space-sm">
-<div class="rounded-xl overflow-hidden border border-outline-variant shadow-sm bg-surface-container-lowest">
-<img alt="Detalle de una Sesión de Mandarina con ventana de contexto, uso de herramientas y tokens" class="shot-light block w-full h-auto" height="900" loading="lazy" src="assets/img/app-detail-light.png" width="1440">
-<img alt="Detalle de una Sesión de Mandarina con ventana de contexto, uso de herramientas y tokens" class="shot-dark w-full h-auto" height="900" loading="lazy" src="assets/img/app-detail-dark.png" width="1440">
-</div>
-<figcaption class="font-body-md text-body-md text-on-surface-variant" data-i18n="cockpit.shot_detail">Detalle de una Sesión: ventana de contexto, herramientas, tokens, caché y coste.</figcaption>
-</figure>
 </div>
 </div>
 </section>
@@ -219,8 +126,8 @@
 <span class="material-symbols-outlined text-[28px]">speed</span>
 </div>
 <h3 class="font-headline-sm text-headline-sm text-on-surface" data-i18n="capabilities.normalized_ingestion_live_websocket">Ingesta Normalizada &amp; WebSocket en Vivo</h3>
-<p class="font-body-md text-body-md text-on-surface-variant" data-i18n="capabilities.hook_pipeline_send_event_mjs">Pipeline de hooks -&gt; send_event.mjs HTTP POST -&gt; Backend Node.js -&gt; SQLite WAL -&gt; Push WebSocket en &lt;2ms. Multi-harness agnóstico (Claude, Codex, Cursor).</p>
-<div class="font-code-sm text-code-sm text-tertiary font-semibold mt-auto">HTTP POST /v1/events · WS &lt;2ms</div>
+<p class="font-body-md text-body-md text-on-surface-variant" data-i18n="capabilities.hook_pipeline_send_event_mjs">El hook send_event.mjs envía cada Evento por HTTP POST al backend Node.js, que lo guarda en SQLite y lo empuja al dashboard por WebSocket. Esquema de Evento normalizado, pensado para sumar otros Harness.</p>
+<div class="font-code-sm text-code-sm text-tertiary font-semibold mt-auto">POST /api/v1/events · WS /ws</div>
 </div>
 
 <div class="bg-surface-container-lowest p-space-xl rounded-xl shadow-sm flex flex-col gap-space-md">
@@ -228,8 +135,8 @@
 <span class="material-symbols-outlined text-[28px]">account_tree</span>
 </div>
 <h3 class="font-headline-sm text-headline-sm text-on-surface" data-i18n="capabilities.agents_subagents_observer">Observador de Agentes &amp; Subagentes</h3>
-<p class="font-body-md text-body-md text-on-surface-variant" data-i18n="capabilities.hierarchical_tree_profiling_subagents_fork">Árbol jerárquico con perfil por tipo de subagente (fork, security-gate, test runner), métricas de duración, consumo de tokens, coste y linaje de quién lanza a quién.</p>
-<div class="font-code-sm text-code-sm text-secondary font-semibold mt-auto" data-i18n="misc.subagent_lineage_cost_breakdown">LINAJE DE SUBAGENTES &amp; DESGLOSE DE COSTE</div>
+<p class="font-body-md text-body-md text-on-surface-variant" data-i18n="capabilities.hierarchical_tree_profiling_subagents_fork">Comparativa por Tipo de Subagente (Lanzamientos, duración, coste y errores), perfil de cada Tipo y detalle de cada Lanzamiento con su Estado, su tarea y su respuesta.</p>
+<div class="font-code-sm text-code-sm text-secondary font-semibold mt-auto" data-i18n="misc.subagent_lineage_cost_breakdown">COMPARATIVA POR TIPO DE SUBAGENTE</div>
 </div>
 
 <div class="bg-surface-container-lowest p-space-xl rounded-xl shadow-sm flex flex-col gap-space-md">
@@ -246,8 +153,8 @@
 <span class="material-symbols-outlined text-[28px]">front_hand</span>
 </div>
 <h3 class="font-headline-sm text-headline-sm text-on-surface" data-i18n="capabilities.budgets_guardrail_halts">Presupuestos &amp; Control de Parada</h3>
-<p class="font-body-md text-body-md text-on-surface-variant" data-i18n="capabilities.enforce_cost_caps_per_session">Límites de gasto configurables por sesión, proyecto y día. Hook preventivo que intercepta y detiene la ejecución del agente (continue: false) si se supera el umbral.</p>
-<div class="font-code-sm text-code-sm text-error font-semibold mt-auto">PREVENTIVE HOOK · CONTINUE: FALSE</div>
+<p class="font-body-md text-body-md text-on-surface-variant" data-i18n="capabilities.enforce_cost_caps_per_session">Límites de Coste estimado por Sesión, por Proyecto y día o globales del día, con aviso en la cabecera y, si lo eliges, parada del agente desde el hook (continue: false). Las Reglas de bloqueo frenan en local rm peligrosos, push --force a main y ficheros sensibles.</p>
+<div class="font-code-sm text-code-sm text-error font-semibold mt-auto">PREVENTIVE HOOK · BLOCKING RULES</div>
 </div>
 
 <div class="bg-surface-container-lowest p-space-xl rounded-xl shadow-sm flex flex-col gap-space-md">
@@ -255,7 +162,7 @@
 <span class="material-symbols-outlined text-[28px]">shield_with_heart</span>
 </div>
 <h3 class="font-headline-sm text-headline-sm text-on-surface" data-i18n="capabilities.secret_pii_masking_injection_alerts">Enmascarado de Secretos, PII &amp; Inyecciones</h3>
-<p class="font-body-md text-body-md text-on-surface-variant" data-i18n="capabilities.local_scanner_flags_jwt_pem">Detección en tiempo real de JWT, claves PEM, contraseñas y PII con algoritmo de Luhn, marcadores tipados [REDACTED_*] y avisos heurísticos de inyección indirecta.</p>
+<p class="font-body-md text-body-md text-on-surface-variant" data-i18n="capabilities.local_scanner_flags_jwt_pem">El hook enmascara secretos (claves de API, tokens) y datos personales (email, teléfono, IBAN, tarjeta, documento de identidad) antes de enviar, con marcadores tipados [REDACTED_*]. Avisa además cuando un contenido leído parece dar órdenes al agente (inyección).</p>
 <div class="font-code-sm text-code-sm text-primary font-semibold mt-auto">LOCAL SANITIZATION &amp; HEURISTICS</div>
 </div>
 
@@ -264,7 +171,7 @@
 <span class="material-symbols-outlined text-[28px]">share</span>
 </div>
 <h3 class="font-headline-sm text-headline-sm text-on-surface" data-i18n="capabilities.otlp_openinference_test_tracking">Exportación OTLP OpenInference &amp; Tests</h3>
-<p class="font-body-md text-body-md text-on-surface-variant" data-i18n="capabilities.opt_in_export_to_jaeger">Trazas opt-in para Jaeger, Grafana Tempo, Langfuse y Phoenix con convención OpenInference. Sincronización directa de Vitest/Playwright y evaluación humana (+1/-1).</p>
+<p class="font-body-md text-body-md text-on-surface-variant" data-i18n="capabilities.opt_in_export_to_jaeger">Exportación opt-in de cada Turno como traza OTLP con la convención OpenInference (Jaeger, Tempo, Datadog, Langfuse, Phoenix). Detecta también las ejecuciones de tests y recoge tu evaluación (+1/−1, etiquetas y notas).</p>
 <div class="font-code-sm text-code-sm text-on-surface font-semibold mt-auto">OPENINFERENCE · VITEST · HUMAN EVALS</div>
 </div></div>
 </div>
@@ -274,56 +181,107 @@
 <div class="max-w-7xl mx-auto flex flex-col gap-space-2xl">
 <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-space-md">
 <div>
-<span class="font-code-sm text-code-sm text-primary tracking-wider uppercase font-semibold" data-i18n="architecture.zero_build_native_hook_integration">INTEGRACIÓN NATIVA SIN COMPILACIONES</span>
-<h2 class="font-headline-xl text-headline-xl text-on-surface mt-space-xs" data-i18n="architecture.lightweight_architecture_settings_json_udp">Arquitectura Ligera: Settings.json &amp; Daemon UDP</h2>
+<span class="font-code-sm text-code-sm text-primary tracking-wider uppercase font-semibold" data-i18n="architecture.zero_build_native_hook_integration">INTEGRACIÓN POR HOOKS</span>
+<h2 class="font-headline-xl text-headline-xl text-on-surface mt-space-xs" data-i18n="architecture.lightweight_architecture_settings_json_udp">Arquitectura Ligera: Hook, Backend y Dashboard</h2>
 </div>
-<p class="font-body-md text-body-md text-on-surface-variant max-w-md" data-i18n="architecture.wire_claude_code_in_10">Configura Claude Code en 10 segundos añadiendo el webhook local en tu configuración estándar.</p>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-md" data-i18n="architecture.wire_claude_code_in_10">Levanta Mandarina con Docker y registra el hook en el settings.json del proyecto que quieras observar. Solo necesitas Node ≥ 20 en tu máquina, sin npm install.</p>
 </div>
 <div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-center">
 
 <div class="lg:col-span-7 bg-surface-container-lowest rounded-xl shadow-sm p-space-lg flex flex-col gap-space-sm">
 <div class="flex items-center justify-between pb-space-sm bg-surface-container-low px-space-md py-space-xs rounded-lg">
-<span class="font-code-sm text-code-sm text-on-surface font-semibold">~/.claude/settings.json</span>
+<span class="font-code-sm text-code-sm text-on-surface font-semibold">&lt;proyecto&gt;/.claude/settings.json</span>
 <span class="font-code-sm text-code-sm text-primary">JSON Config</span>
 </div>
 <pre class="font-code-md text-code-md text-on-surface bg-surface-container-low p-space-md rounded-lg overflow-x-auto leading-relaxed"><code>{
-  <span class="text-primary font-semibold">"$schema"</span>: <span class="text-secondary">"https://mandarina.dev/schema/v1/event.json"</span>,
-  <span class="text-primary font-semibold">"harness"</span>: { <span class="text-tertiary">"name"</span>: <span class="text-secondary">"claude-code"</span>, <span class="text-tertiary">"version"</span>: <span class="text-secondary">"0.9.4"</span> },
-  <span class="text-primary font-semibold">"session_id"</span>: <span class="text-secondary">"ses_0c17a0e7"</span>,
-  <span class="text-primary font-semibold">"model"</span>: { <span class="text-tertiary">"id"</span>: <span class="text-secondary">"claude-3-7-sonnet"</span>, <span class="text-tertiary">"caching"</span>: <span class="text-primary font-bold">true</span> },
-  <span class="text-primary font-semibold">"subagent"</span>: { <span class="text-tertiary">"type"</span>: <span class="text-secondary">"fork"</span>, <span class="text-tertiary">"parent_id"</span>: <span class="text-secondary">"root"</span> },
-  <span class="text-primary font-semibold">"budget_policy"</span>: {
-    <span class="text-tertiary">"max_usd_per_session"</span>: <span class="text-primary font-bold">15.0</span>,
-    <span class="text-tertiary">"on_limit"</span>: <span class="text-secondary">"halt_agent"</span>
-  },
-  <span class="text-primary font-semibold">"transport"</span>: {
-    <span class="text-tertiary">"collector"</span>: <span class="text-secondary">"http://127.0.0.1:4201/v1/events"</span>,
-    <span class="text-tertiary">"adapter"</span>: <span class="text-secondary">"send_event.mjs (zero-dependency)"</span>
+  <span class="text-primary font-semibold">"env"</span>: { <span class="text-tertiary">"MANDARINA_PROJECT"</span>: <span class="text-secondary">"mi-proyecto"</span> },
+  <span class="text-primary font-semibold">"hooks"</span>: {
+    <span class="text-tertiary">"PreToolUse"</span>: [{
+      <span class="text-tertiary">"matcher"</span>: <span class="text-secondary">"*"</span>,
+      <span class="text-tertiary">"hooks"</span>: [{
+        <span class="text-tertiary">"type"</span>: <span class="text-secondary">"command"</span>,
+        <span class="text-tertiary">"command"</span>: <span class="text-secondary">"node &lt;MANDARINA&gt;/adapters/claude-code/send_event.mjs"</span>
+      }]
+    }],
+    <span class="text-tertiary">"PostToolUse"</span>: [ <span class="text-on-surface-variant">/* misma entrada */</span> ],
+    <span class="text-tertiary">"Stop"</span>: [ <span class="text-on-surface-variant">/* misma entrada, sin matcher */</span> ]
   }
 }</code></pre>
+<p class="font-body-sm text-body-sm text-on-surface-variant" data-i18n="architecture.hooks_note">Repite la entrada para SessionStart, UserPromptSubmit, PostToolUseFailure, SubagentStart, SubagentStop, SessionEnd, Notification y PermissionRequest. Sustituye &lt;MANDARINA&gt; por la ruta absoluta del repo.</p>
 </div>
 
 <div class="lg:col-span-5 flex flex-col gap-space-md"><div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex items-start gap-space-md">
 <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 font-bold font-code-sm">1</div>
 <div>
-<div class="font-label-md text-label-md font-bold text-on-surface" data-i18n="architecture.zero_dependency_adaptor_send_event">Adaptador Ligero Sin Dependencias (send_event.mjs)</div>
-<p class="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs" data-i18n="architecture.captures_claude_code_hooks_cursor">Captura hooks de Claude Code, Cursor o Codex CLI vía script mínimo o /plugin install sin inyectar binarios pesados.</p>
+<div class="font-label-md text-label-md font-bold text-on-surface" data-i18n="architecture.zero_dependency_adaptor_send_event">Adaptador Sin Dependencias (send_event.mjs)</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs" data-i18n="architecture.captures_claude_code_hooks_cursor">Claude Code lo ejecuta en tu máquina en cada hook. Enmascara secretos, evalúa las Reglas de bloqueo y envía el Evento; si Mandarina está apagado lo descarta y Claude Code sigue como si nada.</p>
 </div>
 </div>
 <div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex items-start gap-space-md">
 <div class="w-10 h-10 rounded-full bg-tertiary/10 text-tertiary flex items-center justify-center shrink-0 font-bold font-code-sm">2</div>
 <div>
-<div class="font-label-md text-label-md font-bold text-on-surface" data-i18n="architecture.node_js_collector_sqlite_wal">Colector Node.js + SQLite WAL (better-sqlite3)</div>
-<p class="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs" data-i18n="architecture.ultra_fast_event_ingestion_into">Ingesta de eventos ultra-rápida en base de datos SQLite WAL local con enmascarado de secretos PII y sin salir a internet.</p>
+<div class="font-label-md text-label-md font-bold text-on-surface" data-i18n="architecture.node_js_collector_sqlite_wal">Backend Node.js + SQLite (better-sqlite3)</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs" data-i18n="architecture.ultra_fast_event_ingestion_into">Fastify persiste los Eventos en SQLite, completa tokens, coste y Subagentes leyendo en solo lectura los Transcripts de ~/.claude, y los difunde por WebSocket. Nada sale de tu equipo.</p>
 </div>
 </div>
 <div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex items-start gap-space-md">
 <div class="w-10 h-10 rounded-full bg-secondary/10 text-secondary flex items-center justify-center shrink-0 font-bold font-code-sm">3</div>
 <div>
-<div class="font-label-md text-label-md font-bold text-on-surface" data-i18n="architecture.angular_spa_signals_core_native">Angular SPA (Signals) + WebSocket Nativo</div>
-<p class="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs" data-i18n="architecture.cockpit_ui_powered_by_angular">Cockpit reactivo impulsado por Angular Signals a 60 FPS, inspección de servidores MCP y exportación opcional OTLP OpenInference.</p>
+<div class="font-label-md text-label-md font-bold text-on-surface" data-i18n="architecture.angular_spa_signals_core_native">Dashboard Angular + WebSocket</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-space-2xs" data-i18n="architecture.cockpit_ui_powered_by_angular">Board, Agentes, Subagentes, Skills, MCP, Tests, Bloqueos, Seguridad, Evaluaciones y Presupuestos, en vivo. La exportación OTLP es opcional.</p>
 </div>
 </div></div>
+</div>
+</div>
+</section>
+
+<section class="w-full px-margin-lg py-space-3xl bg-surface-container-low" id="metrics-bar">
+<div class="max-w-7xl mx-auto flex flex-col gap-space-xl">
+
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-space-md">
+<div>
+<span class="font-code-sm text-code-sm text-primary tracking-wider uppercase font-semibold" data-i18n="metrics.eyebrow">ÚLTIMAS 24 H · BOARD</span>
+<h2 class="font-headline-xl text-headline-xl text-on-surface mt-space-xs" data-i18n="metrics.real_time_telemetry_last_24">Métricas del Board de un vistazo</h2>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-md" data-i18n="metrics.desc">Sesiones trabajando y en pausa, tokens de entrada y salida, eficiencia de la caché, coste estimado y lo que queda de la cuota de tu suscripción de Claude (ventana de 5 h y semanal).</p>
+</div>
+
+<figure class="flex flex-col gap-space-sm">
+<div class="rounded-xl overflow-hidden border border-outline-variant shadow-sm bg-surface-container-lowest">
+<img alt="Métricas del Board de Mandarina: Sesiones trabajando y en pausa, tokens, caché, coste estimado y uso de la suscripción" class="shot-light block w-full h-auto" height="260" loading="lazy" src="assets/img/app-metrics-light.png" width="1160">
+<img alt="Métricas del Board de Mandarina: Sesiones trabajando y en pausa, tokens, caché, coste estimado y uso de la suscripción" class="shot-dark w-full h-auto" height="260" loading="lazy" src="assets/img/app-metrics-dark.png" width="1160">
+</div>
+<figcaption class="font-body-md text-body-md text-on-surface-variant" data-i18n="metrics.shot_metrics">Métricas de las últimas 24 h y uso de la suscripción. Captura con datos simulados.</figcaption>
+</figure>
+</div>
+</section>
+
+<section class="w-full px-margin-lg py-space-3xl" id="cockpit-showcase">
+<div class="max-w-7xl mx-auto flex flex-col gap-space-xl">
+
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-space-md">
+<div>
+<span class="font-code-sm text-code-sm text-primary tracking-wider uppercase font-semibold" data-i18n="cockpit.live_harness_inspection_flight_cockpit">INSPECCIÓN EN VIVO · CABINA DE MANDO</span>
+<h2 class="font-headline-xl text-headline-xl text-on-surface mt-space-xs" data-i18n="cockpit.the_ultimate_cockpit_for_claude">El Cockpit Definitivo para Agentes Claude Code</h2>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-md" data-i18n="cockpit.trace_bash_tool_calls_inspect">Sigue cada Sesión en vivo: su Estado, Subagentes, herramientas, skills y llamadas MCP, la ventana de contexto, los tokens, la caché y el coste, sin salir de tu equipo.</p>
+</div>
+
+<div class="grid grid-cols-1 gap-space-xl">
+<figure class="flex flex-col gap-space-sm">
+<div class="rounded-xl overflow-hidden border border-outline-variant shadow-sm bg-surface-container-lowest">
+<img alt="Detalle de una Sesión de Mandarina con ventana de contexto, uso de herramientas, tokens, caché y coste" class="shot-light block w-full h-auto" height="900" loading="lazy" src="assets/img/app-detail-light.png" width="1440">
+<img alt="Detalle de una Sesión de Mandarina con ventana de contexto, uso de herramientas, tokens, caché y coste" class="shot-dark w-full h-auto" height="900" loading="lazy" src="assets/img/app-detail-dark.png" width="1440">
+</div>
+<figcaption class="font-body-md text-body-md text-on-surface-variant" data-i18n="cockpit.shot_detail">Detalle de una Sesión: ventana de contexto, uso de herramientas, tokens, caché y coste. Datos simulados.</figcaption>
+</figure>
+<figure class="flex flex-col gap-space-sm">
+<div class="rounded-xl overflow-hidden border border-outline-variant shadow-sm bg-surface-container-lowest">
+<img alt="Pantalla de Eventos de Mandarina con la lista de Eventos en vivo, filtros por tipo y herramienta" class="shot-light block w-full h-auto" height="900" loading="lazy" src="assets/img/app-events-light.png" width="1440">
+<img alt="Pantalla de Eventos de Mandarina con la lista de Eventos en vivo, filtros por tipo y herramienta" class="shot-dark w-full h-auto" height="900" loading="lazy" src="assets/img/app-events-dark.png" width="1440">
+</div>
+<figcaption class="font-body-md text-body-md text-on-surface-variant" data-i18n="cockpit.shot_events">Eventos: la lista cruda en vivo, con filtros por tipo, herramienta, Proyecto y Sesión. Datos simulados.</figcaption>
+</figure>
 </div>
 </div>
 </section>
@@ -331,24 +289,24 @@
 <section class="w-full px-margin-lg py-space-3xl bg-surface-container-low" id="roadmap">
 <div class="max-w-7xl mx-auto flex flex-col gap-space-2xl">
 <div class="text-center max-w-2xl mx-auto">
-<span class="font-code-sm text-code-sm text-primary tracking-wider uppercase font-semibold">ROADMAP &amp; RELEASES</span>
-<h2 class="font-headline-xl text-headline-xl text-on-surface mt-space-xs" data-i18n="roadmap.from_v0_9_current_alpha">De v0.9 (Alpha Actual) a v1.0 Enterprise</h2>
+<span class="font-code-sm text-code-sm text-primary tracking-wider uppercase font-semibold" data-i18n="roadmap.eyebrow">ROADMAP</span>
+<h2 class="font-headline-xl text-headline-xl text-on-surface mt-space-xs" data-i18n="roadmap.from_v0_9_current_alpha">De la Fase 1 a la producción</h2>
 </div>
 <div class="grid grid-cols-1 md:grid-cols-2 gap-space-xl">
 <div class="bg-surface-container-lowest p-space-xl rounded-xl shadow-sm flex flex-col gap-space-md relative overflow-hidden">
 <div class="flex items-center justify-between">
-<span class="font-headline-sm text-headline-sm text-primary font-bold" data-i18n="roadmap.phase_1_mvp_v0_9">Fase 1 · MVP (v0.9.4 Alpha)</span>
-<span class="px-space-sm py-space-2xs bg-surface-container text-tertiary font-code-sm text-code-sm rounded-full font-bold" data-i18n="roadmap.current_mvp">DISPONIBLE AHORA</span>
+<span class="font-headline-sm text-headline-sm text-primary font-bold" data-i18n="roadmap.phase_1_mvp_v0_9">Fase 1 · MVP</span>
+<span class="px-space-sm py-space-2xs bg-surface-container text-tertiary font-code-sm text-code-sm rounded-full font-bold" data-i18n="roadmap.current_mvp">EN DESARROLLO</span>
 </div>
-<p class="font-body-md text-body-md text-on-surface-variant" data-i18n="roadmap.foundational_local_observability_standardized_multi">Observabilidad local fundacional, esquema de eventos normalizado, observador de subagentes y métricas de caché.</p>
+<p class="font-body-md text-body-md text-on-surface-variant" data-i18n="roadmap.foundational_local_observability_standardized_multi">Observabilidad local fundacional, esquema de Eventos normalizado, observador de Subagentes y métricas de caché.</p>
 <ul class="flex flex-col gap-space-sm font-body-sm text-body-sm text-on-surface pt-space-xs">
 <li class="flex items-center gap-space-sm">
 <span class="material-symbols-outlined text-tertiary text-[18px]">check_circle</span>
-<span class="" data-i18n="roadmap.multi_harness_ingestion_claude_code">Ingesta normalizada multi-harness (Claude Code, Cursor, Codex)</span>
+<span class="" data-i18n="roadmap.multi_harness_ingestion_claude_code">Ingesta de Eventos normalizados desde Claude Code (otros Harness, más adelante)</span>
 </li>
 <li class="flex items-center gap-space-sm">
 <span class="material-symbols-outlined text-tertiary text-[18px]">check_circle</span>
-<span class="" data-i18n="roadmap.subagent_tree_agent_profiler_fork">Observador de subagentes y linaje (forks, duración, coste)</span>
+<span class="" data-i18n="roadmap.subagent_tree_agent_profiler_fork">Observador de Agentes y Subagentes: comparativa por Tipo, duración y coste</span>
 </li>
 <li class="flex items-center gap-space-sm">
 <span class="material-symbols-outlined text-tertiary text-[18px]">check_circle</span>
@@ -360,11 +318,15 @@
 </li>
 <li class="flex items-center gap-space-sm">
 <span class="material-symbols-outlined text-tertiary text-[18px]">check_circle</span>
-<span class="" data-i18n="roadmap.secret_pii_redaction_prompt_injection">Enmascarado de PII/secretos, avisos de inyección y tests Vitest/Playwright</span>
+<span class="" data-i18n="roadmap.secret_pii_redaction_prompt_injection">Enmascarado de secretos y PII, avisos de inyección y Reglas de bloqueo</span>
 </li>
 <li class="flex items-center gap-space-sm">
 <span class="material-symbols-outlined text-tertiary text-[18px]">check_circle</span>
 <span class="" data-i18n="roadmap.otlp_openinference_exporter_human_evals">Exportación OTLP OpenInference y evaluación humana (+1/-1)</span>
+</li>
+<li class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-tertiary text-[18px]">check_circle</span>
+<span class="" data-i18n="roadmap.waiting_and_subscription">Alerta visual y sonora de Sesiones que esperan y uso de la suscripción</span>
 </li>
 </ul>
 </div>
@@ -372,13 +334,13 @@
 <div class="bg-surface-container-lowest p-space-xl rounded-xl shadow-sm flex flex-col gap-space-md relative overflow-hidden">
 <div class="flex items-center justify-between">
 <span class="font-headline-sm text-headline-sm text-on-surface font-bold" data-i18n="roadmap.phase_1a_actionable_observability">Fase 1A · Observabilidad Accionable</span>
-<span class="px-space-sm py-space-2xs bg-surface-container text-primary font-code-sm text-code-sm rounded-full font-bold">Q2 2025</span>
+<span class="px-space-sm py-space-2xs bg-surface-container text-primary font-code-sm text-code-sm rounded-full font-bold" data-i18n="roadmap.next">SIGUIENTE</span>
 </div>
 <p class="font-body-md text-body-md text-on-surface-variant" data-i18n="roadmap.real_time_operational_cockpit_reducing">Cabina operativa en tiempo real para desbloquear al desarrollador y supervisar fricciones del harness.</p>
 <ul class="flex flex-col gap-space-sm font-body-sm text-body-sm text-on-surface pt-space-xs">
 <li class="flex items-center gap-space-sm">
 <span class="material-symbols-outlined text-primary text-[18px]">pending_actions</span>
-<span class="" data-i18n="roadmap.attention_required_inbox_waiting_for">Bandeja de Atención Requerida (espera de permiso/input con alerta sonora)</span>
+<span class="" data-i18n="roadmap.attention_required_inbox_waiting_for">Bandeja de Atención Requerida y notificaciones del sistema para las Sesiones que esperan</span>
 </li>
 <li class="flex items-center gap-space-sm">
 <span class="material-symbols-outlined text-primary text-[18px]">commit</span>
@@ -402,7 +364,7 @@
 <div class="bg-surface-container-lowest p-space-xl rounded-xl shadow-sm flex flex-col gap-space-md relative overflow-hidden">
 <div class="flex items-center justify-between">
 <span class="font-headline-sm text-headline-sm text-on-surface font-bold" data-i18n="roadmap.phase_2_skills_plugins_configuration">Fase 2 · Skills, Plugins &amp; Configuración</span>
-<span class="px-space-sm py-space-2xs bg-surface-container text-on-surface-variant font-code-sm text-code-sm rounded-full font-bold">Q3 2025</span>
+<span class="px-space-sm py-space-2xs bg-surface-container text-on-surface-variant font-code-sm text-code-sm rounded-full font-bold" data-i18n="roadmap.planned">PLANIFICADA</span>
 </div>
 <p class="font-body-md text-body-md text-on-surface-variant" data-i18n="roadmap.active_configuration_management_project_settings">Gestión activa de configuración del proyecto, editor de reglas de seguridad y evaluación de skills.</p>
 <ul class="flex flex-col gap-space-sm font-body-sm text-body-sm text-on-surface pt-space-xs">
@@ -498,18 +460,26 @@
 </div>
 </section>
 
-<section class="w-full px-margin-lg py-space-3xl" id="quickstart">
+<section class="w-full px-margin-lg py-space-3xl" id="docs">
 <div class="max-w-5xl mx-auto bg-gradient-to-r from-primary-container to-primary text-on-primary rounded-xl shadow-xl p-space-2xl text-center flex flex-col items-center gap-space-md cta-band dark:from-[#c2410c] dark:to-[#9a3412]">
 <span class="material-symbols-outlined text-[48px]">terminal</span>
-<h2 class="font-headline-xl text-headline-xl text-on-primary font-bold" data-i18n="quickstart.deploy_mandarina_in_30_seconds">Despliega Mandarina en 30 Segundos</h2>
-<p class="font-body-lg text-body-lg text-on-primary/90 max-w-xl" data-i18n="quickstart.no_cloud_accounts_no_credit">Sin cuentas en la nube, sin tarjetas de crédito y con total control de tu código fuente.</p>
+<span class="font-code-sm text-code-sm tracking-wider uppercase font-semibold text-on-primary/90" data-i18n="docs.eyebrow">DOCUMENTACIÓN</span>
+<h2 class="font-headline-xl text-headline-xl text-on-primary font-bold" data-i18n="quickstart.deploy_mandarina_in_30_seconds">Pon Mandarina en marcha</h2>
+<p class="font-body-lg text-body-lg text-on-primary/90 max-w-xl" data-i18n="quickstart.no_cloud_accounts_no_credit">Sin cuentas en la nube ni tarjetas: Docker para Mandarina y un hook de Claude Code en tu máquina.</p>
 <div class="w-full max-w-xl bg-on-primary-fixed/20 p-space-md rounded-lg font-code-md text-code-md text-on-primary flex items-center justify-between">
-<code id="quick-cmd">docker compose -f mandarina-stack.yml up -d &amp;&amp; claude /plugin install mandarina</code>
+<code id="quick-cmd">docker compose up</code>
 <button class="px-space-sm py-space-2xs bg-surface-container-lowest text-on-surface rounded font-code-sm text-code-sm font-semibold hover:bg-surface-container transition-all" data-copy-from="#quick-cmd" data-i18n="hero.copy" id="copy-bottom-btn" type="button">Copiar</button>
 </div>
+<ol class="w-full max-w-xl flex flex-col gap-space-sm text-left font-body-md text-body-md text-on-primary/90">
+<li class="flex items-start gap-space-sm"><span class="font-code-sm font-bold shrink-0">1</span><span data-i18n="docs.step1">Clona el repo y ejecuta docker compose up: backend en 127.0.0.1:4000 y dashboard en 127.0.0.1:4200.</span></li>
+<li class="flex items-start gap-space-sm"><span class="font-code-sm font-bold shrink-0">2</span><span data-i18n="docs.step2">Registra el hook send_event.mjs en el settings.json del proyecto que quieras observar.</span></li>
+<li class="flex items-start gap-space-sm"><span class="font-code-sm font-bold shrink-0">3</span><span data-i18n="docs.step3">Abre el dashboard: el indicador debe decir «En vivo» y tus Sesiones aparecen al enviar un prompt.</span></li>
+</ol>
 <div class="flex flex-wrap items-center justify-center gap-space-md mt-space-sm">
-<a class="px-space-lg py-space-sm bg-surface-container-lowest text-on-surface font-headline-sm text-headline-sm rounded-lg shadow-sm font-semibold hover:bg-surface-container transition-all" data-i18n="quickstart.view_documentation" href="#architecture">Ver Documentación</a>
-<a class="px-space-lg py-space-sm bg-primary-fixed text-on-primary-fixed font-headline-sm text-headline-sm rounded-lg shadow-sm font-semibold hover:bg-primary-fixed-dim transition-all" href="https://github.com" rel="noreferrer" target="_blank">GitHub Repo</a>
+<a class="px-space-lg py-space-sm bg-surface-container-lowest text-on-surface font-headline-sm text-headline-sm rounded-lg shadow-sm font-semibold hover:bg-surface-container transition-all" data-i18n="docs.readme" href="https://github.com/victor-de-andres-personal/mandarina#instalar-el-hook-de-claude-code" rel="noreferrer" target="_blank">Guía de instalación</a>
+<a class="px-space-lg py-space-sm bg-surface-container-lowest text-on-surface font-headline-sm text-headline-sm rounded-lg shadow-sm font-semibold hover:bg-surface-container transition-all" data-i18n="docs.adapter" href="https://github.com/victor-de-andres-personal/mandarina/blob/main/adapters/claude-code/README.md" rel="noreferrer" target="_blank">Adaptador de Claude Code</a>
+<a class="px-space-lg py-space-sm bg-surface-container-lowest text-on-surface font-headline-sm text-headline-sm rounded-lg shadow-sm font-semibold hover:bg-surface-container transition-all" data-i18n="docs.adr" href="https://github.com/victor-de-andres-personal/mandarina/tree/main/docs/adr" rel="noreferrer" target="_blank">Decisiones (ADR)</a>
+<a class="px-space-lg py-space-sm bg-primary-fixed text-on-primary-fixed font-headline-sm text-headline-sm rounded-lg shadow-sm font-semibold hover:bg-primary-fixed-dim transition-all" data-i18n="docs.repo" href="https://github.com/victor-de-andres-personal/mandarina" rel="noreferrer" target="_blank">Repositorio</a>
 </div>
 </div>
 </section>
@@ -521,13 +491,12 @@
 <div class="flex flex-col sm:flex-row items-center gap-space-md text-center sm:text-left">
 <div class="flex items-center gap-space-xs"><img alt="" class="h-6 w-auto object-contain" src="assets/img/logo.svg"><span class="font-label-md text-label-md text-on-surface font-semibold">Mandarina Observability</span></div>
 <span class="hidden sm:inline text-outline-variant font-code-sm" aria-hidden="true">|</span>
-<p class="font-body-sm text-body-sm text-on-surface-variant" data-i18n="footer.license">Publicado bajo licencia de código abierto Apache 2.0.</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant" data-i18n="footer.license">Mandarina · observabilidad local de agentes de código.</p>
 </div>
 <div class="flex items-center gap-space-lg">
-<a class="font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors" href="#quickstart">Docs</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors" href="#docs">Docs</a>
 <a class="font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors" href="#architecture" data-i18n="footer.arch_spec">Especificación de arquitectura</a>
-<a class="font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors" href="#" data-i18n="footer.privacy">Privacidad y términos</a>
-<span class="font-code-sm text-code-sm text-on-surface-variant bg-surface-container-low px-space-sm py-space-2xs rounded-DEFAULT">v0.9.4-alpha</span>
+<span class="font-code-sm text-code-sm text-on-surface-variant bg-surface-container-low px-space-sm py-space-2xs rounded-DEFAULT">alpha</span>
 </div>
 </div>
 </footer>
