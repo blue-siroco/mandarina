@@ -8,7 +8,7 @@ El 1.11 reenvía lo observado a colectores OTLP (Jaeger, Tempo, Datadog, Langfus
 
 ## Consequences
 
-- Apagado por defecto (§7). Se activa con las variables estándar `OTEL_EXPORTER_OTLP_ENDPOINT` / `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` y `OTEL_EXPORTER_OTLP_HEADERS`. El contenido (prompts, respuestas, entradas y salidas de herramientas) necesita además `MANDARINA_OTLP_INCLUDE_CONTENT=true` y sale enmascarado.
+- Apagado por defecto (§9). Se activa con las variables estándar `OTEL_EXPORTER_OTLP_ENDPOINT` / `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` y `OTEL_EXPORTER_OTLP_HEADERS`. El contenido (prompts, respuestas, entradas y salidas de herramientas) necesita además `MANDARINA_OTLP_INCLUDE_CONTENT=true` y sale enmascarado.
 - El estado de exportación de cada Turno se guarda en SQLite. Un reinicio reanuda lo pendiente, y un Turno que falla tras 3 reintentos queda como fallido sin frenar a los demás.
 - `trace_id` y `span_id` se derivan de la Sesión, el Turno y los ids de Evento: un reintento no genera una traza nueva.
 - Sin protobuf ni gRPC: solo colectores que acepten OTLP/HTTP con JSON, que son todos los citados.

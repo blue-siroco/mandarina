@@ -33,7 +33,7 @@ Dos niveles de "multimodelo" a distinguir:
 - **Esquema de eventos normalizado (harness-agnóstico):** define un formato interno propio (`source_app`, `harness_type`, `session_id`, `event_type`, `payload`) y luego un **adaptador** por cada harness que traduce sus hooks nativos a ese formato común. Así el dashboard, la base de datos y el WebSocket no cambian aunque cambie el harness.
 - **Adaptadores de captura por harness:** cada uno tiene su propio mecanismo de hooks/plugins (Claude Code usa `.claude/settings.json`; Codex usa `.agents/plugins/marketplace.json`; otros usan configuraciones distintas). El patrón ya existe en proyectos como `duyet/codex-claude-plugins`, que mantiene manifiestos paralelos (`.claude-plugin/plugin.json` y `.codex-plugin/plugin.json`) para el mismo plugin, y en `oh-my-openagent`, descrito como un "agent OS" multi-harness para OpenCode, Codex, Claude Code y otros agentes de código con orquestación en modo equipo.
 - **Dashboard unificado:** una sola vista de sesiones activas etiquetadas por harness y modelo, para comparar comportamiento entre ellos (ej. "esta tarea la hizo Claude Code con Sonnet en 4 min y Codex en 7 min").
-- **Delegación cruzada:** capacidad de que un agente de un harness le pida una tarea o segunda opinión a otro (ya mencionado en Fase 3.3), lo cual solo tiene sentido si la capa de datos ya es multi-harness desde la base.
+- **Delegación cruzada:** capacidad de que un agente de un harness le pida una tarea o segunda opinión a otro (ya mencionado en Fase 6.3), lo cual solo tiene sentido si la capa de datos ya es multi-harness desde la base.
 
 **Implicación de diseño:** construye primero el esquema de eventos normalizado y el primer adaptador (Claude Code). Añadir el segundo harness (ej. Codex) debe ser "solo" escribir un nuevo adaptador, sin tocar servidor, base de datos ni dashboard — esa es la prueba de que la abstracción está bien hecha.
 
@@ -188,13 +188,13 @@ El 1.7 muestra cada Subagente, pero no deja ver cómo trabaja un Tipo de Subagen
 - **`/subagentes` deja la vista por Tipo** (1.7) en manos de `/agentes`: queda como lista de Subagentes, y el Tipo de cada fila enlaza a su perfil. Una sola tabla por Tipo evita cifras duplicadas que no cuadren.
 - **Tipos sin nombre**: los Subagentes internos (1.7) quedan fuera; los Lanzamientos sin Tipo conocido se agrupan como "Sin Tipo".
 - Actualización en vivo vía WebSocket, como el resto de Eventos.
-- Fuera de alcance: comparar lo declarado en la definición del agente (`tools`, `model` y descripción del frontmatter de `.claude/agents/*.md`) con lo que usa de verdad, y los agentes definidos que nunca se lanzan: el backend no ve las `.claude/agents/` de cada Directorio (ADR-0003) y van con 2.0 y 2.1. Tampoco entran editar o crear agentes (Fase 2), evaluar la calidad de sus respuestas (Fase 5) ni los equipos de agentes (Fase 3.1).
+- Fuera de alcance: comparar lo declarado en la definición del agente (`tools`, `model` y descripción del frontmatter de `.claude/agents/*.md`) con lo que usa de verdad, y los agentes definidos que nunca se lanzan: el backend no ve las `.claude/agents/` de cada Directorio (ADR-0003) y van con 2.0 y 2.1. Tampoco entran editar o crear agentes (Fase 2), evaluar la calidad de sus respuestas (Fase 5) ni los equipos de agentes (Fase 6.1).
 
 ### 1.11 Exportación OTLP con la convención OpenInference
 
 Lo que ve Mandarina se queda en Mandarina: no hay forma de llevar las Sesiones a Jaeger, Grafana Tempo, Datadog, Langfuse o Arize Phoenix, donde se ve el resto de la infraestructura. Todos aceptan trazas OTLP, y Langfuse y Phoenix entienden además la convención semántica de OpenInference para agentes LLM. Decisiones en ADR-0008.
 
-- **Opt-in**: el exportador está apagado por defecto (§7, privacidad por defecto). Se activa con las variables estándar de OpenTelemetry en `docker-compose.yml`: `OTEL_EXPORTER_OTLP_ENDPOINT` (o `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`) y `OTEL_EXPORTER_OTLP_HEADERS` para la autenticación del colector. No se configura desde la UI.
+- **Opt-in**: el exportador está apagado por defecto (§9, privacidad por defecto). Se activa con las variables estándar de OpenTelemetry en `docker-compose.yml`: `OTEL_EXPORTER_OTLP_ENDPOINT` (o `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`) y `OTEL_EXPORTER_OTLP_HEADERS` para la autenticación del colector. No se configura desde la UI.
 - **Una traza por Turno**, exportada cuando el Turno termina (`turn.ended`) o cuando su Sesión pasa a Cerrada o Huérfana con el Turno abierto. Antes no están completos ni los tokens ni las respuestas del modelo, que salen del Transcript (ADR-0003). Spans, con `openinference.span.kind`:
   - **`AGENT`** raíz: el Turno, de su `prompt.submitted` a su `turn.ended`;
   - **`LLM`**: cada respuesta del modelo del Transcript (deduplicada por `message.id`, como el Uso de tokens), con `llm.model_name`, `llm.token_count.prompt` / `completion` / `total`, `llm.token_count.prompt_details.cache_read` y `cache_write`, y los `gen_ai.usage.input_tokens` / `output_tokens` de la convención GenAI de OpenTelemetry, para los colectores que solo entienden esa;
@@ -203,10 +203,10 @@ Lo que ve Mandarina se queda en Mandarina: no hay forma de llevar las Sesiones a
 - **Atributos comunes**: `session.id` (convención de OpenInference para agrupar las trazas de una Sesión) y, como recurso, `service.name=mandarina`, `mandarina.project`, `mandarina.directory` y `mandarina.harness`. Cada span lleva también su Coste estimado (`mandarina.cost.usd`, ADR-0005).
 - **Contenido opt-in aparte**: prompts, respuestas del modelo y entradas y salidas de herramientas (`input.value`, `output.value`) salen de la máquina solo si además se activa `MANDARINA_OTLP_INCLUDE_CONTENT=true`, y siempre enmascarados como en la ingesta. Sin él se exportan estructura, tiempos, tokens, coste, modelo y nombres de herramienta. `llm.system_prompt` no se exporta: Claude Code no escribe el prompt de sistema en el Transcript.
 - **Identificadores deterministas**: el `trace_id` y los `span_id` se derivan de la Sesión, el Turno y los ids de Evento, de modo que un reintento reenvía los mismos ids y el colector puede reconocerlo en lugar de ver una traza nueva.
-- **Nunca frena el flujo local**: la exportación corre en segundo plano, fuera de la ingesta y del hook (§7). El estado de exportación de cada Turno (pendiente / exportado / fallido) se guarda en SQLite, así que un reinicio del backend reanuda lo pendiente. Reintentos con espera creciente (3 como máximo); un Turno que sigue fallando queda como *fallido* y no bloquea a los siguientes.
+- **Nunca frena el flujo local**: la exportación corre en segundo plano, fuera de la ingesta y del hook (§9). El estado de exportación de cada Turno (pendiente / exportado / fallido) se guarda en SQLite, así que un reinicio del backend reanuda lo pendiente. Reintentos con espera creciente (3 como máximo); un Turno que sigue fallando queda como *fallido* y no bloquea a los siguientes.
 - **Indicador en la UI**: con el exportador activo, la barra lateral muestra "Exportando a `<host>`" (con "incluye contenido" si aplica), y al pulsarlo se ven los Turnos pendientes, los exportados y los fallidos, con el último error. `GET /api/v1/exporter` devuelve ese estado.
 - **Transporte**: OTLP/HTTP con JSON (`POST /v1/traces`), escrito a mano en el backend, sin el SDK de OpenTelemetry (ADR-0008).
-- Fuera de alcance: métricas y logs OTLP, OTLP/gRPC y protobuf, exportar Sesiones anteriores a activar el exportador (con 1A.8), integraciones que no hablan OTLP (LangSmith, Sentry; Fase 4) y recibir trazas de otras herramientas.
+- Fuera de alcance: métricas y logs OTLP, OTLP/gRPC y protobuf, exportar Sesiones anteriores a activar el exportador (con 1A.8), integraciones que no hablan OTLP (LangSmith, Sentry; Fase 7) y recibir trazas de otras herramientas.
 
 ### 1.12 Evaluación humana: puntuación, etiquetas y notas
 
@@ -226,7 +226,7 @@ Mandarina enseña qué hizo cada agente, pero no deja apuntar si lo hizo bien. S
 - **Pantalla Evaluaciones en el menú lateral** (`/evaluaciones`, grupo *Observar*): lista de Evaluaciones con objeto (Sesión / Turno / Subagente, con el prompt o la Tarea resumidos), Proyecto, Puntuación, etiquetas, nota y fecha, cada fila con enlace a su objeto en el detalle de Sesión. Filtros por tipo de objeto, Puntuación, etiqueta, Proyecto y periodo, reflejados en la URL, y recuento de uso por etiqueta.
 - **Dataset de evaluación**: la pantalla exporta a JSONL las Evaluaciones que pasan el filtro, una línea por objeto evaluado, con Proyecto, Sesión, modelo, prompt (el del Turno, la Tarea del Subagente o todos los de la Sesión), respuesta final del agente, herramientas usadas, Puntuación, Etiquetas y Nota. La respuesta es la que trae el hook `Stop` o `SubagentStop`, que ya está guardada y enmascarada, y no depende del Transcript; solo el modelo sale de él (`null` sin Transcript). El contenido sale enmascarado como en la ingesta.
 - **Datos**: las Evaluaciones son lo primero que escribe la persona usuaria en Mandarina. No son Eventos (no son hechos observados en la Sesión), así que no pasan por la ingesta: van en su propia tabla de SQLite, con `GET` / `PUT` / `DELETE /api/v1/evaluations/{objeto}/{id}`, `GET /api/v1/evaluations` con los filtros de la pantalla, `GET /api/v1/evaluations/tags` y `GET /api/v1/evaluations/export`. Sin difusión por WebSocket: Mandarina es monousuario y la Evaluación cambia desde la propia pantalla.
-- Fuera de alcance: escala de estrellas, varias personas evaluando el mismo objeto (4.1), evaluación automática con LLM como juez y ejecutar los evals exportados (2.3 y Fase 5), evaluar una sola herramienta, y purgar Evaluaciones junto con su Sesión (1A.9).
+- Fuera de alcance: escala de estrellas, varias personas evaluando el mismo objeto (7.1), evaluación automática con LLM como juez y ejecutar los evals exportados (2.3 y Fase 5), evaluar una sola herramienta, y purgar Evaluaciones junto con su Sesión (1A.9).
 
 ### 1.13 Enmascarado de secretos y PII, y Avisos de inyección
 
@@ -245,11 +245,11 @@ Hoy el servidor enmascara al ingerir un conjunto corto de secretos (AC-06) y los
     - exfiltración: pedir enviar datos a una URL, `curl … | sh`, leer `.env` o claves y mandarlas fuera, imágenes Markdown hacia dominios externos con datos en la query.
   - **Severidad**: **alta** (texto oculto con caracteres de etiqueta, exfiltración, suplantación del sistema), **media** (órdenes de anulación) o **baja** (comentarios HTML con verbos imperativos, ancho cero).
   - **Contexto**: cada aviso muestra la fuente (herramienta y URL, fichero o Servidor MCP), el fragmento con el patrón resaltado, la Sesión y el Subagente, y las herramientas que el agente invocó justo después en el mismo Turno. Un aviso seguido de un `Bash` con red o de un Bloqueo es lo que merece mirarse primero.
-  - **Avisa, no bloquea**: las heurísticas dan falsos positivos (un README que documenta prompt injection), y bloquear sobre ellas rompería el trabajo (§7). Cada aviso se puede **descartar** como falso positivo; el descarte se guarda en SQLite y el aviso deja de contarse.
+  - **Avisa, no bloquea**: las heurísticas dan falsos positivos (un README que documenta prompt injection), y bloquear sobre ellas rompería el trabajo (§9). Cada aviso se puede **descartar** como falso positivo; el descarte se guarda en SQLite y el aviso deja de contarse.
 - **Dónde se ve**:
   - **Pantalla Seguridad** en el menú lateral (`/seguridad`, grupo *Observar*), con dos pestañas. *Avisos de inyección*: lista filtrable por severidad, patrón, fuente, Proyecto, periodo y descartados, reflejada en la URL, con enlace al Evento en el detalle de Sesión. *Enmascarado*: cuántos marcadores de cada tipo hay por Proyecto en el periodo, contados en los payloads guardados.
   - La tarjeta del board de una Sesión con avisos de severidad alta sin descartar lleva un badge. En `/eventos` y en la *Línea de tiempo*, los Eventos con aviso se marcan y hay una categoría **Avisos** en el filtro. El servidor añade los avisos a cada Evento en `GET /events` y en el mensaje del WebSocket, como los datos de Subagente del 1.7.
-- Fuera de alcance: bloquear por un Aviso de inyección, clasificar con un LLM (opt-in, como 1A.10), buscar en los Transcripts completos, volver a enmascarar lo ya guardado (con 1A.9), PII de otros países salvo correos y teléfonos E.164, y enmascarado configurable de rutas personales o datos de clientes (4.1).
+- Fuera de alcance: bloquear por un Aviso de inyección, clasificar con un LLM (opt-in, como 1A.10), buscar en los Transcripts completos, volver a enmascarar lo ya guardado (con 1A.9), PII de otros países salvo correos y teléfonos E.164, y enmascarado configurable de rutas personales o datos de clientes (7.1).
 
 ### 1.14 Eficiencia de la caché de prompts
 
@@ -274,7 +274,7 @@ El 1.8 ya muestra, en el modal de *Tokens de entrada*, el % leído de caché y l
 
 ### 1.15 Presupuestos: avisos y parada del agente al superarlos
 
-El Coste estimado se ve, pero nada impide que una Sesión desbocada (un bucle, un Subagente que no termina) siga gastando mientras nadie mira el board. Absorbe el 4.3 salvo los canales externos. Decisiones en ADR-0010.
+El Coste estimado se ve, pero nada impide que una Sesión desbocada (un bucle, un Subagente que no termina) siga gastando mientras nadie mira el board. Absorbe el 7.3 salvo los canales externos. Decisiones en ADR-0010.
 
 - **Presupuesto**: un límite de Coste estimado (USD) para un **ámbito**:
   - **por Sesión**: se aplica a cada Sesión por separado, de todos los Proyectos o de uno;
@@ -282,7 +282,7 @@ El Coste estimado se ve, pero nada impide que una Sesión desbocada (un bucle, u
   - **global por día**: el coste de todos los Proyectos en el día.
   El día es el natural en la zona horaria del backend (`TZ` en `docker-compose.yml`). El coste incluye el de los Subagentes, igual que en las fichas.
 - **Estado del presupuesto**: **Dentro**, **Cerca** (al llegar a su umbral de aviso, por defecto el 80 %) o **Superado**. Cada Presupuesto tiene una acción al superarse: **solo avisar** o **detener** (por defecto, detener).
-- **Avisos en la UI**: al pasar a Cerca o a Superado, un aviso destacado en la cabecera, visible desde cualquier pantalla, con el ámbito, lo gastado y el límite, y un sonido corto. El sonido se genera en el navegador (Web Audio), solo suena si la persona usuaria ya ha interactuado con la página (política de autoplay de los navegadores) y se silencia con un interruptor que se guarda en el navegador. El cambio de estado llega por el WebSocket. Las notificaciones del sistema van con 1A.1, y los webhooks y el correo siguen en la Fase 4.
+- **Avisos en la UI**: al pasar a Cerca o a Superado, un aviso destacado en la cabecera, visible desde cualquier pantalla, con el ámbito, lo gastado y el límite, y un sonido corto. El sonido se genera en el navegador (Web Audio), solo suena si la persona usuaria ya ha interactuado con la página (política de autoplay de los navegadores) y se silencia con un interruptor que se guarda en el navegador. El cambio de estado llega por el WebSocket. Las notificaciones del sistema van con 1A.1, y los webhooks y el correo siguen en la Fase 7.
 - **Detener el agente**: con un Presupuesto Superado y acción *detener*, el hook para al agente en su ámbito:
   - en `PreToolUse`, devuelve `continue: false` con un `stopReason` que explica qué presupuesto se superó. Así Claude Code para el agente, en vez de solo rechazar la herramienta (con `permissionDecision: "deny"` el modelo reintenta o sigue sin herramientas). Se aplica también a las herramientas de los Subagentes;
   - en `UserPromptSubmit`, rechaza los prompts nuevos (`decision: "block"`) mientras siga Superado;
@@ -294,7 +294,7 @@ El Coste estimado se ve, pero nada impide que una Sesión desbocada (un bucle, u
   - **Pantalla Presupuestos** (`/presupuestos`, grupo nuevo *Configurar* del menú lateral): alta, edición, desactivación y borrado de Presupuestos, cada uno con su estado, lo gastado, el límite y las excepciones vigentes. Es la primera configuración que se edita desde la UI, y va en el servidor (SQLite) porque es el servidor quien calcula el coste. Las Reglas de bloqueo siguen en el hook hasta 2.6;
   - la ficha **Coste estimado** del board muestra el progreso frente al presupuesto global por día, si existe;
   - la tarjeta de una Sesión detenida por presupuesto lleva un badge.
-- Fuera de alcance: presupuestos por semana o por mes, por persona desarrolladora (4.1), por Tipo de Subagente o por modelo; presupuestos de tokens o de Turnos (el de las tareas headless sigue en 3.6); y avisos por webhook o correo (4.3).
+- Fuera de alcance: presupuestos por semana o por mes, por persona desarrolladora (7.1), por Tipo de Subagente o por modelo; presupuestos de tokens o de Turnos (el de las tareas headless sigue en 6.6); y avisos por webhook o correo (7.3).
 
 ### 1.16 Alerta visual y sonora cuando una Sesión espera a la persona usuaria
 
@@ -309,7 +309,7 @@ Con varias Sesiones abiertas, un agente puede llevar minutos parado esperando un
 - **Alerta visual**: aviso destacado en la cabecera, visible desde cualquier pantalla, con el número de Sesiones que esperan y un enlace a la que más tiempo lleva esperando. Mientras haya alguna, el título de la pestaña lleva un contador (p. ej. `(2) Mandarina`) y el favicon cambia, para verlo desde otra pestaña.
 - **Alerta sonora**: un sonido corto al pasar una Sesión a *Esperando*, distinto del de los Presupuestos (1.15). Mismo mecanismo que allí: Web Audio generado en el navegador, solo si la persona usuaria ya ha interactuado con la página (política de autoplay) y con un interruptor de silencio que se guarda en el navegador. No se repite en bucle; si la Sesión sigue esperando, vuelve a sonar como mucho cada pocos minutos.
 - **Datos**: el cambio de Actividad llega por el WebSocket; `GET /sessions` y el detalle de Sesión exponen la Actividad *Esperando* y su motivo.
-- Fuera de alcance: notificaciones del sistema operativo (Notification API) y configuración por Proyecto (1A.1), responder o aprobar el permiso desde el dashboard (3.5) y avisar al terminar un Turno.
+- Fuera de alcance: notificaciones del sistema operativo (Notification API) y configuración por Proyecto (1A.1), responder o aprobar el permiso desde el dashboard (6.5) y avisar al terminar un Turno.
 
 **Stack típico usado por estos proyectos:** servidor en Bun/TypeScript o Python (uv), SQLite, cliente Vue 3 o React, comunicación por WebSocket.
 
@@ -391,7 +391,7 @@ El Adaptador es best-effort (ADR-0004): si el servidor no responde, el Evento se
 
 - Exponer consultas de Mandarina como herramientas MCP para que los propios agentes consulten su historial: Sesiones recientes del Proyecto, qué se intentó y falló, Estado de los tests, ficheros más tocados, coste acumulado.
 - Ejemplo: al empezar una Sesión, el agente pregunta "¿qué se hizo ayer en este Proyecto y qué quedó pendiente?".
-- Solo lectura en esta fase; las acciones van en la Fase 3.
+- Solo lectura en esta fase; las acciones van en la Fase 6.
 
 ---
 
@@ -464,88 +464,47 @@ Convertir lo observado en cambios concretos de configuración, siempre como prop
 
 ---
 
-## 3. Fase 3 — Orquestación multi-agente
+## 3. Fase 3 — Gobernanza basada en Git y políticas de equipo
 
-### 3.1 Gestión de equipos de agentes
+Se trata de llevar el control a donde los equipos ya colaboran, el repositorio de código, en lugar de saltar a arquitecturas multiusuario complejas o a SSO en la nube. La autenticación y el multiusuario (7.1) quedan para cuando de verdad haga falta un servidor compartido.
 
-- Crear un "equipo": capa de coordinación + lista de tareas centralizada compartida entre agentes.
-- Desplegar agentes especializados (builder, validator, reviewer...) cada uno con su propia ventana de contexto y sesión, en paneles/procesos aislados.
-- Comunicación entre agentes vía mensajería (`SendMessage` o equivalente).
-- Apagado ordenado de agentes al completar su tarea y limpieza del estado del equipo al terminar.
+### 3.1 Políticas compartidas en el repo
 
-### 3.2 Ejecución paralela a escala
+- Reglas de presupuesto (1.15), umbrales de parada y patrones de enmascarado de PII (1.13) definidos en un fichero de configuración versionado en la raíz del Proyecto (p. ej. `mandarina.yaml`). Quien clona el repositorio ya lleva la gobernanza integrada.
+- Precedencia clara entre la política del repo y los ajustes locales de cada persona: la política del repo fija el mínimo y lo local solo puede endurecerlo, no relajarlo.
+- Necesita un ADR propio: el backend en Docker no ve el repo de cada Directorio (2.0), así que el fichero lo lee el Adaptador en el host o se monta en solo lectura.
 
-- Lanzamiento de N agentes en paralelo (proyectos de referencia llegan a 20–50) usando tmux u otro multiplexor de procesos.
-- Auto-reinicio de un agente que termina su tarea o se queda atascado/con error.
-- Monitor de salud por agente: % de contexto usado, si está "trabajando" o "parado", errores recientes.
-- **Worktrees aislados de git**: cada agente trabaja en su propia rama/directorio para no pisarse con otros agentes que tocan el mismo repo.
+### 3.2 Auditoría de IA en Pull Requests
 
-### 3.3 Delegación entre harnesses
+- Hook para GitHub Actions o GitLab CI que lee los resúmenes locales de Mandarina y añade un comentario automático en el PR con el coste en tokens, el uso de caché (1.14) y los riesgos de seguridad detectados (Bloqueos y Avisos de inyección, 1.13) durante esa rama.
+- Sustituye a un panel web multiusuario corporativo: el resumen viaja con la rama y se revisa en el propio PR.
+- Depende de los cambios de código por Sesión (1A.2) para asociar Sesiones a ramas y commits.
 
-- Posibilidad de delegar una tarea concreta a otro CLI/agente (Codex, OpenCode, etc.) y capturar el resultado de vuelta al flujo principal.
-- Útil para pedir una "segunda opinión" o una revisión cruzada entre modelos/herramientas distintas.
+### 3.3 Métricas agregadas anónimas
 
-### 3.4 Modo swarm avanzado
-
-- Memoria persistente compartida entre agentes del swarm.
-- Federación entre marketplaces/equipos de distintos proyectos.
-- Hooks disparados vía servidores MCP conectados al swarm.
-
-### 3.5 Persona en el bucle desde el dashboard
-
-Primer paso de control, de bajo riesgo y alto valor, antes que lanzar agentes:
-
-- Aprobar o denegar desde el dashboard (o el móvil) las peticiones de permiso de 1A.1: el hook `PermissionRequest` consulta al servidor y espera la decisión con un tiempo límite; si no hay respuesta, cae al prompt local de siempre.
-- Choca con el hook best-effort y rápido de ADR-0004, así que necesita un ADR propio (tiempo límite, qué pasa sin servidor, autenticación de quien aprueba).
-
-### 3.6 Lanzador de tareas headless
-
-Lo que las Agent Teams nativas no cubren: lanzar y programar trabajo sin abrir un terminal.
-
-- Lanzar desde la UI una Sesión headless (`claude -p` o Claude Agent SDK) a partir de una plantilla: prompt, skill o agente, modelo, Directorio y, opcionalmente, un worktree aislado.
-- Cola de tareas con programación (cron) y presupuesto máximo de coste o de Turnos por tarea; la tarea se corta al superarlo.
-- La Sesión lanzada se observa por el mismo pipeline que cualquier otra y queda enlazada a su tarea y su resultado (commits, tests, respuesta final).
-- Necesita un componente en el host (ver 2.0): el backend en Docker no puede lanzar el Harness de la máquina.
+- Exportar un resumen semanal de ahorro y eficiencia para compartirlo en las reuniones de equipo, sin exponer código fuente ni datos sensibles: solo agregados (coste, caché, Sesiones, Bloqueos), sin prompts, rutas ni nombres de persona.
+- Opt-in y con vista previa de lo que se exportaría (§9, privacidad por defecto).
 
 ---
 
-## 4. Fase 4 — Tracing, costes y nivel "producción"
+## 4. Fase 4 — Federación local y ecosistema de plugins
 
-Esta capa es la que diferencia una herramienta de desarrollador de una herramienta lista para equipos/empresa:
+Se apuesta por un modelo modular y abierto, en lugar de una orquestación cruzada rígida entre agentes de terceros.
 
-- **Tracing de llamadas LLM**: qué prompt exacto se envió, qué respondió el modelo, latencia.
-- **Tracking de llamadas a herramientas**: qué tool se invocó, con qué input, cuánto tardó, si falló.
-- **Coordinación multi-agente**: quién delegó qué a quién y en qué orden.
-- **Seguimiento de coste por tokens**: coste acumulado por sesión, por proyecto, por agente, con alertas de presupuesto.
-- **Pruebas A/B de prompts/skills**: comparar variantes de un mismo prompt o skill sobre el mismo conjunto de tareas.
-- **Guardrails**: reglas que detectan comportamiento anómalo o fuera de política antes de que el agente actúe.
-- **Trazado de decisiones**: por qué el agente eligió una herramienta u otra en un punto dado.
-- **Integraciones con observabilidad estándar de la industria**: las trazas OTLP (Jaeger, Tempo, Datadog, Langfuse, Arize Phoenix) pasan al MVP como **1.11**. Quedan aquí las métricas y logs OTLP y las integraciones que no hablan OTLP (LangSmith, Sentry).
-- **Guías por framework**: si el agente usa LangChain, LangGraph, Claude Agent SDK, CrewAI, AutoGen, Pydantic AI, etc., adaptar la instrumentación a cada uno.
+### 4.1 Marketplace de skills y hooks locales
 
-### 4.1 Autenticación y multiusuario
+- Gestor dentro del Cockpit para instalar, actualizar y probar prompts del sistema (`CLAUDE.md`), skills y filtros de seguridad creados por la comunidad o por el propio equipo de ingeniería.
+- Se apoya en el acceso a la configuración de cada Directorio (2.0) y en el gestor de marketplaces y plugins (2.2).
 
-Hoy la API y el WebSocket no tienen autenticación: basta en `localhost`, pero es lo primero que hace falta para desplegarlo en un servidor compartido.
+### 4.2 Red de agentes locales (mesh local)
 
-- Token de ingesta por Adaptador (o por persona desarrolladora), revocable, enviado en cada Evento.
-- Inicio de sesión en el dashboard (SSO/OIDC en entorno de empresa) y roles: ver solo mis Sesiones, ver las del equipo, administrar reglas.
-- Persona desarrolladora como dimensión del Evento y filtro del board y de las métricas.
-- Enmascarado configurable además del de secretos y PII (1.13): rutas personales, datos de clientes.
-- Migración a Postgres cuando haya varias personas escribiendo a la vez (ya prevista en 0.6).
+- Si varias personas desarrolladoras del mismo equipo usan agentes en su red local (LAN), pueden compartir de forma peer-to-peer (P2P) aprendizajes sobre qué prompts funcionan mejor o qué bucles evitar, sin depender de servidores en la nube.
+- Usa como base las Evaluaciones (1.12) y la detección de fricción (1A.4); lo que se comparte es opt-in y va enmascarado.
 
-### 4.2 Métricas de resultado
+### 4.3 APIs abiertas para CI/CD
 
-El coste solo tiene sentido frente a lo que se obtuvo:
-
-- Coste y Duración activa por commit, por PR creado y por test que pasa de rojo a verde (con 1A.2 y 1.5).
-- Tasa de Sesiones que terminan con los tests en verde y sin Bloqueos.
-- Comparativa por modelo, agente y skill de coste frente a resultado, no solo de coste.
-
-### 4.3 Presupuestos y alertas
-
-- Los Presupuestos por Sesión, por Proyecto y día y globales por día, con aviso y parada del agente, pasan al MVP como **1.15**. Quedan aquí los presupuestos por persona desarrolladora (con 4.1) y por semana o mes.
-- Canales de alerta: webhook genérico (Slack, Teams) y correo; la notificación del navegador va con 1A.1.
-- Alertas también sobre las anomalías de 1A.4 y sobre la salud de la ingesta de 1A.7.
+- Exponer una API local robusta para que herramientas de testing o despliegue internas interactúen con el estado de los agentes (Sesiones, Bloqueos, Presupuestos, resultado de los tests).
+- Parte de la API REST y el WebSocket ya existentes (`specs/api-spec.yaml`); habrá que versionar lo público y decidir su autenticación (7.1).
 
 ---
 
@@ -560,11 +519,100 @@ El coste solo tiene sentido frente a lo que se obtuvo:
 - **Auditoría de plugins instalados**, diffs de git y documentación del proyecto, con verificación visual automática del propio informe antes de entregarlo (renderizarlo y revisarlo como imagen para detectar diagramas rotos).
 - **Comparador de Sesiones**: dos o más Sesiones lado a lado (modelo, Harness, coste, Duración activa, herramientas, Bloqueos, resultado de los tests). Es la vista que materializa la comparación multi-harness de 0.5 ("Claude Code con Sonnet en 4 min frente a Codex en 7 min").
 - **Trazabilidad de criterios de aceptación**: para Proyectos que citan `AC-*` en sus tests, qué criterios tienen tests que pasan, cuáles fallan y cuáles no tienen ningún test, con la Sesión que los tocó por última vez (a partir de 1.5).
-- **Registro de auditoría**: quién cambió qué regla, qué plugin se instaló, qué permiso se aprobó desde el dashboard (con 2.6, 2.2 y 3.5).
+- **Registro de auditoría**: quién cambió qué regla, qué plugin se instaló, qué permiso se aprobó desde el dashboard (con 2.6, 2.2 y 6.5).
 
 ---
 
-## 6. Matriz de priorización sugerida
+## 6. Fase 6 — Orquestación multi-agente
+
+Reubicada desde la antigua Fase 3 al rediseñar las Fases 3 y 4 (gobernanza en Git y ecosistema local). Se conserva íntegra y se retoma según lo pida el flujo diario.
+
+### 6.1 Gestión de equipos de agentes
+
+- Crear un "equipo": capa de coordinación + lista de tareas centralizada compartida entre agentes.
+- Desplegar agentes especializados (builder, validator, reviewer...) cada uno con su propia ventana de contexto y sesión, en paneles/procesos aislados.
+- Comunicación entre agentes vía mensajería (`SendMessage` o equivalente).
+- Apagado ordenado de agentes al completar su tarea y limpieza del estado del equipo al terminar.
+
+### 6.2 Ejecución paralela a escala
+
+- Lanzamiento de N agentes en paralelo (proyectos de referencia llegan a 20–50) usando tmux u otro multiplexor de procesos.
+- Auto-reinicio de un agente que termina su tarea o se queda atascado/con error.
+- Monitor de salud por agente: % de contexto usado, si está "trabajando" o "parado", errores recientes.
+- **Worktrees aislados de git**: cada agente trabaja en su propia rama/directorio para no pisarse con otros agentes que tocan el mismo repo.
+
+### 6.3 Delegación entre harnesses
+
+- Posibilidad de delegar una tarea concreta a otro CLI/agente (Codex, OpenCode, etc.) y capturar el resultado de vuelta al flujo principal.
+- Útil para pedir una "segunda opinión" o una revisión cruzada entre modelos/herramientas distintas.
+
+### 6.4 Modo swarm avanzado
+
+- Memoria persistente compartida entre agentes del swarm.
+- Federación entre marketplaces/equipos de distintos proyectos.
+- Hooks disparados vía servidores MCP conectados al swarm.
+
+### 6.5 Persona en el bucle desde el dashboard
+
+Primer paso de control, de bajo riesgo y alto valor, antes que lanzar agentes:
+
+- Aprobar o denegar desde el dashboard (o el móvil) las peticiones de permiso de 1A.1: el hook `PermissionRequest` consulta al servidor y espera la decisión con un tiempo límite; si no hay respuesta, cae al prompt local de siempre.
+- Choca con el hook best-effort y rápido de ADR-0004, así que necesita un ADR propio (tiempo límite, qué pasa sin servidor, autenticación de quien aprueba).
+
+### 6.6 Lanzador de tareas headless
+
+Lo que las Agent Teams nativas no cubren: lanzar y programar trabajo sin abrir un terminal.
+
+- Lanzar desde la UI una Sesión headless (`claude -p` o Claude Agent SDK) a partir de una plantilla: prompt, skill o agente, modelo, Directorio y, opcionalmente, un worktree aislado.
+- Cola de tareas con programación (cron) y presupuesto máximo de coste o de Turnos por tarea; la tarea se corta al superarlo.
+- La Sesión lanzada se observa por el mismo pipeline que cualquier otra y queda enlazada a su tarea y su resultado (commits, tests, respuesta final).
+- Necesita un componente en el host (ver 2.0): el backend en Docker no puede lanzar el Harness de la máquina.
+
+---
+
+## 7. Fase 7 — Tracing, costes y nivel "producción"
+
+Reubicada desde la antigua Fase 4. Autenticación y multiusuario (7.1) es ahora el paso para desplegar en un servidor compartido, y las Fases 3 y 4 no dependen de ello.
+
+Esta capa es la que diferencia una herramienta de desarrollador de una herramienta lista para equipos/empresa:
+
+- **Tracing de llamadas LLM**: qué prompt exacto se envió, qué respondió el modelo, latencia.
+- **Tracking de llamadas a herramientas**: qué tool se invocó, con qué input, cuánto tardó, si falló.
+- **Coordinación multi-agente**: quién delegó qué a quién y en qué orden.
+- **Seguimiento de coste por tokens**: coste acumulado por sesión, por proyecto, por agente, con alertas de presupuesto.
+- **Pruebas A/B de prompts/skills**: comparar variantes de un mismo prompt o skill sobre el mismo conjunto de tareas.
+- **Guardrails**: reglas que detectan comportamiento anómalo o fuera de política antes de que el agente actúe.
+- **Trazado de decisiones**: por qué el agente eligió una herramienta u otra en un punto dado.
+- **Integraciones con observabilidad estándar de la industria**: las trazas OTLP (Jaeger, Tempo, Datadog, Langfuse, Arize Phoenix) pasan al MVP como **1.11**. Quedan aquí las métricas y logs OTLP y las integraciones que no hablan OTLP (LangSmith, Sentry).
+- **Guías por framework**: si el agente usa LangChain, LangGraph, Claude Agent SDK, CrewAI, AutoGen, Pydantic AI, etc., adaptar la instrumentación a cada uno.
+
+### 7.1 Autenticación y multiusuario
+
+Hoy la API y el WebSocket no tienen autenticación: basta en `localhost`, pero es lo primero que hace falta para desplegarlo en un servidor compartido.
+
+- Token de ingesta por Adaptador (o por persona desarrolladora), revocable, enviado en cada Evento.
+- Inicio de sesión en el dashboard (SSO/OIDC en entorno de empresa) y roles: ver solo mis Sesiones, ver las del equipo, administrar reglas.
+- Persona desarrolladora como dimensión del Evento y filtro del board y de las métricas.
+- Enmascarado configurable además del de secretos y PII (1.13): rutas personales, datos de clientes.
+- Migración a Postgres cuando haya varias personas escribiendo a la vez (ya prevista en 0.6).
+
+### 7.2 Métricas de resultado
+
+El coste solo tiene sentido frente a lo que se obtuvo:
+
+- Coste y Duración activa por commit, por PR creado y por test que pasa de rojo a verde (con 1A.2 y 1.5).
+- Tasa de Sesiones que terminan con los tests en verde y sin Bloqueos.
+- Comparativa por modelo, agente y skill de coste frente a resultado, no solo de coste.
+
+### 7.3 Presupuestos y alertas
+
+- Los Presupuestos por Sesión, por Proyecto y día y globales por día, con aviso y parada del agente, pasan al MVP como **1.15**. Quedan aquí los presupuestos por persona desarrolladora (con 7.1) y por semana o mes.
+- Canales de alerta: webhook genérico (Slack, Teams) y correo; la notificación del navegador va con 1A.1.
+- Alertas también sobre las anomalías de 1A.4 y sobre la salud de la ingesta de 1A.7.
+
+---
+
+## 8. Matriz de priorización sugerida
 
 | Funcionalidad | Valor | Complejidad | Fase |
 | --- | --- | --- | --- |
@@ -600,35 +648,41 @@ El coste solo tiene sentido frente a lo que se obtuvo:
 | Recomendaciones de configuración | Alto | Media | 2 |
 | Editor + benchmark de skills | Medio-Alto | Media | 2 |
 | Gestor de marketplaces/plugins | Medio | Media | 2 |
-| Orquestación de equipos de agentes | Alto (si tu caso de uso lo pide) | Alta | 3 |
-| Ejecución paralela a escala (20+) | Medio (nicho) | Alta | 3 |
-| Persona en el bucle (aprobar permisos desde el dashboard) | Alto | Media-Alta | 3 |
-| Lanzador de tareas headless con cola y presupuesto | Medio-Alto | Alta | 3 |
-| Tracing/costes nivel producción | Alto (si es para equipos) | Alta | 4 |
-| Autenticación y multiusuario | Alto (imprescindible fuera de `localhost`) | Media | 4 |
-| Métricas de resultado (coste por commit/PR/test) | Alto | Media | 4 |
-| Presupuestos por persona y periodo, y alertas por webhook o correo | Medio | Baja-Media | 4 |
+| Políticas compartidas en el repo (`mandarina.yaml`: presupuestos, umbrales, enmascarado) | Alto | Media | 3 |
+| Auditoría de IA en Pull Requests (comentario en el PR desde CI) | Alto | Media | 3 |
+| Métricas agregadas anónimas (resumen semanal exportable) | Medio | Baja | 3 |
+| Marketplace de skills y hooks locales | Medio | Media-Alta | 4 |
+| Red de agentes locales (mesh P2P en LAN) | Medio-Bajo (nicho) | Alta | 4 |
+| APIs abiertas para CI/CD | Medio-Alto | Media | 4 |
+| Orquestación de equipos de agentes | Alto (si tu caso de uso lo pide) | Alta | 6 |
+| Ejecución paralela a escala (20+) | Medio (nicho) | Alta | 6 |
+| Persona en el bucle (aprobar permisos desde el dashboard) | Alto | Media-Alta | 6 |
+| Lanzador de tareas headless con cola y presupuesto | Medio-Alto | Alta | 6 |
+| Tracing/costes nivel producción | Alto (si es para equipos) | Alta | 7 |
+| Autenticación y multiusuario | Alto (imprescindible fuera de `localhost`) | Media | 7 |
+| Métricas de resultado (coste por commit/PR/test) | Alto | Media | 7 |
+| Presupuestos por persona y periodo, y alertas por webhook o correo | Medio | Baja-Media | 7 |
 | Reporting exportable | Medio | Media | 5 |
 | Comparador de Sesiones | Medio-Alto | Baja-Media | 5 |
 | Trazabilidad de criterios de aceptación | Medio | Media | 5 |
 
 ---
 
-## 7. Consideraciones técnicas transversales
+## 9. Consideraciones técnicas transversales
 
-- **No reinventes la orquestación nativa**: antes de construir la Fase 3, evalúa si las Agent Teams nativas de Claude Code ya cubren el caso de uso — es la lección explícita de claude-activity-viewer.
+- **No reinventes la orquestación nativa**: antes de construir la Fase 6, evalúa si las Agent Teams nativas de Claude Code ya cubren el caso de uso — es la lección explícita de claude-activity-viewer.
 - **SQLite como almacén por defecto**: todos los proyectos de referencia lo usan por simplicidad de despliegue local; considera Postgres solo si vas a multiusuario/multi-equipo. Con Node.js, `better-sqlite3` es la opción más común para esto.
 - **WebSocket para tiempo real**, HTTP REST para consultas históricas/paginadas.
 - **No expongas secretos**: al mostrar variables de entorno o payloads de eventos, enmascara tokens/API keys.
 - **Empaquétalo como plugin de Claude Code** (con `.claude-plugin/plugin.json` y opcionalmente `marketplace.json`) para que se instale con `/plugin install`, en vez de requerir un setup manual — es el patrón que siguen casi todos los proyectos más recientes. Encaja con 0.7: el plugin instala el **Adaptador** (hooks) en el host; el servidor y el dashboard siguen distribuyéndose como imágenes Docker.
 - **Rendimiento con volumen**: índices por Sesión, Proyecto y momento; agregados precalculados para las fichas del board cuando la tabla de Eventos crezca; paginación por cursor y scroll virtual en las listas largas. Fijar un objetivo medible (p. ej. board en < 1 s con 1 M de Eventos).
 - **Versionado del Evento**: `schema_version` ya viaja en cada Evento; definir cómo convive el servidor con Adaptadores de versiones anteriores y cómo se migran los datos guardados.
-- **Privacidad por defecto**: todo local; cualquier funcionalidad que envíe datos fuera (resúmenes con LLM, integraciones de la Fase 4, alertas por webhook) es opt-in y se indica en la UI.
-- **La observación nunca rompe el trabajo**: ninguna funcionalidad nueva puede hacer que el hook bloquee o ralentice al agente más allá de su tiempo límite (ADR-0004); las que lo necesiten (1.15, 3.5) lo justifican en un ADR.
+- **Privacidad por defecto**: todo local; cualquier funcionalidad que envíe datos fuera (resúmenes con LLM, integraciones de la Fase 7, alertas por webhook) es opt-in y se indica en la UI.
+- **La observación nunca rompe el trabajo**: ninguna funcionalidad nueva puede hacer que el hook bloquee o ralentice al agente más allá de su tiempo límite (ADR-0004); las que lo necesiten (1.15, 6.5) lo justifican en un ADR.
 
 ---
 
-## 8. Próximos pasos concretos
+## 10. Próximos pasos concretos
 
 Hecho (ver `mvp-fase1.md`): esquema de Evento, ingesta + SQLite + WebSocket, board, detalle de Sesión, Bloqueos, Estado de los tests y uso de skills.
 
@@ -636,6 +690,6 @@ Hecho (ver `mvp-fase1.md`): esquema de Evento, ingesta + SQLite + WebSocket, boa
 2. Atención requerida (1A.1): bandeja, notificaciones del sistema y métrica de fricción sobre la Actividad *Esperando* de 1.16.
 3. Importación del historial previo (1A.8) y salud de la ingesta (1A.7), para que los datos estén completos y sean fiables.
 4. Cambios de código por Sesión (1A.2) y detección de fricción (1A.4).
-5. Decidir en un ADR el acceso a la configuración de cada Directorio (2.0) antes de empezar la Fase 2.
+5. Decidir en un ADR el acceso a la configuración de cada Directorio (2.0) antes de empezar la Fase 2; lo necesitan también las políticas en el repo (3.1).
 6. Empaquetar el Adaptador como plugin instalable vía marketplace.
 7. Iterar hacia la Fase 2 según qué falte más en el flujo diario.

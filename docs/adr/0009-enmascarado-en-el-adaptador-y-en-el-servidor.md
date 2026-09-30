@@ -2,7 +2,7 @@
 
 Hasta ahora el servidor enmascaraba los secretos al ingerir y los reemplazaba por `***` (AC-06), "para no repetir la lógica en cada Adaptador". El 1.13 amplía los patrones (JWT, claves privadas, PII) y pide que el secreto no salga de la máquina en claro. Decidimos enmascarar **en el Adaptador antes de enviar** y **otra vez en el servidor al ingerir**, con el mismo catálogo de patrones en los dos, y reemplazar por **marcadores con tipo** (`[REDACTED_API_KEY]`, `[REDACTED_EMAIL]`…). Se descartan dos alternativas:
 
-- **Solo en el servidor**: el secreto viaja en claro por HTTP y pasa por la memoria y los logs del backend. Hoy es `localhost`, pero con 4.1 el backend puede estar en otra máquina.
+- **Solo en el servidor**: el secreto viaja en claro por HTTP y pasa por la memoria y los logs del backend. Hoy es `localhost`, pero con 7.1 el backend puede estar en otra máquina.
 - **Solo en el Adaptador**: los Adaptadores antiguos, los de otros Harness escritos en otro lenguaje y lo que el servidor lee del Transcript quedarían sin enmascarar.
 
 ## Consequences
