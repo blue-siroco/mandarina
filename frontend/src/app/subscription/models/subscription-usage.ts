@@ -4,7 +4,7 @@ export type UsageWindowStatus = 'comfortable' | 'near' | 'exhausted' | 'reset_pe
 /** Una ventana de la cuota de la suscripción: la de 5 horas o la semanal (AC-137). */
 export interface UsageWindow {
   usedPercent: number;
-  /** Lo que queda: es la cifra que se enseña, no lo consumido. */
+  /** Lo que queda: fija el estado (Holgado, Cerca, Agotado); la cifra que se enseña es la consumida. */
   remainingPercent: number;
   resetsAt: Date;
   status: UsageWindowStatus;

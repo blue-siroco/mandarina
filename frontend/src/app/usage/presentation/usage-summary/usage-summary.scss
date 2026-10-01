@@ -73,3 +73,11 @@
     outline-offset: 2px;
   }
 }
+
+// En pantalla ancha, cinco columnas: la primera fila son las cinco primeras fichas y la segunda,
+// Coste estimado (1) y los dos medidores de la suscripción (2 + 2).
+@media (min-width: 960px) {
+  .kpi-grid--board {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
